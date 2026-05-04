@@ -9,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
+import '../../core/services/permission_service.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 
 // ── Home screen ───────────────────────────────────────────
@@ -69,6 +70,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     _ctrl.forward();
+
+    // Ask for notification + exact-alarm permissions once, after the first
+    // frame so the screen is visible when the rationale sheet appears.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      // Only prompt if not already granted (PermissionService checks first).
+      final granted = await PermissionService.instance.notificationsGranted;
+      if (!granted && mounted) {
+        await PermissionService.instance.requestAllRequired(context);
+      }
+    });
   }
 
   @override

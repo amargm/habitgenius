@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/permission_service.dart';
 
 // ── Emoji picker data ──────────────────────────────────────
 
@@ -128,6 +129,18 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   }
 
   Future<void> _pickReminder() async {
+    // Ask for notification permission contextually before showing the time
+    // picker — the user is clearly about to set a reminder.
+    final granted =
+        await PermissionService.instance.notificationsGranted;
+    if (!granted) {
+      if (!mounted) return;
+      final allow = await PermissionService.instance
+          .requestNotifications(context);
+      if (!allow) return; // User declined — don't show time picker.
+    }
+
+    if (!mounted) return;
     final picked = await showTimePicker(
       context: context,
       initialTime: _reminderTime ?? const TimeOfDay(hour: 8, minute: 0),
