@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/router/app_router.dart';
 
 /// A modal bottom sheet shown when a user tries to exceed their tier limit.
@@ -28,9 +29,9 @@ class UpgradePromptSheet extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.appColors.bgCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
       child: Column(
@@ -41,7 +42,7 @@ class UpgradePromptSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.textMuted,
+              color: context.appColors.textMuted,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -70,7 +71,7 @@ class UpgradePromptSheet extends StatelessWidget {
           Text(
             'You\'ve reached the limit for your current plan.\nUpgrade to Pro for unlimited access.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
+              color: context.appColors.textSecondary,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -120,9 +121,9 @@ class UpgradePromptSheet extends StatelessWidget {
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Maybe later',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.appColors.textSecondary),
             ),
           ),
         ],

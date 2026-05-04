@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/providers/settings_provider.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/account.dart';
 import '../../core/models/transaction.dart';
@@ -246,18 +248,25 @@ class _TransactionsTab extends StatelessWidget {
     // Total this month
     final now = DateTime.now();
     final monthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final monthTxs = transactions.where(
+    final monthExpenseTxs = transactions.where(
       (t) => t.date.startsWith(monthStr) && t.type == TransactionType.expense,
     );
-    final monthTotal =
-        monthTxs.isEmpty
+    final monthIncomeTxs = transactions.where(
+      (t) => t.date.startsWith(monthStr) && t.type == TransactionType.income,
+    );
+    final monthExpenses =
+        monthExpenseTxs.isEmpty
             ? 0.0
-            : monthTxs.map((t) => t.amount).reduce((a, b) => a + b);
-    // Use the most common currency among this month's expenses (or the first).
+            : monthExpenseTxs.map((t) => t.amount).reduce((a, b) => a + b);
+    final monthIncome =
+        monthIncomeTxs.isEmpty
+            ? 0.0
+            : monthIncomeTxs.map((t) => t.amount).reduce((a, b) => a + b);
+    // Use the currency from this month's expenses (or first transaction).
     final summaryCurrency =
-        monthTxs.isEmpty
-            ? (transactions.isNotEmpty ? transactions.first.currency : 'USD')
-            : monthTxs.first.currency;
+        monthExpenseTxs.isNotEmpty
+            ? monthExpenseTxs.first.currency
+            : (transactions.isNotEmpty ? transactions.first.currency : 'USD');
 
     return Column(
       children: [
@@ -265,7 +274,8 @@ class _TransactionsTab extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: _SummaryCard(
-              monthTotal: monthTotal,
+              monthExpenses: monthExpenses,
+              monthIncome: monthIncome,
               currency: summaryCurrency,
             ),
           ),
@@ -317,7 +327,7 @@ class _TransactionsTab extends StatelessWidget {
 
 // ── Accounts tab ──────────────────────────────────────────
 
-class _AccountsTab extends StatelessWidget {
+class _AccountsTab extends ConsumerWidget {
   final List<Account> accounts;
   final List<Transaction> transactions;
   final UserTier tier;
@@ -356,7 +366,7 @@ class _AccountsTab extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return accounts.isEmpty
         ? _EmptyState(
           icon: '🏦',
@@ -370,49 +380,53 @@ class _AccountsTab extends StatelessWidget {
             ...accounts.map((a) {
               final bal = _balance(a);
               final icon = _kAccountTypeIcons[a.type] ?? '🏦';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.bgCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Text(icon, style: const TextStyle(fontSize: 28)),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            a.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
+              return GestureDetector(
+                onLongPress: () => _confirmDeleteAccount(context, ref, a),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(icon, style: const TextStyle(fontSize: 28)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              a.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
                             ),
-                          ),
-                          Text(
-                            a.type.name.toUpperCase(),
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11,
-                              letterSpacing: 0.5,
+                            Text(
+                              a.type.name.toUpperCase(),
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${a.currency} ${bal.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: bal >= 0 ? AppColors.success : AppColors.danger,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                      Text(
+                        '${a.currency} ${bal.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color:
+                              bal >= 0 ? AppColors.success : AppColors.danger,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }),
@@ -427,46 +441,186 @@ class _AccountsTab extends StatelessWidget {
           ],
         );
   }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+    Account a,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text('Delete "${a.name}"?'),
+            content: const Text(
+              'The account will be removed. Its transactions remain in history.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(dataNotifierProvider.notifier).deleteAccount(a.id);
+    }
+  }
 }
 
 // ── Summary card ──────────────────────────────────────────
 
 class _SummaryCard extends StatelessWidget {
-  final double monthTotal;
+  final double monthExpenses;
+  final double monthIncome;
   final String currency;
-  const _SummaryCard({required this.monthTotal, required this.currency});
+
+  const _SummaryCard({
+    required this.monthExpenses,
+    required this.monthIncome,
+    required this.currency,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final net = monthIncome - monthExpenses;
+    final now = DateTime.now();
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final monthLabel = '${months[now.month - 1]} ${now.year}';
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('💸', style: TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Text(
+            monthLabel,
+            style: TextStyle(
+              color: context.appColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              const Text(
-                'Spent this month',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              Expanded(
+                child: _MonthMetric(
+                  label: 'Expenses',
+                  amount: monthExpenses,
+                  currency: currency,
+                  color: AppColors.danger,
+                  icon: Icons.arrow_downward_rounded,
+                ),
               ),
-              Text(
-                '$currency ${monthTotal.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 22,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MonthMetric(
+                  label: 'Income',
+                  amount: monthIncome,
+                  currency: currency,
+                  color: AppColors.success,
+                  icon: Icons.arrow_upward_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MonthMetric(
+                  label: 'Net',
+                  amount: net,
+                  currency: currency,
+                  color: net >= 0 ? AppColors.success : AppColors.danger,
+                  icon:
+                      net >= 0
+                          ? Icons.trending_up_rounded
+                          : Icons.trending_down_rounded,
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MonthMetric extends StatelessWidget {
+  final String label;
+  final double amount;
+  final String currency;
+  final Color color;
+  final IconData icon;
+
+  const _MonthMetric({
+    required this.label,
+    required this.amount,
+    required this.currency,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: context.appColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          amount.abs().toStringAsFixed(2),
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          currency,
+          style: TextStyle(color: context.appColors.textMuted, fontSize: 10),
+        ),
+      ],
     );
   }
 }
@@ -626,17 +780,19 @@ class _TxTile extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
-          (_) => AlertDialog(
+          (ctx) => AlertDialog(
             title: const Text('Delete transaction?'),
+            content: const Text('This cannot be undone.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.pop(ctx, true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('Delete'),
               ),
@@ -663,6 +819,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
   TransactionType _type = TransactionType.expense;
   String _category = _kExpenseCategories.first;
   Account? _account;
+  Account? _toAccount; // destination account for transfers
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   DateTime _date = DateTime.now();
@@ -684,12 +841,17 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
   List<String> get _categories =>
       _type == TransactionType.income
           ? _kIncomeCategories
-          : _kExpenseCategories;
+          : _kExpenseCategories; // expense + transfer both use expense categories
 
   Future<void> _save() async {
     final amount = double.tryParse(_amountCtrl.text);
-    // Guard against absurdly large values that would break display / arithmetic.
     if (amount == null || amount <= 0 || amount > 1e9 || _account == null) {
+      return;
+    }
+    if (_type == TransactionType.transfer && _toAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a destination account.')),
+      );
       return;
     }
     setState(() => _saving = true);
@@ -704,6 +866,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
         currency: _account!.currency,
         category: _category,
         accountId: _account!.id,
+        toAccountId: _type == TransactionType.transfer ? _toAccount?.id : null,
         note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         recurring: false,
         date: dateStr,
@@ -736,9 +899,12 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       maxChildSize: 0.95,
       builder:
           (_, scrollCtrl) => Container(
-            decoration: const BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [
@@ -794,24 +960,34 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                     controller: scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                     children: [
-                      // Type toggle
+                      // Type toggle — Expense / Income / Transfer
                       Row(
                         children:
                             [
                               TransactionType.expense,
                               TransactionType.income,
+                              TransactionType.transfer,
                             ].map((t) {
                               final sel = _type == t;
                               final c =
                                   t == TransactionType.income
                                       ? AppColors.success
+                                      : t == TransactionType.transfer
+                                      ? AppColors.accent
                                       : AppColors.danger;
+                              final label =
+                                  t == TransactionType.expense
+                                      ? 'Expense'
+                                      : t == TransactionType.income
+                                      ? 'Income'
+                                      : 'Transfer';
                               return Expanded(
                                 child: GestureDetector(
                                   onTap:
                                       () => setState(() {
                                         _type = t;
                                         _category = _categories.first;
+                                        _toAccount = null;
                                       }),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 150),
@@ -831,9 +1007,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        t == TransactionType.expense
-                                            ? 'Expense'
-                                            : 'Income',
+                                        label,
                                         style: TextStyle(
                                           color:
                                               sel ? c : AppColors.textSecondary,
@@ -841,6 +1015,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                               sel
                                                   ? FontWeight.w700
                                                   : FontWeight.normal,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ),
@@ -850,6 +1025,28 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                             }).toList(),
                       ),
                       const SizedBox(height: 16),
+
+                      // Destination account (only for transfers)
+                      if (_type == TransactionType.transfer) ...[
+                        DropdownButtonFormField<Account>(
+                          value: _toAccount,
+                          decoration: const InputDecoration(
+                            labelText: 'To Account',
+                          ),
+                          items:
+                              widget.accounts
+                                  .where((a) => a.id != _account?.id)
+                                  .map(
+                                    (a) => DropdownMenuItem(
+                                      value: a,
+                                      child: Text(a.name),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (a) => setState(() => _toAccount = a),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       // Amount
                       TextField(
@@ -1009,6 +1206,14 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill the default currency from Settings
+    final prefs = ref.read(sharedPreferencesProvider);
+    _currency = prefs.getString(PrefKeys.defaultCurrency) ?? 'USD';
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     _balCtrl.dispose();
@@ -1052,9 +1257,12 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
       maxChildSize: 0.9,
       builder:
           (_, scrollCtrl) => Container(
-            decoration: const BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [

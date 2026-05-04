@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
 
 /// 3-slide onboarding shown once to new registered/pro users.
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
 
@@ -23,18 +25,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'Habits, mood, focus sessions, journal and expenses — all tracked in a single beautiful app.',
     ),
     _Slide(
-      icon: Icons.folder_open_rounded,
-      title: 'Your data, your file',
+      icon: Icons.lock_outlined,
+      title: 'Your data stays on device',
       body:
-          'All data lives in a single JSON file on your device. You own it completely — no servers, no subscriptions for your data.',
+          'All data is stored locally inside the app. Nothing is sent to any server — you own it completely.',
     ),
     _Slide(
-      icon: Icons.cloud_sync_rounded,
-      title: 'Sync across devices',
+      icon: Icons.workspace_premium_rounded,
+      title: 'Free & Pro plans',
       body:
-          'Place your data file in a Google Drive or Dropbox folder. HabitGenius reads and writes it automatically — sync just works.',
+          'Start free with core features. Upgrade to Pro for unlimited habits, themes, and more.',
     ),
   ];
+
+  Future<void> _finish() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(PrefKeys.hasSeenOnboarding, true);
+    if (mounted) context.go(AppRoutes.home);
+  }
 
   void _next() {
     if (_page < _slides.length - 1) {
@@ -43,7 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.go(AppRoutes.fileSetup);
+      _finish();
     }
   }
 
@@ -65,7 +73,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
-                onPressed: () => context.go(AppRoutes.fileSetup),
+                onPressed: _finish,
                 child: const Text(
                   'Skip',
                   style: TextStyle(color: AppColors.textSecondary),

@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/habit.dart';
 import '../../core/models/habit_log.dart';
@@ -15,7 +16,7 @@ import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
 // ── View enum ─────────────────────────────────────────────
 
-enum _HabitView { today, week, all }
+enum _HabitView { today, week, all, year, archived }
 
 // ── Screen ────────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     final appData = ref.watch(appDataProvider);
     final tier = ref.watch(authNotifierProvider).tier;
     final habits = appData.habits.where((h) => h.archivedAt == null).toList();
+    final archivedHabits =
+        appData.habits.where((h) => h.archivedAt != null).toList();
     final logs = appData.habitLogs;
     final today = DateTime.now();
     final todayStr = HabitHelpers.todayStr();
@@ -66,8 +69,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                         if (todayHabits.isNotEmpty)
                           Text(
                             '$doneToday / ${todayHabits.length} done today',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: context.appColors.textSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -107,13 +110,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                               color:
                                   sel
                                       ? Theme.of(context).colorScheme.primary
-                                      : AppColors.bgCard,
+                                      : context.appColors.bgCard,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color:
                                     sel
                                         ? Theme.of(context).colorScheme.primary
-                                        : AppColors.border,
+                                        : context.appColors.border,
                               ),
                             ),
                             child: Text(
@@ -122,7 +125,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                 color:
                                     sel
                                         ? Colors.white
-                                        : AppColors.textSecondary,
+                                        : context.appColors.textSecondary,
                                 fontWeight:
                                     sel ? FontWeight.w600 : FontWeight.normal,
                                 fontSize: 13,
@@ -156,6 +159,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                         )
                         : _buildView(
                           habits: habits,
+                          archivedHabits: archivedHabits,
                           logs: logs,
                           today: today,
                           todayStr: todayStr,
@@ -175,6 +179,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
   Widget _buildView({
     required List<Habit> habits,
+    required List<Habit> archivedHabits,
     required List<HabitLog> logs,
     required DateTime today,
     required String todayStr,
@@ -233,6 +238,38 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 primary: primary,
               ),
         );
+
+      case _HabitView.year:
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+          itemCount: habits.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder:
+              (_, i) => _YearHeatmapCard(
+                habit: habits[i],
+                logs: logs,
+                today: today,
+                primary: primary,
+              ),
+        );
+
+      case _HabitView.archived:
+        return archivedHabits.isEmpty
+            ? SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: EmptyStateWidget(
+                icon: Icons.archive_outlined,
+                title: 'No archived habits',
+                subtitle: 'Habits you archive will appear here.',
+              ),
+            )
+            : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+              itemCount: archivedHabits.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder:
+                  (_, i) => _ArchivedHabitTile(habit: archivedHabits[i]),
+            );
     }
   }
 
@@ -253,13 +290,17 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         return 'This Week';
       case _HabitView.all:
         return 'All';
+      case _HabitView.year:
+        return 'Year';
+      case _HabitView.archived:
+        return 'Archived';
     }
   }
 }
 
 // ── Habit tile ────────────────────────────────────────────
 
-class _HabitTile extends StatelessWidget {
+class _HabitTile extends ConsumerWidget {
   final Habit habit;
   final List<HabitLog> logs;
   final String dateStr;
@@ -273,7 +314,7 @@ class _HabitTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Color habitColor;
     try {
       habitColor = Color(
@@ -287,9 +328,9 @@ class _HabitTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
       child: Row(
         children: [
@@ -323,8 +364,8 @@ class _HabitTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         '$streak day streak',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: context.appColors.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -337,15 +378,25 @@ class _HabitTile extends StatelessWidget {
           const SizedBox(width: 4),
           // Long-press menu: archive or delete the habit.
           PopupMenuButton<_HabitAction>(
-            icon: const Icon(
+            icon: Icon(
               Icons.more_vert_rounded,
               size: 18,
-              color: AppColors.textMuted,
+              color: context.appColors.textMuted,
             ),
-            onSelected: (action) => _onAction(context, action),
+            onSelected: (action) => _onAction(context, ref, action),
             itemBuilder:
-                (_) => const [
-                  PopupMenuItem(
+                (_) => [
+                  const PopupMenuItem(
+                    value: _HabitAction.edit,
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
                     value: _HabitAction.archive,
                     child: Row(
                       children: [
@@ -355,7 +406,7 @@ class _HabitTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: _HabitAction.delete,
                     child: Row(
                       children: [
@@ -379,9 +430,14 @@ class _HabitTile extends StatelessWidget {
     );
   }
 
-  Future<void> _onAction(BuildContext context, _HabitAction action) async {
-    final ref = ProviderScope.containerOf(context);
-    if (action == _HabitAction.archive) {
+  Future<void> _onAction(
+    BuildContext context,
+    WidgetRef ref,
+    _HabitAction action,
+  ) async {
+    if (action == _HabitAction.edit) {
+      context.push(AppRoutes.editHabit, extra: habit);
+    } else if (action == _HabitAction.archive) {
       final archived = habit.copyWith(
         archivedAt: DateTime.now().toUtc().toIso8601String(),
       );
@@ -390,18 +446,18 @@ class _HabitTile extends StatelessWidget {
       final confirmed = await showDialog<bool>(
         context: context,
         builder:
-            (_) => AlertDialog(
+            (ctx) => AlertDialog(
               title: const Text('Delete habit?'),
               content: Text(
                 'All logs for "${habit.name}" will also be deleted. This cannot be undone.',
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(ctx, false),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
                   ),
@@ -417,7 +473,149 @@ class _HabitTile extends StatelessWidget {
   }
 }
 
-enum _HabitAction { archive, delete }
+enum _HabitAction { edit, archive, delete }
+
+// ── Archived habit tile ───────────────────────────────────
+
+class _ArchivedHabitTile extends ConsumerWidget {
+  final Habit habit;
+  const _ArchivedHabitTile({required this.habit});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Color habitColor;
+    try {
+      habitColor = Color(
+        int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
+      );
+    } catch (_) {
+      habitColor = Theme.of(context).colorScheme.primary;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Row(
+        children: [
+          Opacity(
+            opacity: 0.5,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: habitColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(habit.icon, style: const TextStyle(fontSize: 22)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  habit.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: context.appColors.textSecondary,
+                    decoration: TextDecoration.lineThrough,
+                    decorationColor: context.appColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  'Archived',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: context.appColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Unarchive button
+          IconButton(
+            icon: Icon(
+              Icons.unarchive_outlined,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            tooltip: 'Unarchive',
+            onPressed: () async {
+              // copyWith can't clear nullable fields to null via ??, so
+              // construct a new Habit explicitly with archivedAt: null.
+              final unarchived = Habit(
+                id: habit.id,
+                name: habit.name,
+                icon: habit.icon,
+                colorHex: habit.colorHex,
+                progressType: habit.progressType,
+                targetValue: habit.targetValue,
+                unit: habit.unit,
+                schedule: habit.schedule,
+                scheduleDays: habit.scheduleDays,
+                reminderTime: habit.reminderTime,
+                createdAt: habit.createdAt,
+                archivedAt: null,
+                checklistItems: habit.checklistItems,
+              );
+              await ref
+                  .read(dataNotifierProvider.notifier)
+                  .updateHabit(unarchived);
+            },
+          ),
+          // Delete button
+          IconButton(
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              size: 20,
+              color: AppColors.danger,
+            ),
+            tooltip: 'Delete permanently',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder:
+                    (ctx) => AlertDialog(
+                      title: const Text('Delete habit?'),
+                      content: Text(
+                        'All logs for "${habit.name}" will also be deleted permanently.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.danger,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+              );
+              if (confirmed == true && context.mounted) {
+                await ref
+                    .read(dataNotifierProvider.notifier)
+                    .deleteHabit(habit.id);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Weekly card ───────────────────────────────────────────
 
@@ -451,9 +649,9 @@ class _WeeklyHabitCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +704,7 @@ class _WeeklyHabitCard extends StatelessWidget {
                       color:
                           i == today.weekday % 7
                               ? habitColor
-                              : AppColors.textMuted,
+                              : context.appColors.textMuted,
                       fontWeight:
                           i == today.weekday % 7
                               ? FontWeight.w700
@@ -548,7 +746,7 @@ class _MiniRing extends StatelessWidget {
           CircularProgressIndicator(
             value: pct,
             strokeWidth: 4,
-            backgroundColor: AppColors.bgElevated,
+            backgroundColor: context.appColors.bgElevated,
             color: pct == 1.0 ? AppColors.success : color,
           ),
           Text(
@@ -560,6 +758,234 @@ class _MiniRing extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Year heatmap card ─────────────────────────────────────
+
+class _YearHeatmapCard extends StatelessWidget {
+  final Habit habit;
+  final List<HabitLog> logs;
+  final DateTime today;
+  final Color primary;
+
+  const _YearHeatmapCard({
+    required this.habit,
+    required this.logs,
+    required this.today,
+    required this.primary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color habitColor;
+    try {
+      habitColor = Color(
+        int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
+      );
+    } catch (_) {
+      habitColor = primary;
+    }
+
+    // Map of dateStr → intensity (0=missed, 1–4=partial/full completion)
+    final heatmap = HabitHelpers.yearlyHeatmap(habit, logs, today);
+    final totalDone = heatmap.values.where((v) => v > 0).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(habit.icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  habit.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Text(
+                '$totalDone days done',
+                style: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _HeatmapGrid(today: today, heatmap: heatmap, habitColor: habitColor),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Heatmap grid ──────────────────────────────────────────
+
+class _HeatmapGrid extends StatelessWidget {
+  final DateTime today;
+  final Map<String, int> heatmap; // dateStr → 0–4
+  final Color habitColor;
+
+  static const _cellSize = 13.0;
+  static const _cellGap = 3.0;
+  static const _dayLabelWidth = 22.0;
+  static const _weeks = 53;
+
+  const _HeatmapGrid({
+    required this.today,
+    required this.heatmap,
+    required this.habitColor,
+  });
+
+  DateTime _weekStart(DateTime date) {
+    final diff = (date.weekday - DateTime.monday + 7) % 7;
+    return DateTime(date.year, date.month, date.day - diff);
+  }
+
+  String _dateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Color _cellColor(int? intensity) {
+    if (intensity == null) return habitColor.withValues(alpha: 0.06);
+    switch (intensity) {
+      case 0:
+        return habitColor.withValues(alpha: 0.12);
+      case 1:
+        return habitColor.withValues(alpha: 0.30);
+      case 2:
+        return habitColor.withValues(alpha: 0.55);
+      case 3:
+        return habitColor.withValues(alpha: 0.75);
+      default:
+        return habitColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+    final currentWeekStart = _weekStart(todayMidnight);
+    final firstWeekStart = currentWeekStart.subtract(
+      Duration(days: (_weeks - 1) * 7),
+    );
+
+    final weeks = List.generate(
+      _weeks,
+      (w) => firstWeekStart.add(Duration(days: w * 7)),
+    );
+
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final monthLabels = <int, String>{};
+    int? lastMonth;
+    for (int w = 0; w < weeks.length; w++) {
+      final m = weeks[w].month;
+      if (m != lastMonth) {
+        monthLabels[w] = monthNames[m - 1];
+        lastMonth = m;
+      }
+    }
+
+    final colWidth = _cellSize + _cellGap;
+    final gridWidth = _dayLabelWidth + _weeks * colWidth;
+    final gridHeight = 20.0 + 7 * (_cellSize + _cellGap);
+    final todayKey = _dateKey(todayMidnight);
+
+    // Build all positioned widgets in a flat list to avoid Builder-in-Stack.
+    final stackChildren = <Widget>[];
+
+    // Day labels (Mon / Wed / Fri on rows 0, 2, 4)
+    for (int row = 0; row < 7; row++) {
+      if (row != 0 && row != 2 && row != 4) continue;
+      stackChildren.add(
+        Positioned(
+          left: 0,
+          top: 20 + row * (_cellSize + _cellGap) + (_cellSize - 10) / 2,
+          child: SizedBox(
+            width: _dayLabelWidth - 4,
+            child: Text(
+              ['M', 'T', 'W', 'T', 'F', 'S', 'S'][row],
+              style: TextStyle(fontSize: 9, color: context.appColors.textMuted),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Month labels
+    for (final entry in monthLabels.entries) {
+      stackChildren.add(
+        Positioned(
+          left: _dayLabelWidth + entry.key * colWidth,
+          top: 0,
+          child: Text(
+            entry.value,
+            style: TextStyle(fontSize: 9, color: context.appColors.textMuted),
+          ),
+        ),
+      );
+    }
+
+    // Cells
+    for (int w = 0; w < _weeks; w++) {
+      for (int row = 0; row < 7; row++) {
+        final cellDate = weeks[w].add(Duration(days: row));
+        if (cellDate.isAfter(todayMidnight)) continue;
+        final key = _dateKey(cellDate);
+        final intensity = heatmap[key]; // null = not scheduled
+        final isToday = key == todayKey;
+
+        stackChildren.add(
+          Positioned(
+            left: _dayLabelWidth + w * colWidth,
+            top: 20 + row * (_cellSize + _cellGap),
+            child: Container(
+              width: _cellSize,
+              height: _cellSize,
+              decoration: BoxDecoration(
+                color: _cellColor(intensity),
+                borderRadius: BorderRadius.circular(3),
+                border:
+                    isToday ? Border.all(color: habitColor, width: 1.5) : null,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: gridWidth,
+        height: gridHeight,
+        child: Stack(children: stackChildren),
       ),
     );
   }

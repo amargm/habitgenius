@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/services/data_service.dart';
 
 /// Generic illustrated empty-state widget used across all list screens.
@@ -63,8 +64,8 @@ class EmptyStateWidget extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.appColors.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -101,6 +102,7 @@ class EmptyStateWidget extends StatelessWidget {
 class DataErrorWidget extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
+
   /// Called when the user opts to reconfigure their data path.
   /// If null the reconfigure button is hidden.
   final VoidCallback? onReconfigure;
@@ -179,8 +181,8 @@ class DataErrorWidget extends StatelessWidget {
             Text(
               _body,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.appColors.textSecondary,
                 height: 1.5,
                 fontSize: 14,
               ),

@@ -65,7 +65,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
 
       final auth = ref.read(authNotifierProvider);
-      final prefs = ref.read(sharedPreferencesProvider);
 
       // No session at all → show welcome screen.
       if (auth.user == null) {
@@ -82,24 +81,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         return;
       }
 
-      // Registered user: check whether the data folder has been configured.
-      final dataDir = prefs.getString(PrefKeys.dataFilePath);
-      if (dataDir == null || dataDir.isEmpty) {
-        await _goFaded(AppRoutes.fileSetup);
-        return;
-      }
-
-      // Load data then decide whether to show onboarding.
+      // Registered user → always use internal app storage.
       final notifier = ref.read(dataNotifierProvider.notifier);
-      await notifier.load(isGuest: false, customDir: dataDir);
+      await notifier.load(isGuest: false, customDir: null);
       await SyncService.instance.seedTimestamp(notifier.filePath);
 
       if (!mounted) return;
+      final prefs = ref.read(sharedPreferencesProvider);
       final hasSeenOnboarding =
           prefs.getBool(PrefKeys.hasSeenOnboarding) ?? false;
-      await _goFaded(
-        hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding,
-      );
+      await _goFaded(hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding);
     } catch (e, st) {
       debugPrint('[SplashScreen] Init error: $e\n$st');
       // Any unhandled exception during startup falls back to the welcome

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../constants/app_colors.dart';
 
 /// Centralised runtime permission requests for HabitGenius.
 ///
@@ -202,8 +203,9 @@ class _RationaleSheet extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+        color: isDark ? AppColors.bgCard : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: const Border(top: BorderSide(color: AppColors.border)),
       ),
       padding: EdgeInsets.fromLTRB(
         24,

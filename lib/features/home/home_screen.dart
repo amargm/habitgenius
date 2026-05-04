@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/app_data.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
@@ -112,7 +113,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               (e, _) => DataErrorWidget(
                 error: e,
                 onRetry: () => ref.read(dataNotifierProvider.notifier).reload(),
-                onReconfigure: () => context.push(AppRoutes.fileSetup),
               ),
           data:
               (data) => _Body(
@@ -173,11 +173,13 @@ class _Body extends StatelessWidget {
     // Active journal entries
     final journalCount = data.journal.length;
 
-    // Best streak across all habits
+    // Best streak across active (non-archived) habits only
+    final activeHabits =
+        data.habits.where((h) => h.archivedAt == null).toList();
     final bestStreak =
-        data.habits.isEmpty
+        activeHabits.isEmpty
             ? 0
-            : data.habits
+            : activeHabits
                 .map(
                   (h) => HabitHelpers.currentStreak(h, data.habitLogs, today),
                 )
@@ -341,8 +343,8 @@ class _GreetingHeader extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 dateLabel,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: context.appColors.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -392,19 +394,48 @@ class _TodayRingCard extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final progress = total == 0 ? 0.0 : done / total;
     final pct = (progress * 100).round();
+    final allDone = total > 0 && done == total;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        gradient:
+            allDone
+                ? LinearGradient(
+                  colors: [
+                    primary.withValues(alpha: 0.18),
+                    primary.withValues(alpha: 0.06),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+                : null,
+        color: allDone ? null : context.appColors.bgCard,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color:
+              allDone
+                  ? primary.withValues(alpha: 0.35)
+                  : context.appColors.border,
+          width: allDone ? 1.5 : 1.0,
+        ),
+        boxShadow:
+            allDone
+                ? [
+                  BoxShadow(
+                    color: primary.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+                : null,
       ),
       child: Row(
         children: [
           SizedBox(
-            width: 96,
-            height: 96,
+            width: 108,
+            height: 108,
             child: CustomPaint(
               painter: _RingPainter(progress: progress, color: primary),
               child: Center(
@@ -414,14 +445,21 @@ class _TodayRingCard extends StatelessWidget {
                     Text(
                       '$pct%',
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24,
                         color: primary,
+                        height: 1.0,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                    const Text(
-                      'today',
-                      style: TextStyle(fontSize: 9, color: AppColors.textMuted),
+                    const SizedBox(height: 2),
+                    Text(
+                      total == 0 ? '—' : '$done / $total',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: context.appColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -435,33 +473,35 @@ class _TodayRingCard extends StatelessWidget {
               children: [
                 Text(
                   total == 0
-                      ? 'No habits today'
-                      : done == total
-                      ? 'All done! 🎉'
-                      : '$done of $total habits done',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
+                      ? 'No habits\nfor today'
+                      : allDone
+                      ? '🎉 All habits done!'
+                      : '$done of $total\ncompleted',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    height: 1.25,
+                    color: allDone ? primary : null,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   total == 0
-                      ? 'Add habits to track your progress'
-                      : done == total
+                      ? 'Add habits to start tracking'
+                      : allDone
                       ? 'Amazing consistency today!'
                       : '${total - done} habit${total - done == 1 ? '' : 's'} remaining',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: context.appColors.textSecondary,
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: progress,
-                    minHeight: 6,
+                    minHeight: 7,
                     backgroundColor: primary.withValues(alpha: 0.15),
                     valueColor: AlwaysStoppedAnimation<Color>(primary),
                   ),
@@ -486,7 +526,7 @@ class _RingPainter extends CustomPainter {
     final cx = size.width / 2;
     final cy = size.height / 2;
     final radius = (size.width / 2) - 8;
-    final stroke = 9.0;
+    final stroke = 10.0;
 
     final trackPaint =
         Paint()
@@ -589,9 +629,9 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
       child: Column(
         children: [
@@ -608,7 +648,7 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+            style: TextStyle(color: context.appColors.textMuted, fontSize: 11),
           ),
         ],
       ),
@@ -688,7 +728,7 @@ class _QuickActionsGrid extends StatelessWidget {
         label: 'Settings',
         icon: Icons.settings_rounded,
         route: AppRoutes.settings,
-        color: AppColors.textSecondary,
+        color: null,
       ),
     ].where((a) => !a.hidden).toList();
   }

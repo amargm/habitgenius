@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'app_theme_extension.dart';
 
 /// Builds a [ThemeData] for HabitGenius given a [ThemeColor] and [Brightness].
 /// Call [AppTheme.build] whenever the user changes color or mode.
@@ -12,6 +13,17 @@ class AppTheme {
   }) {
     final isDark = brightness == Brightness.dark;
 
+    // Adaptive border colour: white tint on dark, black tint on light.
+    final borderColor = isDark ? AppColors.border : const Color(0x1A000000);
+
+    // Compute onPrimary: use dark text for light primary colours (e.g. amber)
+    // so text placed on primary-coloured buttons always has adequate contrast.
+    final Color onPrimary =
+        ThemeData.estimateBrightnessForColor(themeColor.primary) ==
+                Brightness.light
+            ? const Color(0xFF1A1A24)
+            : Colors.white;
+
     final colorScheme = ColorScheme.fromSeed(
       seedColor: themeColor.primary,
       brightness: brightness,
@@ -19,10 +31,7 @@ class AppTheme {
       secondary: AppColors.accent,
       error: AppColors.danger,
       surface: isDark ? AppColors.bgCard : const Color(0xFFF5F5F5),
-    ).copyWith(
-      primaryContainer: themeColor.primaryDark,
-      onPrimary: Colors.white,
-    );
+    ).copyWith(primaryContainer: themeColor.primaryDark, onPrimary: onPrimary);
 
     return ThemeData(
       useMaterial3: true,
@@ -31,7 +40,8 @@ class AppTheme {
       scaffoldBackgroundColor: isDark ? AppColors.bg : const Color(0xFFF0F0F5),
       fontFamily: 'Inter',
       cardColor: isDark ? AppColors.bgCard : Colors.white,
-      dividerColor: AppColors.border,
+      dividerColor: borderColor,
+      extensions: [isDark ? AppColorsExtension.dark : AppColorsExtension.light],
 
       // AppBar
       appBarTheme: AppBarTheme(
@@ -87,7 +97,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: borderColor),
         ),
         margin: const EdgeInsets.only(bottom: 12),
       ),
@@ -96,7 +106,8 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: isDark ? AppColors.bgCard : Colors.white,
         selectedItemColor: themeColor.primary,
-        unselectedItemColor: AppColors.textMuted,
+        unselectedItemColor:
+            isDark ? AppColors.textMuted : const Color(0xFF8E8EA0),
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
@@ -107,11 +118,11 @@ class AppTheme {
         fillColor: isDark ? AppColors.bgCard : Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -121,14 +132,16 @@ class AppTheme {
           horizontal: 16,
           vertical: 14,
         ),
-        hintStyle: const TextStyle(color: AppColors.textMuted),
+        hintStyle: TextStyle(
+          color: isDark ? AppColors.textMuted : const Color(0xFF8E8EA0),
+        ),
       ),
 
       // ElevatedButton
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: themeColor.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: onPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
@@ -151,9 +164,31 @@ class AppTheme {
           fontWeight: FontWeight.w500,
           fontFamily: 'Inter',
         ),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: borderColor),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      ),
+
+      // Dialog (AlertDialog, SimpleDialog)
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark ? AppColors.bgCard : Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: borderColor),
+        ),
+        titleTextStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: isDark ? AppColors.text : const Color(0xFF1A1A24),
+          fontFamily: 'Inter',
+        ),
+        contentTextStyle: TextStyle(
+          fontSize: 14,
+          height: 1.55,
+          color: isDark ? AppColors.textSecondary : const Color(0xFF5C5C6E),
+          fontFamily: 'Inter',
+        ),
       ),
     );
   }

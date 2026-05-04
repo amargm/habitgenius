@@ -590,14 +590,10 @@ class _DataSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appData = ref.watch(appDataProvider);
-    final habitCount = appData.habits.length;
+    final habitCount = appData.habits.where((h) => h.archivedAt == null).length;
     final entryCount = appData.journal.length;
     final txCount = appData.transactions.length;
     final moodCount = appData.moods.length;
-
-    // Show the current data folder path for registered (non-guest) users.
-    final rawPath = ref.watch(dataFilePathProvider);
-    final isRegistered = tier != UserTier.guest;
 
     return Container(
       decoration: BoxDecoration(
@@ -611,78 +607,15 @@ class _DataSection extends ConsumerWidget {
           _DataRow(label: 'Journal entries', value: '$entryCount'),
           _DataRow(label: 'Transactions', value: '$txCount'),
           _DataRow(label: 'Mood logs', value: '$moodCount'),
-          if (isRegistered) ...[
-            _DataRow(
-              label: 'Storage',
-              value: 'Local JSON file',
-              isLast: rawPath == null,
-            ),
-            if (rawPath != null)
-              _FolderRow(
-                path: rawPath,
-                onTap: () => context.push(AppRoutes.fileSetup),
-              ),
-          ],
+          const _DataRow(
+            label: 'Storage',
+            value: 'Local (on-device)',
+            isLast: true,
+          ),
         ],
       ),
     );
   }
-}
-
-/// Shows the current data folder path with a button to change it.
-class _FolderRow extends StatelessWidget {
-  final String path;
-  final VoidCallback onTap;
-
-  const _FolderRow({required this.path, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Divider(height: 1, indent: 16, endIndent: 16),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.folder_open_rounded,
-              size: 18,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Data folder',
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    path,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: onTap,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                minimumSize: Size.zero,
-              ),
-              child: const Text('Change', style: TextStyle(fontSize: 13)),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
 }
 
 class _DataRow extends StatelessWidget {
@@ -759,18 +692,18 @@ class _AccountSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
-          (_) => AlertDialog(
+          (ctx) => AlertDialog(
             title: const Text('Sign out?'),
             content: const Text(
-              'Your data file will remain intact. You can sign back in any time.',
+              'Your data will remain intact. You can sign back in any time.',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.pop(ctx, true),
                 child: const Text('Sign out'),
               ),
             ],
@@ -1076,15 +1009,15 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
     final picked = await showDialog<int>(
       context: context,
       builder:
-          (_) => SimpleDialog(
+          (ctx) => SimpleDialog(
             title: const Text('First day of week'),
             children: [
               SimpleDialogOption(
-                onPressed: () => Navigator.pop(context, 0),
+                onPressed: () => Navigator.pop(ctx, 0),
                 child: const Text('Sunday'),
               ),
               SimpleDialogOption(
-                onPressed: () => Navigator.pop(context, 1),
+                onPressed: () => Navigator.pop(ctx, 1),
                 child: const Text('Monday'),
               ),
             ],
@@ -1097,37 +1030,88 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
 
   Future<void> _pickCurrency() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    const currencies = [
-      'USD',
-      'EUR',
-      'GBP',
-      'INR',
-      'JPY',
-      'CAD',
-      'AUD',
-      'CHF',
-      'CNY',
-      'BRL',
-      'MXN',
-      'SGD',
-      'AED',
-      'KRW',
-      'SAR',
+    const currencies = <(String, String)>[
+      ('USD', 'US Dollar'),
+      ('EUR', 'Euro'),
+      ('GBP', 'British Pound'),
+      ('INR', 'Indian Rupee'),
+      ('JPY', 'Japanese Yen'),
+      ('CAD', 'Canadian Dollar'),
+      ('AUD', 'Australian Dollar'),
+      ('CHF', 'Swiss Franc'),
+      ('CNY', 'Chinese Yuan'),
+      ('BRL', 'Brazilian Real'),
+      ('MXN', 'Mexican Peso'),
+      ('SGD', 'Singapore Dollar'),
+      ('AED', 'UAE Dirham'),
+      ('KRW', 'South Korean Won'),
+      ('SAR', 'Saudi Riyal'),
+      ('HKD', 'Hong Kong Dollar'),
+      ('SEK', 'Swedish Krona'),
+      ('NOK', 'Norwegian Krone'),
+      ('DKK', 'Danish Krone'),
+      ('PLN', 'Polish Zloty'),
+      ('TRY', 'Turkish Lira'),
+      ('ZAR', 'South African Rand'),
+      ('IDR', 'Indonesian Rupiah'),
+      ('MYR', 'Malaysian Ringgit'),
+      ('THB', 'Thai Baht'),
+      ('PHP', 'Philippine Peso'),
+      ('VND', 'Vietnamese Dong'),
+      ('NGN', 'Nigerian Naira'),
+      ('PKR', 'Pakistani Rupee'),
+      ('BDT', 'Bangladeshi Taka'),
+      ('EGP', 'Egyptian Pound'),
+      ('NZD', 'New Zealand Dollar'),
+      ('ILS', 'Israeli Shekel'),
+      ('ARS', 'Argentine Peso'),
+      ('CLP', 'Chilean Peso'),
+      ('COP', 'Colombian Peso'),
+      ('UAH', 'Ukrainian Hryvnia'),
+      ('CZK', 'Czech Koruna'),
+      ('HUF', 'Hungarian Forint'),
+      ('RUB', 'Russian Ruble'),
     ];
     final picked = await showDialog<String>(
       context: context,
       builder:
-          (_) => SimpleDialog(
+          (ctx) => AlertDialog(
             title: const Text('Default currency'),
-            children:
-                currencies
-                    .map(
-                      (c) => SimpleDialogOption(
-                        onPressed: () => Navigator.pop(context, c),
-                        child: Text(c),
-                      ),
-                    )
-                    .toList(),
+            contentPadding: const EdgeInsets.only(top: 12, bottom: 0),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: currencies.length,
+                itemBuilder: (_, i) {
+                  final (code, name) = currencies[i];
+                  final sel = _currency == code;
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      code,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(name),
+                    trailing:
+                        sel
+                            ? Icon(
+                              Icons.check_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                            : null,
+                    onTap: () => Navigator.pop(ctx, code),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+            ],
           ),
     );
     if (picked == null) return;

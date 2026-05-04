@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/focus_session.dart';
 import '../../core/providers/auth_provider.dart';
@@ -65,11 +66,15 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             const SizedBox(height: 4),
             Text(
               _todayStats(sessions),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.appColors.textSecondary,
                 fontSize: 14,
               ),
             ),
+            if (sessions.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _FocusStatsRow(sessions: sessions),
+            ],
             const SizedBox(height: 24),
 
             // Category chips
@@ -190,9 +195,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   }
 
   void _onReset(FocusSessionService svc) {
-    setState(() {
-      _selectedPreset = FocusSessionService.preset25;
-    });
+    // Do NOT reset _selectedPreset — preserve the user's chosen duration.
     svc.reset();
     svc.configure(
       plannedDuration: _selectedPreset,
@@ -249,11 +252,12 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     final result = await showDialog<int>(
       context: context,
       builder:
-          (_) => AlertDialog(
+          (ctx) => AlertDialog(
             title: const Text('Custom duration'),
             content: TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
+              autofocus: true,
               decoration: const InputDecoration(
                 labelText: 'Minutes',
                 suffixText: 'min',
@@ -261,14 +265,14 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(ctx),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
                 onPressed: () {
                   final v = int.tryParse(ctrl.text);
                   if (v != null && v > 0 && v <= 180) {
-                    Navigator.pop(context, v * 60);
+                    Navigator.pop(ctx, v * 60);
                   }
                 },
                 child: const Text('Set'),
@@ -276,6 +280,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ],
           ),
     );
+    ctrl.dispose();
     if (result != null) {
       setState(() => _selectedPreset = result);
       svc.configure(plannedDuration: result);
@@ -447,6 +452,39 @@ class _Controls extends StatelessWidget {
       );
     }
 
+    // Stopwatch: show Save button alongside Reset/Pause when running or paused
+    if (mode == FocusMode.stopwatch &&
+        (state == TimerState.running || state == TimerState.paused)) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _ControlBtn(
+            icon: Icons.refresh_rounded,
+            onTap: onReset,
+            label: 'Reset',
+          ),
+          const SizedBox(width: 24),
+          _ControlBtn(
+            icon:
+                state == TimerState.running
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+            onTap: state == TimerState.running ? onPause : onPlay,
+            label: state == TimerState.running ? 'Pause' : 'Resume',
+            color: primary,
+            large: true,
+          ),
+          const SizedBox(width: 24),
+          _ControlBtn(
+            icon: Icons.save_alt_rounded,
+            onTap: onSave,
+            label: 'Save',
+            color: primary,
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -506,10 +544,11 @@ class _ControlBtn extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: large ? c.withValues(alpha: 0.15) : AppColors.bgCard,
+              color:
+                  large ? c.withValues(alpha: 0.15) : context.appColors.bgCard,
               shape: BoxShape.circle,
               border: Border.all(
-                color: large ? c : AppColors.border,
+                color: large ? c : context.appColors.border,
                 width: large ? 2 : 1,
               ),
             ),
@@ -554,9 +593,11 @@ class _ModeToggle extends StatelessWidget {
                     color:
                         sel
                             ? primary.withValues(alpha: 0.15)
-                            : AppColors.bgCard,
+                            : context.appColors.bgCard,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? primary : AppColors.border),
+                    border: Border.all(
+                      color: sel ? primary : context.appColors.border,
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -566,7 +607,8 @@ class _ModeToggle extends StatelessWidget {
                         m.$3,
                         style: TextStyle(
                           fontSize: 11,
-                          color: sel ? primary : AppColors.textSecondary,
+                          color:
+                              sel ? primary : context.appColors.textSecondary,
                           fontWeight: sel ? FontWeight.w700 : FontWeight.normal,
                         ),
                       ),
@@ -607,15 +649,19 @@ class _CategoryChips extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color:
-                      sel ? primary.withValues(alpha: 0.15) : AppColors.bgCard,
+                      sel
+                          ? primary.withValues(alpha: 0.15)
+                          : context.appColors.bgCard,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: sel ? primary : AppColors.border),
+                  border: Border.all(
+                    color: sel ? primary : context.appColors.border,
+                  ),
                 ),
                 child: Text(
                   c,
                   style: TextStyle(
                     fontSize: 13,
-                    color: sel ? primary : AppColors.textSecondary,
+                    color: sel ? primary : context.appColors.textSecondary,
                     fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
@@ -663,16 +709,20 @@ class _PresetRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color:
-                      sel ? primary.withValues(alpha: 0.15) : AppColors.bgCard,
+                      sel
+                          ? primary.withValues(alpha: 0.15)
+                          : context.appColors.bgCard,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: sel ? primary : AppColors.border),
+                  border: Border.all(
+                    color: sel ? primary : context.appColors.border,
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     p.$2,
                     style: TextStyle(
                       fontWeight: sel ? FontWeight.w700 : FontWeight.normal,
-                      color: sel ? primary : AppColors.textSecondary,
+                      color: sel ? primary : context.appColors.textSecondary,
                     ),
                   ),
                 ),
@@ -687,27 +737,27 @@ class _PresetRow extends StatelessWidget {
               margin: const EdgeInsets.only(right: 0),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.bgCard,
+                color: context.appColors.bgCard,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.appColors.border),
               ),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (!AppLimits.canUseCustomFocusDuration(tier))
-                      const Icon(
+                      Icon(
                         Icons.lock_rounded,
                         size: 12,
-                        color: AppColors.textMuted,
+                        color: context.appColors.textMuted,
                       ),
                     if (!AppLimits.canUseCustomFocusDuration(tier))
                       const SizedBox(width: 4),
-                    const Text(
+                    Text(
                       'Custom',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                   ],
@@ -741,9 +791,9 @@ class _SessionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
       child: Row(
         children: [
@@ -762,8 +812,8 @@ class _SessionTile extends StatelessWidget {
                 ),
                 Text(
                   when,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
+                  style: TextStyle(
+                    color: context.appColors.textMuted,
                     fontSize: 12,
                   ),
                 ),
@@ -783,9 +833,9 @@ class _SessionTile extends StatelessWidget {
               if (session.completedCycles > 0)
                 Text(
                   '${session.completedCycles} 🍅',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textMuted,
+                    color: context.appColors.textMuted,
                   ),
                 ),
             ],
@@ -810,6 +860,94 @@ class _SessionTile extends StatelessWidget {
     if (diff.inHours < 1) return '${diff.inMinutes}m ago';
     if (diff.inDays < 1) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
+  }
+}
+
+// ── Focus stats row ───────────────────────────────────────
+
+class _FocusStatsRow extends StatelessWidget {
+  final List<FocusSession> sessions;
+  const _FocusStatsRow({required this.sessions});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todaySec = sessions
+        .where((s) {
+          final d = DateTime.tryParse(s.startedAt);
+          return d != null &&
+              d.year == now.year &&
+              d.month == now.month &&
+              d.day == now.day;
+        })
+        .fold<int>(0, (sum, s) => sum + s.actualDuration);
+
+    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+    final weekSec = sessions
+        .where((s) {
+          final d = DateTime.tryParse(s.startedAt);
+          return d != null && !d.isBefore(startOfWeek);
+        })
+        .fold<int>(0, (sum, s) => sum + s.actualDuration);
+
+    final total = sessions.length;
+
+    String fmt(int sec) {
+      final min = sec ~/ 60;
+      return min >= 60 ? '${(min / 60).toStringAsFixed(1)}h' : '${min}m';
+    }
+
+    return Row(
+      children: [
+        Expanded(child: _FocusStatCard(label: 'Today', value: fmt(todaySec))),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _FocusStatCard(label: 'This week', value: fmt(weekSec)),
+        ),
+
+        const SizedBox(width: 10),
+        Expanded(child: _FocusStatCard(label: 'Sessions', value: '$total')),
+      ],
+    );
+  }
+}
+
+class _FocusStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  const _FocusStatCard({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.appColors.border),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: context.appColors.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

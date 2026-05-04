@@ -77,7 +77,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           context: context,
           builder:
               (ctx) => AlertDialog(
-                backgroundColor: AppColors.bgCard,
                 title: const Text('Sign in with Google?'),
                 content: const Text(
                   'Signing in will start fresh with a new data file.\n\n'

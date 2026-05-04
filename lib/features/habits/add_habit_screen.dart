@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/services/notification_service.dart';
@@ -60,7 +61,8 @@ const _kColors = [
 // ── Screen ────────────────────────────────────────────────
 
 class AddHabitScreen extends ConsumerStatefulWidget {
-  const AddHabitScreen({super.key});
+  final Habit? initialHabit;
+  const AddHabitScreen({super.key, this.initialHabit});
 
   @override
   ConsumerState<AddHabitScreen> createState() => _AddHabitScreenState();
@@ -80,6 +82,33 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   TimeOfDay? _reminderTime;
   bool _saving = false;
 
+  bool get _isEditing => widget.initialHabit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final h = widget.initialHabit;
+    if (h != null) {
+      _nameCtrl.text = h.name;
+      _targetCtrl.text = h.targetValue.toString();
+      _unitCtrl.text = h.unit ?? '';
+      _progressType = h.progressType;
+      _schedule = h.schedule;
+      _scheduleDays = List<int>.from(h.scheduleDays);
+      _emoji = h.icon;
+      _colorHex = h.colorHex;
+      if (h.reminderTime != null) {
+        final parts = h.reminderTime!.split(':');
+        if (parts.length == 2) {
+          _reminderTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 8,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -93,8 +122,13 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
     setState(() => _saving = true);
 
     try {
+      final reminderStr =
+          _reminderTime != null
+              ? '${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
+              : null;
+
       final habit = Habit(
-        id: const Uuid().v4(),
+        id: _isEditing ? widget.initialHabit!.id : const Uuid().v4(),
         name: _nameCtrl.text.trim(),
         icon: _emoji,
         colorHex: _colorHex,
@@ -103,15 +137,21 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
         unit: _unitCtrl.text.trim().isEmpty ? null : _unitCtrl.text.trim(),
         schedule: _schedule,
         scheduleDays: _scheduleDays,
-        reminderTime:
-            _reminderTime != null
-                ? '${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
-                : null,
-        createdAt: DateTime.now().toUtc().toIso8601String(),
-        checklistItems: const [],
+        reminderTime: reminderStr,
+        createdAt:
+            _isEditing
+                ? widget.initialHabit!.createdAt
+                : DateTime.now().toUtc().toIso8601String(),
+        archivedAt: _isEditing ? widget.initialHabit!.archivedAt : null,
+        checklistItems:
+            _isEditing ? widget.initialHabit!.checklistItems : const [],
       );
 
-      await ref.read(dataNotifierProvider.notifier).addHabit(habit);
+      if (_isEditing) {
+        await ref.read(dataNotifierProvider.notifier).updateHabit(habit);
+      } else {
+        await ref.read(dataNotifierProvider.notifier).addHabit(habit);
+      }
 
       if (_reminderTime != null) {
         await NotificationService.scheduleHabitReminder(
@@ -164,7 +204,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Habit'),
+        title: Text(_isEditing ? 'Edit Habit' : 'New Habit'),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -200,9 +240,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.bgCard,
+                      color: context.appColors.bgCard,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.appColors.border),
                     ),
                     child: Center(
                       child: Text(_emoji, style: const TextStyle(fontSize: 28)),
@@ -377,12 +417,16 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   void _showEmojiPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder:
-          (_) => Padding(
+          (_) => Container(
+            decoration: BoxDecoration(
+              color: context.appColors.bgCard,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              border: Border(top: BorderSide(color: context.appColors.border)),
+            ),
             padding: const EdgeInsets.all(20),
             child: Wrap(
               spacing: 12,
@@ -451,7 +495,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: AppColors.textSecondary,
+      color: context.appColors.textSecondary,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.4,
     ),
@@ -485,15 +529,17 @@ class _DayPicker extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: sel ? primary : AppColors.bgCard,
+              color: sel ? primary : context.appColors.bgCard,
               shape: BoxShape.circle,
-              border: Border.all(color: sel ? primary : AppColors.border),
+              border: Border.all(
+                color: sel ? primary : context.appColors.border,
+              ),
             ),
             child: Center(
               child: Text(
                 _labels[i],
                 style: TextStyle(
-                  color: sel ? Colors.white : AppColors.textSecondary,
+                  color: sel ? Colors.white : context.appColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -525,13 +571,13 @@ class _ReminderTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.appColors.bgCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color:
                 time != null
                     ? primary.withValues(alpha: 0.4)
-                    : AppColors.border,
+                    : context.appColors.border,
           ),
         ),
         child: Row(

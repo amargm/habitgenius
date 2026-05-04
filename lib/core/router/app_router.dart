@@ -5,6 +5,7 @@ import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/file_setup_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../core/models/habit.dart';
 import '../../features/habits/habits_screen.dart';
 import '../../features/habits/add_habit_screen.dart';
 import '../../features/mood/mood_screen.dart';
@@ -23,6 +24,7 @@ class AppRoutes {
   static const home = '/home';
   static const habits = '/habits';
   static const addHabit = '/habits/add';
+  static const editHabit = '/habits/edit';
   static const mood = '/mood';
   static const focus = '/focus';
   static const journal = '/journal';
@@ -120,6 +122,13 @@ final appRouter = GoRouter(
       pageBuilder:
           (context, state) =>
               _slidePage(context, state, const AddHabitScreen()),
+    ),
+    GoRoute(
+      path: AppRoutes.editHabit,
+      pageBuilder: (context, state) {
+        final habit = state.extra as Habit;
+        return _slidePage(context, state, AddHabitScreen(initialHabit: habit));
+      },
     ),
     // ── Main shell with bottom nav ─────────────────────────
     ShellRoute(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/utils/habit_helpers.dart';
@@ -109,7 +109,7 @@ class _CheckboxControl extends StatelessWidget {
           color: isCompleted ? color : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isCompleted ? color : AppColors.textMuted,
+            color: isCompleted ? color : context.appColors.textMuted,
             width: 2,
           ),
         ),
@@ -152,7 +152,10 @@ class _CounterControl extends StatelessWidget {
           onTap: current > 0 ? onDecrement : null,
           child: Icon(
             Icons.remove_circle_outline_rounded,
-            color: current > 0 ? AppColors.textSecondary : AppColors.textMuted,
+            color:
+                current > 0
+                    ? context.appColors.textSecondary
+                    : context.appColors.textMuted,
             size: 22,
           ),
         ),
@@ -160,7 +163,7 @@ class _CounterControl extends StatelessWidget {
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 200),
           style: TextStyle(
-            color: isCompleted ? color : AppColors.text,
+            color: isCompleted ? color : context.appColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -171,7 +174,7 @@ class _CounterControl extends StatelessWidget {
           onTap: onIncrement,
           child: Icon(
             Icons.add_circle_rounded,
-            color: isCompleted ? color : AppColors.textSecondary,
+            color: isCompleted ? color : context.appColors.textSecondary,
             size: 22,
           ),
         ),
@@ -213,14 +216,14 @@ class _TimerControl extends StatelessWidget {
             child: CircularProgressIndicator(
               value: pct,
               strokeWidth: 3,
-              backgroundColor: AppColors.bgElevated,
-              color: isCompleted ? color : AppColors.textSecondary,
+              backgroundColor: context.appColors.bgElevated,
+              color: isCompleted ? color : context.appColors.textSecondary,
             ),
           ),
           Icon(
             isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded,
             size: 16,
-            color: isCompleted ? color : AppColors.textMuted,
+            color: isCompleted ? color : context.appColors.textMuted,
           ),
         ],
       ),

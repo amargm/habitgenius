@@ -664,9 +664,8 @@ class _CalendarTabState extends State<_CalendarTab> {
                 decoration: BoxDecoration(
                   color:
                       mood != null
-                          ? _kMoodLevels[mood.level - 1].color.withValues(
-                            alpha: 0.25,
-                          )
+                          ? _kMoodLevels[mood.level.clamp(1, 5) - 1].color
+                              .withValues(alpha: 0.25)
                           : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: isToday ? Border.all(color: primary, width: 2) : null,
@@ -697,20 +696,38 @@ class _CalendarTabState extends State<_CalendarTab> {
   }
 
   void _showDetail(Mood mood) {
-    final ml = _kMoodLevels[mood.level - 1];
+    final level = mood.level.clamp(1, 5);
+    final ml = _kMoodLevels[level - 1];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
-          (_) => Padding(
-            padding: const EdgeInsets.all(24),
+          (_) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: const Border(top: BorderSide(color: AppColors.border)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.textMuted,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Text(ml.emoji, style: const TextStyle(fontSize: 36)),
@@ -762,7 +779,7 @@ class _CalendarTabState extends State<_CalendarTab> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
               ],
             ),
           ),

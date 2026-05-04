@@ -143,7 +143,6 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     return internalPath;
   }
 
-
   ///
   /// Throws [StateError] if the data is not loaded yet (loading state) or if
   /// the file path has not been configured (never called [load]).  These

@@ -398,9 +398,12 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       maxChildSize: 0.97,
       builder:
           (_, scrollCtrl) => Container(
-            decoration: const BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [

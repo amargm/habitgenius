@@ -20,38 +20,16 @@ class DataCorruptedException implements Exception {
 class DataService {
   static const _kFileName = 'habitgenius_data.json';
 
-  /// Returns the full path to the data file.
-  ///
-  /// * **Guest** users → app's internal documents directory (not user-visible).
-  /// * **Registered/Pro** users → their chosen [customDirPath] (e.g. a Google
-  ///   Drive folder), set during the [FileSetupScreen] flow.
-  ///
-  /// Throws [ArgumentError] if [customDirPath] contains directory-traversal
-  /// components (`..`) — this guards against a tampered SharedPreferences
-  /// value being used to escape the intended storage location.
+  /// Returns the full path to the data file inside the app's internal
+  /// documents directory. All users (guest, registered, pro) share the same
+  /// storage location — data never leaves the device.
   Future<String> resolveFilePath({
-    required bool isGuest,
-    required String? customDirPath,
+    // These parameters are kept for API compatibility but are no longer used.
+    bool isGuest = true,
+    String? customDirPath,
   }) async {
-    if (isGuest || customDirPath == null || customDirPath.isEmpty) {
-      final dir = await getApplicationDocumentsDirectory();
-      return '${dir.path}/$_kFileName';
-    }
-
-    // Guard against path-traversal: reject any segment that is '..' or '.'.
-    // Split on both Unix and Windows separators to be safe.
-    final segments = customDirPath.split(RegExp(r'[/\\]'));
-    if (segments.any((s) => s == '..' || s == '.')) {
-      throw ArgumentError(
-        'Invalid data directory: path traversal components are not allowed.',
-      );
-    }
-
-    final dir =
-        customDirPath.endsWith('/')
-            ? customDirPath.substring(0, customDirPath.length - 1)
-            : customDirPath;
-    return '$dir/$_kFileName';
+    final dir = await getApplicationDocumentsDirectory();
+    return '${dir.path}/$_kFileName';
   }
 
   /// Loads [AppData] from [filePath].
