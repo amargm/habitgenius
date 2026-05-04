@@ -1,3 +1,9 @@
+plugins {
+    // Google Services plugin — processes google-services.json into native
+    // Firebase configuration. `apply false` means each sub-project opts in.
+    id("com.google.gms.google-services") version "4.4.2" apply false
+}
+
 allprojects {
     repositories {
         google()

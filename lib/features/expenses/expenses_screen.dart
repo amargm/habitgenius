@@ -668,7 +668,9 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
   Future<void> _save() async {
     final amount = double.tryParse(_amountCtrl.text);
     // Guard against absurdly large values that would break display / arithmetic.
-    if (amount == null || amount <= 0 || amount > 1e9 || _account == null) return;
+    if (amount == null || amount <= 0 || amount > 1e9 || _account == null) {
+      return;
+    }
     setState(() => _saving = true);
     try {
       final dateStr =

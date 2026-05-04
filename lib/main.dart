@@ -1,4 +1,5 @@
-﻿import 'package:flutter/foundation.dart';
+﻿import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +25,15 @@ void main() async {
   };
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Initialize Firebase — reads configuration from google-services.json
+  // which is processed at build time by the Google Services Gradle plugin.
+  // Non-fatal: a missing or invalid config is logged but never crashes the app.
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('[Startup] Firebase.initializeApp failed: $e');
+  }
 
   // Non-fatal startup services — failures must never prevent the app from
   // reaching runApp().
