@@ -67,6 +67,15 @@ workflows:
           fi
           echo "google-services.json decoded and validated OK."
 
+      - name: Print debug keystore SHA-1 (add this to Firebase Console)
+        script: |
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android \
+            2>/dev/null | grep -E "SHA1:|SHA256:" || echo "Could not read debug keystore"
+
       - name: Get Flutter packages
         script: flutter pub get
 

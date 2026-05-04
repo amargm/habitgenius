@@ -51,11 +51,22 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      final msg =
-          e.toString().contains('cancelled')
-              ? 'Sign-in cancelled.'
-              : 'Sign-in failed. Check your connection and try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      final String msg;
+      final s = e.toString();
+      if (s.contains('cancelled') || s.contains('sign_in_cancelled')) {
+        msg = 'Sign-in cancelled.';
+      } else if (s.contains('sign_in_failed') ||
+          s.contains('10:') ||
+          s.contains('DEVELOPER_ERROR')) {
+        msg =
+            'Sign-in failed: SHA-1 certificate not registered in Firebase. '
+            'Error: $s';
+      } else {
+        msg = 'Sign-in failed: $s';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 8)),
+      );
     } finally {
       if (mounted) setState(() => _signingIn = false);
     }
