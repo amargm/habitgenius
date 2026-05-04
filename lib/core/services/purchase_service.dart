@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'entitlement_service.dart';
 
 // ── Product IDs ───────────────────────────────────────────
 
@@ -134,8 +135,23 @@ class PurchaseService extends ChangeNotifier {
 
   Future<void> _deliverPro() async {
     _isPro = true;
+    // Persist locally first so the app reflects Pro immediately even offline.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kProPurchasedKey, true);
+    // Write to Firestore so the server record is the authoritative source.
+    // Fire-and-forget — local state is already set above.
+    EntitlementService.instance.grantPro();
+    notifyListeners();
+  }
+
+  /// Called by [AuthNotifier] when Firestore disagrees with the local
+  /// SharedPreferences value.  Syncs local storage to match the server.
+  Future<void> syncProFromServer({required bool isPro}) async {
+    _isPro = isPro;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kProPurchasedKey, isPro);
+    } catch (_) {}
     notifyListeners();
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/entitlement_service.dart';
 import '../services/purchase_service.dart';
 import 'settings_provider.dart';
 // ── Purchase service provider ─────────────────────────────────
@@ -52,8 +53,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(isLoading: true);
     try {
       final user = await _service.restoreSession();
-      final isPro = PurchaseService.instance.isPro;
-      state = AuthState(user: user, isPro: isPro);
+      // SharedPreferences gives us instant, offline-safe Pro status.
+      final localIsPro = PurchaseService.instance.isPro;
+      state = AuthState(user: user, isPro: localIsPro);
+
+      // Then verify against Firestore (authoritative server-side record).
+      // Only meaningful for signed-in users — guest has no Firebase UID.
+      if (user != null && !user.isGuest) {
+        final serverIsPro = await EntitlementService.instance.checkPro();
+        if (serverIsPro != localIsPro) {
+          // Server wins: sync SharedPreferences to match.
+          await PurchaseService.instance.syncProFromServer(isPro: serverIsPro);
+          state = AuthState(user: user, isPro: serverIsPro);
+        }
+      }
     } catch (_) {
       state = const AuthState();
     }
@@ -64,7 +77,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(isLoading: true);
     try {
       final user = await _service.signInWithGoogle();
-      state = AuthState(user: user);
+      // After a fresh sign-in always check the server — the user may have
+      // purchased Pro on another device or after a reinstall.
+      final serverIsPro = await EntitlementService.instance.checkPro();
+      if (serverIsPro) {
+        await PurchaseService.instance.syncProFromServer(isPro: true);
+      }
+      state = AuthState(user: user, isPro: serverIsPro);
       return user;
     } catch (e) {
       state = AuthState(error: e.toString());
