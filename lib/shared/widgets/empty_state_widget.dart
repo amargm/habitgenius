@@ -101,33 +101,63 @@ class EmptyStateWidget extends StatelessWidget {
 class DataErrorWidget extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
+  /// Called when the user opts to reconfigure their data path.
+  /// If null the reconfigure button is hidden.
+  final VoidCallback? onReconfigure;
 
   const DataErrorWidget({
     super.key,
     required this.error,
     required this.onRetry,
+    this.onReconfigure,
   });
 
   String get _title {
     if (error is DataCorruptedException) return 'Data file corrupted';
+    if (_isStorageError) return 'Cannot access data folder';
+    if (error is StateError) return 'Data not ready';
     return 'Could not load your data';
+  }
+
+  bool get _isStorageError {
+    final s = error.toString().toLowerCase();
+    return s.contains('permission') ||
+        s.contains('filesystem') ||
+        s.contains('filesystemexception') ||
+        s.contains('operation not permitted') ||
+        s.contains('access denied') ||
+        error.runtimeType.toString().contains('FileSystemException');
   }
 
   String get _body {
     if (error is DataCorruptedException) {
       return 'Your data file could not be read — it may have been damaged.\n\n'
-          'Your in-app data is intact until you restart. '
           'Tap Retry to attempt recovery, or check your data folder.';
+    }
+    if (_isStorageError) {
+      return 'The app cannot read or write to your chosen data folder.\n\n'
+          'This commonly happens on Android when the selected folder is on '
+          'external/shared storage that the OS restricts.\n\n'
+          'Tap "Change Folder" to pick an accessible location, '
+          'or tap Retry to try again.';
     }
     if (error is ArgumentError) {
       return 'The data folder path is invalid. '
-          'Go to Settings → Data to reconfigure it.';
+          'Tap "Change Folder" to reconfigure it.';
     }
-    return 'Check that your data folder is accessible,\nthen tap Retry.';
+    if (error is StateError) {
+      return 'The app data layer is not ready yet. '
+          'Please wait a moment and tap Retry.';
+    }
+    return 'Check that your data folder is accessible,\nthen tap Retry.\n\n'
+        'Error: $error';
   }
 
   @override
   Widget build(BuildContext context) {
+    final showReconfigure =
+        onReconfigure != null && (_isStorageError || error is ArgumentError);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 36),
@@ -156,10 +186,23 @@ class DataErrorWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (showReconfigure) ...[
+                  OutlinedButton.icon(
+                    onPressed: onReconfigure,
+                    icon: const Icon(Icons.folder_open_rounded, size: 18),
+                    label: const Text('Change Folder'),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Retry'),
+                ),
+              ],
             ),
           ],
         ),

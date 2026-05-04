@@ -595,6 +595,10 @@ class _DataSection extends ConsumerWidget {
     final txCount = appData.transactions.length;
     final moodCount = appData.moods.length;
 
+    // Show the current data folder path for registered (non-guest) users.
+    final rawPath = ref.watch(dataFilePathProvider);
+    final isRegistered = tier != UserTier.guest;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -607,12 +611,78 @@ class _DataSection extends ConsumerWidget {
           _DataRow(label: 'Journal entries', value: '$entryCount'),
           _DataRow(label: 'Transactions', value: '$txCount'),
           _DataRow(label: 'Mood logs', value: '$moodCount'),
-          if (tier != UserTier.guest)
-            _DataRow(label: 'Storage', value: 'Local JSON file', isLast: true),
+          if (isRegistered) ...[
+            _DataRow(
+              label: 'Storage',
+              value: 'Local JSON file',
+              isLast: rawPath == null,
+            ),
+            if (rawPath != null)
+              _FolderRow(
+                path: rawPath,
+                onTap: () => context.push(AppRoutes.fileSetup),
+              ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Shows the current data folder path with a button to change it.
+class _FolderRow extends StatelessWidget {
+  final String path;
+  final VoidCallback onTap;
+
+  const _FolderRow({required this.path, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Divider(height: 1, indent: 16, endIndent: 16),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.folder_open_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Data folder',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    path,
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: onTap,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+              ),
+              child: const Text('Change', style: TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _DataRow extends StatelessWidget {
@@ -789,8 +859,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
 
   Future<void> _load() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    final permStatus =
-        await PermissionService.instance.notificationStatus;
+    final permStatus = await PermissionService.instance.notificationStatus;
     if (!mounted) return;
     setState(() {
       _enabled =
@@ -813,11 +882,11 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
       // Request permission first. requestNotifications() is a no-op if
       // already granted; shows rationale + OS dialog if not.
       if (!_permStatus.isGranted) {
-        final granted =
-            await PermissionService.instance.requestNotifications(context);
+        final granted = await PermissionService.instance.requestNotifications(
+          context,
+        );
         if (!mounted) return;
-        final newStatus =
-            await PermissionService.instance.notificationStatus;
+        final newStatus = await PermissionService.instance.notificationStatus;
         setState(() => _permStatus = newStatus);
         if (!granted) return; // stay off if user denied
       }
@@ -867,10 +936,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
                 const Expanded(
                   child: Text(
                     'Daily habit reminders',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ),
                 Switch(
@@ -882,7 +948,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
             ),
           ),
           // ── Permanently denied banner ─────────────────────
-          if (isPermanentlyDenied) ...[  
+          if (isPermanentlyDenied) ...[
             const Divider(height: 1, indent: 16, endIndent: 16),
             InkWell(
               onTap: openAppSettings,
@@ -922,7 +988,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
             ),
           ],
           // ── Time picker row (only when enabled) ───────────
-          if (_enabled && !isPermanentlyDenied) ...[  
+          if (_enabled && !isPermanentlyDenied) ...[
             const Divider(height: 1, indent: 16, endIndent: 16),
             InkWell(
               onTap: _pickTime,

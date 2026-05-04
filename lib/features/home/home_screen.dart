@@ -112,6 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               (e, _) => DataErrorWidget(
                 error: e,
                 onRetry: () => ref.read(dataNotifierProvider.notifier).reload(),
+                onReconfigure: () => context.push(AppRoutes.fileSetup),
               ),
           data:
               (data) => _Body(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import '../models/transaction.dart';
 import '../services/data_service.dart';
 import '../services/sync_service.dart';
 import '../utils/habit_helpers.dart';
+import 'settings_provider.dart';
 
 // ── Service ───────────────────────────────────────────────
 
@@ -84,10 +86,84 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     SyncService.instance.reset();
   }
 
-  /// Applies [updater] to the current [AppData], updates state, and persists.
+  /// Loads data from [newPath] and updates [_filePath].
+  ///
+  /// Used by Settings when the user reconfigures the data folder.
+  /// Transitions through [AsyncValue.loading] while reading the new file.
+  Future<void> reconfigurePath(String newPath) async {
+    state = const AsyncValue.loading();
+    try {
+      final data = await _service.loadData(newPath);
+      _filePath = newPath;
+      state = AsyncValue.data(data);
+      await SyncService.instance.seedTimestamp(_filePath);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Attempts to load from [customPath]; if that throws a [FileSystemException]
+  /// (storage access error), falls back to the internal documents directory.
+  ///
+  /// Called by the retry flow when the original path is inaccessible (e.g.
+  /// Android 11+ scoped storage blocking writes to external user-picked paths).
+  /// Returns the path that succeeded, or throws if both paths fail.
+  Future<String> loadWithFallback({
+    required bool isGuest,
+    required String? customPath,
+  }) async {
+    state = const AsyncValue.loading();
+    // Try the provided path first.
+    if (customPath != null && customPath.isNotEmpty) {
+      try {
+        final data = await _service.loadData(customPath);
+        _isGuest = isGuest;
+        _filePath = customPath;
+        state = AsyncValue.data(data);
+        await SyncService.instance.seedTimestamp(_filePath);
+        return customPath;
+      } on FileSystemException {
+        // Storage access denied — fall through to internal fallback below.
+        debugPrint(
+          '[DataNotifier] External path inaccessible ($customPath), '
+          'falling back to internal storage.',
+        );
+      }
+    }
+    // Fallback: use internal app documents directory.
+    final internalPath = await _service.resolveFilePath(
+      isGuest: true, // guest path = internal documents dir
+      customDirPath: null,
+    );
+    final data = await _service.loadData(internalPath);
+    _isGuest = isGuest;
+    _filePath = internalPath;
+    state = AsyncValue.data(data);
+    await SyncService.instance.seedTimestamp(_filePath);
+    return internalPath;
+  }
+
+
+  ///
+  /// Throws [StateError] if the data is not loaded yet (loading state) or if
+  /// the file path has not been configured (never called [load]).  These
+  /// failures are propagated so every mutation caller (addHabit, upsertMood,
+  /// etc.) can show a meaningful error instead of silently doing nothing.
   Future<void> _save(AppData Function(AppData current) updater) async {
+    // Explicit precondition check — fail loudly so callers always know.
+    if (_filePath == null) {
+      throw StateError(
+        'Data file path is not configured. '
+        'Please sign out and sign back in, or restart the app.',
+      );
+    }
     final current = state.valueOrNull;
-    if (current == null || _filePath == null) return;
+    if (current == null) {
+      throw StateError(
+        'Data is not ready (state: ${state.runtimeType}). '
+        'Please wait for the app to finish loading, then try again.',
+      );
+    }
     final next = updater(current);
     state = AsyncValue.data(next);
     try {
@@ -310,4 +386,13 @@ final dataNotifierProvider =
 /// unavailable (the HomeScreen handles the error state visually).
 final appDataProvider = Provider<AppData>((ref) {
   return ref.watch(dataNotifierProvider).valueOrNull ?? AppData.empty();
+});
+
+/// The resolved file path used by [DataNotifier] for the current session.
+///
+/// Reads from SharedPreferences via [settingsProvider] so this is cheap and
+/// does not require [DataNotifier] to expose a public getter.
+final dataFilePathProvider = Provider<String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return prefs.getString(PrefKeys.dataFilePath);
 });

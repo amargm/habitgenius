@@ -104,4 +104,28 @@ class DataService {
 
   /// Returns true if the data file exists at [filePath].
   Future<bool> fileExists(String filePath) => File(filePath).exists();
+
+  /// Verifies that the app can actually write to [dirPath].
+  ///
+  /// Creates a hidden test file, writes a byte, then deletes it.
+  /// Returns true if all three succeed; false otherwise.
+  ///
+  /// Use this in the folder-setup flow BEFORE persisting the chosen path
+  /// to SharedPreferences — on Android 11+ scoped storage, user-picked
+  /// external directories cannot be accessed with dart:io even if
+  /// file_picker returned a real filesystem path.
+  Future<bool> testWriteAccess(String dirPath) async {
+    try {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final probe = File('$dirPath/.hg_write_probe');
+      await probe.writeAsString('ok', flush: true);
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

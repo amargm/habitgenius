@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
@@ -20,10 +21,9 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
   String? _selectedPath;
   bool _isLoading = false;
 
+  /// Shows the rationale dialog, opens the system folder picker, then
+  /// validates that the selected folder is actually writable.
   Future<void> _pickFolder() async {
-    // Show an in-app explanation before the system folder picker opens.
-    // This is required by Google Play policy: users must understand WHY
-    // the app is accessing storage before the OS prompt appears.
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -32,10 +32,10 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
             content: const Text(
               'HabitGenius stores all your habits, journal, moods, focus sessions, '
               'and expenses in a single JSON file.\n\n'
-              'Pick any folder on your device — a Google Drive or Dropbox folder '
-              'lets you sync automatically across your devices.\n\n'
-              'The app only reads and writes this one file. It does not access '
-              'any other files or photos on your device.',
+              'Pick any folder on your device. '
+              'The app only reads and writes this one file — it does not access '
+              'any other files or photos on your device.\n\n'
+              'Tip: Use the app\'s default location if you are unsure — it always works.',
             ),
             actions: [
               TextButton(
@@ -54,9 +54,55 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
     final dir = await FilePicker.platform.getDirectoryPath(
       dialogTitle: 'Choose folder for HabitGenius data',
     );
-    if (dir != null && mounted) {
-      setState(() => _selectedPath = dir);
+    if (dir == null || !mounted) return;
+
+    // Validate write access BEFORE accepting the path.
+    // On Android 11+ (scoped storage), user-picked external paths may look
+    // like valid file paths but are NOT writable via dart:io's File API.
+    final svc = ref.read(dataServiceProvider);
+    final canWrite = await svc.testWriteAccess(dir);
+    if (!mounted) return;
+
+    if (!canWrite) {
+      // Offer the user a choice: pick again or use internal storage.
+      final useDefault = await showDialog<bool>(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('Folder not accessible'),
+              content: const Text(
+                'HabitGenius cannot write to that folder on this device.\n\n'
+                'This is a known Android limitation for certain storage locations.\n\n'
+                'Would you like to use the default location inside the app instead? '
+                'Your data will be safe there — you can always move the file later.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Pick another'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Use default'),
+                ),
+              ],
+            ),
+      );
+      if (!mounted) return;
+      if (useDefault == true) {
+        await _useDefaultLocation();
+      }
+      return;
     }
+
+    setState(() => _selectedPath = dir);
+  }
+
+  /// Sets the data path to the internal app documents directory — always
+  /// accessible on all Android versions, no permissions needed.
+  Future<void> _useDefaultLocation() async {
+    final dir = await getApplicationDocumentsDirectory();
+    if (mounted) setState(() => _selectedPath = dir.path);
   }
 
   Future<void> _continue() async {
@@ -77,11 +123,15 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not access the selected folder. Please choose a different location.',
+              'Could not access the selected folder: $e\n'
+              'Please choose a different location or use the default.',
             ),
             backgroundColor: const Color(0xFFE17055),
+            duration: const Duration(seconds: 6),
           ),
         );
+        // Reset selection so the user can pick again.
+        setState(() => _selectedPath = null);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -127,7 +177,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.check_circle_rounded,
                         color: AppColors.success,
                         size: 20,
@@ -141,6 +191,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
                             color: AppColors.textSecondary,
                           ),
                           overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
                         ),
                       ),
                     ],
@@ -160,6 +211,15 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Default location shortcut.
+              TextButton(
+                onPressed: _useDefaultLocation,
+                child: Text(
+                  'Use default location',
+                  style: TextStyle(color: primary.withValues(alpha: 0.7)),
                 ),
               ),
               const Spacer(),
