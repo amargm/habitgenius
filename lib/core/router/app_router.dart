@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/auth/welcome_screen.dart';
@@ -29,6 +30,39 @@ class AppRoutes {
   static const settings = '/settings';
 }
 
+// ── Slide transition helper ───────────────────────────────
+
+CustomTransitionPage<void> _slidePage(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 240),
+    transitionsBuilder: (ctx, animation, secondaryAnimation, child) {
+      final tween = Tween(
+        begin: const Offset(1.0, 0.0),
+        end: Offset.zero,
+      ).chain(CurveTween(curve: Curves.easeInOutCubic));
+      final secondary = Tween(
+        begin: Offset.zero,
+        end: const Offset(-0.3, 0.0),
+      ).chain(CurveTween(curve: Curves.easeInOutCubic));
+
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: SlideTransition(
+          position: secondaryAnimation.drive(secondary),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 // ── Router ────────────────────────────────────────────────
 final appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
@@ -39,23 +73,32 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.welcome,
-      builder: (context, state) => const WelcomeScreen(),
+      pageBuilder:
+          (context, state) => _slidePage(context, state, const WelcomeScreen()),
     ),
     GoRoute(
       path: AppRoutes.fileSetup,
-      builder: (context, state) => const FileSetupScreen(),
+      pageBuilder:
+          (context, state) =>
+              _slidePage(context, state, const FileSetupScreen()),
     ),
     GoRoute(
       path: AppRoutes.onboarding,
-      builder: (context, state) => const OnboardingScreen(),
+      pageBuilder:
+          (context, state) =>
+              _slidePage(context, state, const OnboardingScreen()),
     ),
     GoRoute(
       path: AppRoutes.settings,
-      builder: (context, state) => const SettingsScreen(),
+      pageBuilder:
+          (context, state) =>
+              _slidePage(context, state, const SettingsScreen()),
     ),
     GoRoute(
       path: AppRoutes.addHabit,
-      builder: (context, state) => const AddHabitScreen(),
+      pageBuilder:
+          (context, state) =>
+              _slidePage(context, state, const AddHabitScreen()),
     ),
     // ── Main shell with bottom nav ─────────────────────────
     ShellRoute(

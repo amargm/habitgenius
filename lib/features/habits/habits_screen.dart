@@ -9,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/habit_check_widget.dart';
 import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
@@ -137,16 +138,30 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
             // ── Body ──────────────────────────────────────
             Expanded(
-              child:
-                  habits.isEmpty
-                      ? _EmptyState(tier: tier)
-                      : _buildView(
-                        habits: habits,
-                        logs: logs,
-                        today: today,
-                        todayStr: todayStr,
-                        primary: Theme.of(context).colorScheme.primary,
-                      ),
+              child: RefreshIndicator(
+                onRefresh:
+                    () => ref.read(dataNotifierProvider.notifier).reload(),
+                child:
+                    habits.isEmpty
+                        ? SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: EmptyStateWidget(
+                            icon: Icons.check_circle_outline_rounded,
+                            title: 'No habits yet',
+                            subtitle:
+                                'Tap + to add your first habit and start building great routines.',
+                            actionLabel: 'Add habit',
+                            onAction: () => _onAddHabit(tier, 0),
+                          ),
+                        )
+                        : _buildView(
+                          habits: habits,
+                          logs: logs,
+                          today: today,
+                          todayStr: todayStr,
+                          primary: Theme.of(context).colorScheme.primary,
+                        ),
+              ),
             ),
           ],
         ),
@@ -169,7 +184,15 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
       case _HabitView.today:
         final forToday = HabitHelpers.habitsForDate(habits, today);
         return forToday.isEmpty
-            ? const _NoTodayHabits()
+            ? SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: EmptyStateWidget(
+                icon: Icons.today_rounded,
+                title: 'Rest day',
+                subtitle:
+                    'No habits scheduled for today.\nSwitch to All to see all habits.',
+              ),
+            )
             : ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
               itemCount: forToday.length,
@@ -461,47 +484,4 @@ class _MiniRing extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── Empty states ──────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  final dynamic tier;
-  const _EmptyState({required this.tier});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('💪', style: TextStyle(fontSize: 56)),
-          const SizedBox(height: 16),
-          const Text(
-            'No habits yet',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tap + to add your first habit.',
-            style: TextStyle(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _NoTodayHabits extends StatelessWidget {
-  const _NoTodayHabits();
-
-  @override
-  Widget build(BuildContext context) => const Center(
-    child: Text(
-      'No habits scheduled for today',
-      style: TextStyle(color: AppColors.textSecondary),
-    ),
-  );
 }

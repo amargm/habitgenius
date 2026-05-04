@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,9 +64,11 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     state = AsyncValue.data(next);
     try {
       await _service.saveData(next, _filePath!);
-    } catch (_) {
-      state = AsyncValue.data(current); // rollback on write failure
-      rethrow;
+    } catch (e) {
+      // Roll back the optimistic state update so the UI stays consistent.
+      state = AsyncValue.data(current);
+      // Non-fatal: surface via debugPrint — the in-memory state is still valid.
+      debugPrint('[DataNotifier] Save failed (rolled back): $e');
     }
   }
 

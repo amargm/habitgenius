@@ -9,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
+import '../../shared/widgets/empty_state_widget.dart';
 
 // ── Home screen ───────────────────────────────────────────
 
@@ -91,11 +92,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: dataAsync.when(
           loading: () => const _Skeleton(),
           error:
-              (e, _) => Center(
-                child: Text(
-                  'Error loading data',
-                  style: TextStyle(color: AppColors.danger),
-                ),
+              (e, _) => DataErrorWidget(
+                error: e,
+                onRetry: () => ref.read(dataNotifierProvider.notifier).reload(),
               ),
           data:
               (data) => _Body(

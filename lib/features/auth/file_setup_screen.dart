@@ -32,16 +32,30 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
   Future<void> _continue() async {
     if (_selectedPath == null) return;
     setState(() => _isLoading = true);
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await prefs.setString(PrefKeys.dataFilePath, _selectedPath!);
+      await prefs.setBool(PrefKeys.hasSeenOnboarding, true);
 
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.setString(PrefKeys.dataFilePath, _selectedPath!);
-    await prefs.setBool(PrefKeys.hasSeenOnboarding, true);
+      await ref
+          .read(dataNotifierProvider.notifier)
+          .load(isGuest: false, customDir: _selectedPath);
 
-    await ref
-        .read(dataNotifierProvider.notifier)
-        .load(isGuest: false, customDir: _selectedPath);
-
-    if (mounted) context.go(AppRoutes.home);
+      if (mounted) context.go(AppRoutes.home);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not access the selected folder. Please choose a different location.',
+            ),
+            backgroundColor: const Color(0xFFE17055),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
