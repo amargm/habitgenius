@@ -152,8 +152,11 @@ class _Body extends StatelessWidget {
     // earlier the same day are not accidentally excluded.
     // FocusSession.startedAt is stored as UTC — convert to local before
     // comparing so sessions are attributed to the correct calendar day.
-    final weekStart = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - 1));
+    final weekStart = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: today.weekday - 1));
     final weekFocusMinutes = data.focusSessions
         .where((s) {
           final d = DateTime.tryParse(s.startedAt)?.toLocal();
@@ -341,7 +344,7 @@ class _GreetingHeader extends StatelessWidget {
           ),
         ),
         GestureDetector(
-          onTap: () => GoRouter.of(context).go(AppRoutes.settings),
+          onTap: () => context.push(AppRoutes.settings),
           child: Container(
             width: 44,
             height: 44,
@@ -709,7 +712,14 @@ class _ActionTile extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        context.go(item.route);
+        // Settings and AddHabit live outside the ShellRoute; use push() so
+        // the back button returns here instead of exiting the app.
+        const outOfShell = {AppRoutes.settings, AppRoutes.addHabit};
+        if (outOfShell.contains(item.route)) {
+          context.push(item.route);
+        } else {
+          context.go(item.route);
+        }
       },
       child: Container(
         decoration: BoxDecoration(
