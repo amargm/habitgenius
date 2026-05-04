@@ -1,18 +1,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # HabitGenius — Codemagic CI/CD
 #
-# Required variable groups (configure in Codemagic UI → Teams → Global vars
-# or per-app):
+# Required variables — set these in Codemagic UI → App settings → Environment
+# variables (no group needed, just plain app-level variables):
+#
+#   GOOGLE_SERVICES_JSON   base64 of android/app/google-services.json
+#
+# Required variable group (Codemagic UI → Teams → Global vars or per-app):
 #
 #   keystore_credentials
 #     CM_KEYSTORE           base64 of android/app/habitgenius-release.keystore
-#                           (contents of keystore_base64.txt)
 #     CM_KEYSTORE_PASSWORD  HabitGenius@2026
 #     CM_KEY_ALIAS          habitgenius
 #     CM_KEY_PASSWORD       HabitGenius@2026
-#
-#   firebase
-#     GOOGLE_SERVICES_JSON  base64 of android/app/google-services.json
 #
 # Two workflows:
 #   1. android-debug   — fast debug APK on every push to dev/*  or main
@@ -39,8 +39,6 @@ workflows:
     environment:
       flutter: stable
       java: 17
-      groups:
-        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
@@ -96,7 +94,6 @@ workflows:
       java: 17
       groups:
         - keystore_credentials
-        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
