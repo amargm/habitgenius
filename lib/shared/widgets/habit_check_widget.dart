@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/habit.dart';
-import '../../core/models/habit_log.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/utils/habit_helpers.dart';
 
@@ -62,19 +61,16 @@ class HabitCheckWidget extends ConsumerWidget {
 
   Future<void> _toggle(WidgetRef ref) async {
     HapticFeedback.lightImpact();
-    await ref.read(dataNotifierProvider.notifier).toggleHabit(
-          habitId: habit.id,
-          dateStr: dateStr,
-        );
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .toggleHabit(habitId: habit.id, dateStr: dateStr);
   }
 
   Future<void> _increment(WidgetRef ref, int delta) async {
     HapticFeedback.selectionClick();
-    await ref.read(dataNotifierProvider.notifier).toggleHabit(
-          habitId: habit.id,
-          dateStr: dateStr,
-          delta: delta,
-        );
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .toggleHabit(habitId: habit.id, dateStr: dateStr, delta: delta);
   }
 
   static Color _habitColor(String hex, Color fallback) {
@@ -117,9 +113,10 @@ class _CheckboxControl extends StatelessWidget {
             width: 2,
           ),
         ),
-        child: isCompleted
-            ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-            : null,
+        child:
+            isCompleted
+                ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                : null,
       ),
     );
   }
@@ -221,9 +218,7 @@ class _TimerControl extends StatelessWidget {
             ),
           ),
           Icon(
-            isCompleted
-                ? Icons.check_rounded
-                : Icons.play_arrow_rounded,
+            isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded,
             size: 16,
             color: isCompleted ? color : AppColors.textMuted,
           ),

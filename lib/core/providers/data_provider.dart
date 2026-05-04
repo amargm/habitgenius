@@ -115,8 +115,7 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
             date: today,
             completed: done,
             value: newValue,
-            completedAt:
-                done ? DateTime.now().toUtc().toIso8601String() : null,
+            completedAt: done ? DateTime.now().toUtc().toIso8601String() : null,
           );
         }
       } else {
@@ -131,7 +130,10 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
                 toggled ? DateTime.now().toUtc().toIso8601String() : null,
           );
         } else {
-          final newValue = (existing.value + delta).clamp(0, habit.targetValue * 2);
+          final newValue = (existing.value + delta).clamp(
+            0,
+            habit.targetValue * 2,
+          );
           final done = newValue >= habit.targetValue;
           updated = existing.copyWith(
             value: newValue,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../constants/app_colors.dart';
-import '../router/app_router.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/router/app_router.dart';
 
 /// A modal bottom sheet shown when a user tries to exceed their tier limit.
 ///
@@ -61,19 +61,18 @@ class UpgradePromptSheet extends StatelessWidget {
 
           Text(
             'Unlock $feature',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'You\'ve reached the limit for your current plan.\nUpgrade to Pro for unlimited access.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.textSecondary, height: 1.5),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),
@@ -84,11 +83,13 @@ class UpgradePromptSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppColors.success, size: 18),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.success,
+                    size: 18,
+                  ),
                   const SizedBox(width: 12),
-                  Text(b,
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(b, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
             ),

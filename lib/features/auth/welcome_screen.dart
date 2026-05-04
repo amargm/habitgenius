@@ -6,7 +6,6 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
-import '../../core/services/data_service.dart';
 
 /// Auth entry point: Google Sign-In or Continue as Guest.
 class WelcomeScreen extends ConsumerStatefulWidget {

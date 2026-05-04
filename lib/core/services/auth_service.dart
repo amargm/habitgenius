@@ -136,7 +136,8 @@ class AuthService {
     if (user.displayName != null) {
       await _prefs.setString(_kDisplayName, user.displayName!);
     }
-    if (user.photoUrl != null)
+    if (user.photoUrl != null) {
       await _prefs.setString(_kPhotoUrl, user.photoUrl!);
+    }
   }
 }

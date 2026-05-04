@@ -11,15 +11,49 @@ import '../../core/services/notification_service.dart';
 // ── Emoji picker data ──────────────────────────────────────
 
 const _kEmojis = [
-  '💪', '🏃', '🧘', '💤', '💧', '🥗', '📚', '✍️', '🎨', '🎸',
-  '🧹', '🛁', '💊', '☀️', '🌙', '🧠', '❤️', '🌿', '🔥', '⭐',
-  '🎯', '📖', '🏋️', '🚴', '🧗', '🏊', '🤸', '🎵', '🎮', '🌍',
+  '💪',
+  '🏃',
+  '🧘',
+  '💤',
+  '💧',
+  '🥗',
+  '📚',
+  '✍️',
+  '🎨',
+  '🎸',
+  '🧹',
+  '🛁',
+  '💊',
+  '☀️',
+  '🌙',
+  '🧠',
+  '❤️',
+  '🌿',
+  '🔥',
+  '⭐',
+  '🎯',
+  '📖',
+  '🏋️',
+  '🚴',
+  '🧗',
+  '🏊',
+  '🤸',
+  '🎵',
+  '🎮',
+  '🌍',
 ];
 
 const _kColors = [
-  '#6C5CE7', '#0984E3', '#00B894', '#E17055',
-  '#FDCB6E', '#A29BFE', '#00CEC9', '#FD79A8',
-  '#636E72', '#2D3436',
+  '#6C5CE7',
+  '#0984E3',
+  '#00B894',
+  '#E17055',
+  '#FDCB6E',
+  '#A29BFE',
+  '#00CEC9',
+  '#FD79A8',
+  '#636E72',
+  '#2D3436',
 ];
 
 // ── Screen ────────────────────────────────────────────────
@@ -68,9 +102,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
         unit: _unitCtrl.text.trim().isEmpty ? null : _unitCtrl.text.trim(),
         schedule: _schedule,
         scheduleDays: _scheduleDays,
-        reminderTime: _reminderTime != null
-            ? '${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
-            : null,
+        reminderTime:
+            _reminderTime != null
+                ? '${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
+                : null,
         createdAt: DateTime.now().toUtc().toIso8601String(),
         checklistItems: const [],
       );
@@ -112,19 +147,20 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    'Save',
-                    style: TextStyle(
-                      color: primary,
-                      fontWeight: FontWeight.w700,
+            child:
+                _saving
+                    ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : Text(
+                      'Save',
+                      style: TextStyle(
+                        color: primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
           ),
         ],
       ),
@@ -161,9 +197,11 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                       hintText: 'e.g. Morning run',
                     ),
                     textCapitalization: TextCapitalization.sentences,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter a habit name'
-                        : null,
+                    validator:
+                        (v) =>
+                            (v == null || v.trim().isEmpty)
+                                ? 'Enter a habit name'
+                                : null,
                   ),
                 ),
               ],
@@ -175,14 +213,15 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
-              children: HabitProgressType.values.map((pt) {
-                final selected = _progressType == pt;
-                return ChoiceChip(
-                  label: Text(_progressLabel(pt)),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _progressType = pt),
-                );
-              }).toList(),
+              children:
+                  HabitProgressType.values.map((pt) {
+                    final selected = _progressType == pt;
+                    return ChoiceChip(
+                      label: Text(_progressLabel(pt)),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _progressType = pt),
+                    );
+                  }).toList(),
             ),
             if (_progressType == HabitProgressType.counter ||
                 _progressType == HabitProgressType.timer) ...[
@@ -194,17 +233,18 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                     child: TextFormField(
                       controller: _targetCtrl,
                       decoration: InputDecoration(
-                        labelText: _progressType == HabitProgressType.timer
-                            ? 'Target (minutes)'
-                            : 'Target count',
+                        labelText:
+                            _progressType == HabitProgressType.timer
+                                ? 'Target (minutes)'
+                                : 'Target count',
                       ),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       validator: (v) {
                         final n = int.tryParse(v ?? '');
-                        if (n == null || n < 1) return 'Enter a positive number';
+                        if (n == null || n < 1) {
+                          return 'Enter a positive number';
+                        }
                         return null;
                       },
                     ),
@@ -232,21 +272,23 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
-              children: [
-                HabitSchedule.daily,
-                HabitSchedule.weekly,
-                HabitSchedule.specific,
-              ].map((s) {
-                final selected = _schedule == s;
-                return ChoiceChip(
-                  label: Text(_scheduleLabel(s)),
-                  selected: selected,
-                  onSelected: (_) => setState(() {
-                    _schedule = s;
-                    if (s == HabitSchedule.daily) _scheduleDays = [];
-                  }),
-                );
-              }).toList(),
+              children:
+                  [
+                    HabitSchedule.daily,
+                    HabitSchedule.weekly,
+                    HabitSchedule.specific,
+                  ].map((s) {
+                    final selected = _schedule == s;
+                    return ChoiceChip(
+                      label: Text(_scheduleLabel(s)),
+                      selected: selected,
+                      onSelected:
+                          (_) => setState(() {
+                            _schedule = s;
+                            if (s == HabitSchedule.daily) _scheduleDays = [];
+                          }),
+                    );
+                  }).toList(),
             ),
             if (_schedule == HabitSchedule.weekly ||
                 _schedule == HabitSchedule.specific) ...[
@@ -264,31 +306,34 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: _kColors.map((hex) {
-                final color = _parseColor(hex);
-                final selected = _colorHex == hex;
-                return GestureDetector(
-                  onTap: () => setState(() => _colorHex = hex),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: selected
-                          ? Border.all(
-                              color: Colors.white,
-                              width: 2.5,
-                            )
-                          : null,
-                    ),
-                    child: selected
-                        ? const Icon(Icons.check_rounded,
-                            color: Colors.white, size: 16)
-                        : null,
-                  ),
-                );
-              }).toList(),
+              children:
+                  _kColors.map((hex) {
+                    final color = _parseColor(hex);
+                    final selected = _colorHex == hex;
+                    return GestureDetector(
+                      onTap: () => setState(() => _colorHex = hex),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border:
+                              selected
+                                  ? Border.all(color: Colors.white, width: 2.5)
+                                  : null,
+                        ),
+                        child:
+                            selected
+                                ? const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                )
+                                : null,
+                      ),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 24),
 
@@ -314,24 +359,26 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: _kEmojis
-              .map(
-                (e) => GestureDetector(
-                  onTap: () {
-                    setState(() => _emoji = e);
-                    Navigator.pop(context);
-                  },
-                  child: Text(e, style: const TextStyle(fontSize: 32)),
-                ),
-              )
-              .toList(),
-        ),
-      ),
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children:
+                  _kEmojis
+                      .map(
+                        (e) => GestureDetector(
+                          onTap: () {
+                            setState(() => _emoji = e);
+                            Navigator.pop(context);
+                          },
+                          child: Text(e, style: const TextStyle(fontSize: 32)),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ),
     );
   }
 
@@ -380,13 +427,13 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.4,
-            ),
-      );
+    text,
+    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+      color: AppColors.textSecondary,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.4,
+    ),
+  );
 }
 
 class _DayPicker extends StatelessWidget {
@@ -418,9 +465,7 @@ class _DayPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: sel ? primary : AppColors.bgCard,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: sel ? primary : AppColors.border,
-              ),
+              border: Border.all(color: sel ? primary : AppColors.border),
             ),
             child: Center(
               child: Text(
@@ -461,9 +506,10 @@ class _ReminderTile extends StatelessWidget {
           color: AppColors.bgCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: time != null
-                ? primary.withValues(alpha: 0.4)
-                : AppColors.border,
+            color:
+                time != null
+                    ? primary.withValues(alpha: 0.4)
+                    : AppColors.border,
           ),
         ),
         child: Row(
@@ -485,8 +531,11 @@ class _ReminderTile extends StatelessWidget {
             if (time != null)
               GestureDetector(
                 onTap: onClear,
-                child: const Icon(Icons.close_rounded,
-                    size: 18, color: AppColors.textMuted),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
               ),
           ],
         ),

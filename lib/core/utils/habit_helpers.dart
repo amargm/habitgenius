@@ -36,18 +36,13 @@ class HabitHelpers {
     List<HabitLog> logs,
     String habitId,
     String dateStr,
-  ) =>
-      logs.where((l) => l.habitId == habitId && l.date == dateStr).firstOrNull;
+  ) => logs.where((l) => l.habitId == habitId && l.date == dateStr).firstOrNull;
 
   // ── Completion ────────────────────────────────────────────
 
   /// Returns true if the habit is considered "done" for [dateStr].
   /// For counter/timer habits: value >= targetValue.
-  static bool isCompletedOn(
-    Habit habit,
-    List<HabitLog> logs,
-    String dateStr,
-  ) {
+  static bool isCompletedOn(Habit habit, List<HabitLog> logs, String dateStr) {
     final log = logForDate(logs, habit.id, dateStr);
     if (log == null) return false;
     if (habit.progressType == HabitProgressType.checkbox ||
@@ -65,11 +60,7 @@ class HabitHelpers {
   /// ending on [today] or the most recent scheduled day).
   ///
   /// A "missed" scheduled day that was not completed resets the streak to 0.
-  static int currentStreak(
-    Habit habit,
-    List<HabitLog> logs,
-    DateTime today,
-  ) {
+  static int currentStreak(Habit habit, List<HabitLog> logs, DateTime today) {
     int streak = 0;
     DateTime cursor = DateTime(today.year, today.month, today.day);
 
@@ -137,13 +128,14 @@ class HabitHelpers {
       } else if (habit.progressType == HabitProgressType.counter ||
           habit.progressType == HabitProgressType.timer) {
         final pct = (log.value / habit.targetValue).clamp(0.0, 1.0);
-        result[ds] = pct < 0.25
-            ? 1
-            : pct < 0.50
+        result[ds] =
+            pct < 0.25
+                ? 1
+                : pct < 0.50
                 ? 2
                 : pct < 0.75
-                    ? 3
-                    : 4;
+                ? 3
+                : 4;
       } else {
         result[ds] = 4;
       }

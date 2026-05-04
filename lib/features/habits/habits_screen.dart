@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/habit.dart';
+import '../../core/models/habit_log.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
@@ -37,9 +38,10 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     final todayStr = HabitHelpers.todayStr();
 
     final todayHabits = HabitHelpers.habitsForDate(habits, today);
-    final doneToday = todayHabits
-        .where((h) => HabitHelpers.isCompletedOn(h, logs, todayStr))
-        .length;
+    final doneToday =
+        todayHabits
+            .where((h) => HabitHelpers.isCompletedOn(h, logs, todayStr))
+            .length;
 
     return Scaffold(
       body: SafeArea(
@@ -57,9 +59,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                       children: [
                         Text(
                           'Habits',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
+                          style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         if (todayHabits.isNotEmpty)
@@ -89,57 +89,64 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
-                children: _HabitView.values.map((v) {
-                  final sel = _view == v;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _view = v),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: sel
-                              ? Theme.of(context).colorScheme.primary
-                              : AppColors.bgCard,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: sel
-                                ? Theme.of(context).colorScheme.primary
-                                : AppColors.border,
+                children:
+                    _HabitView.values.map((v) {
+                      final sel = _view == v;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _view = v),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  sel
+                                      ? Theme.of(context).colorScheme.primary
+                                      : AppColors.bgCard,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color:
+                                    sel
+                                        ? Theme.of(context).colorScheme.primary
+                                        : AppColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              _viewLabel(v),
+                              style: TextStyle(
+                                color:
+                                    sel
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                fontWeight:
+                                    sel ? FontWeight.w600 : FontWeight.normal,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _viewLabel(v),
-                          style: TextStyle(
-                            color: sel ? Colors.white : AppColors.textSecondary,
-                            fontWeight:
-                                sel ? FontWeight.w600 : FontWeight.normal,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
             ),
             const SizedBox(height: 16),
 
             // ── Body ──────────────────────────────────────
             Expanded(
-              child: habits.isEmpty
-                  ? _EmptyState(tier: tier)
-                  : _buildView(
-                      habits: habits,
-                      logs: logs,
-                      today: today,
-                      todayStr: todayStr,
-                      primary: Theme.of(context).colorScheme.primary,
-                    ),
+              child:
+                  habits.isEmpty
+                      ? _EmptyState(tier: tier)
+                      : _buildView(
+                        habits: habits,
+                        logs: logs,
+                        today: today,
+                        todayStr: todayStr,
+                        primary: Theme.of(context).colorScheme.primary,
+                      ),
             ),
           ],
         ),
@@ -153,7 +160,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
   Widget _buildView({
     required List<Habit> habits,
-    required List logs,
+    required List<HabitLog> logs,
     required DateTime today,
     required String todayStr,
     required Color primary,
@@ -164,28 +171,30 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         return forToday.isEmpty
             ? const _NoTodayHabits()
             : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-                itemCount: forToday.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _HabitTile(
-                  habit: forToday[i],
-                  logs: logs,
-                  dateStr: todayStr,
-                  primary: primary,
-                ),
-              );
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+              itemCount: forToday.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder:
+                  (_, i) => _HabitTile(
+                    habit: forToday[i],
+                    logs: logs,
+                    dateStr: todayStr,
+                    primary: primary,
+                  ),
+            );
 
       case _HabitView.week:
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
           itemCount: habits.length,
           separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (_, i) => _WeeklyHabitCard(
-            habit: habits[i],
-            logs: logs,
-            today: today,
-            primary: primary,
-          ),
+          itemBuilder:
+              (_, i) => _WeeklyHabitCard(
+                habit: habits[i],
+                logs: logs,
+                today: today,
+                primary: primary,
+              ),
         );
 
       case _HabitView.all:
@@ -193,12 +202,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
           itemCount: habits.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => _HabitTile(
-            habit: habits[i],
-            logs: logs,
-            dateStr: todayStr,
-            primary: primary,
-          ),
+          itemBuilder:
+              (_, i) => _HabitTile(
+                habit: habits[i],
+                logs: logs,
+                dateStr: todayStr,
+                primary: primary,
+              ),
         );
     }
   }
@@ -228,7 +238,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
 class _HabitTile extends StatelessWidget {
   final Habit habit;
-  final List logs;
+  final List<HabitLog> logs;
   final String dateStr;
   final Color primary;
 
@@ -244,7 +254,8 @@ class _HabitTile extends StatelessWidget {
     Color habitColor;
     try {
       habitColor = Color(
-          int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16));
+        int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
+      );
     } catch (_) {
       habitColor = primary;
     }
@@ -267,24 +278,33 @@ class _HabitTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-                child: Text(habit.icon, style: const TextStyle(fontSize: 22))),
+              child: Text(habit.icon, style: const TextStyle(fontSize: 22)),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(habit.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(
+                  habit.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
                 if (streak > 0)
                   Row(
                     children: [
                       const Text('🔥', style: TextStyle(fontSize: 12)),
                       const SizedBox(width: 4),
-                      Text('$streak day streak',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 12)),
+                      Text(
+                        '$streak day streak',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
               ],
@@ -301,7 +321,7 @@ class _HabitTile extends StatelessWidget {
 
 class _WeeklyHabitCard extends StatelessWidget {
   final Habit habit;
-  final List logs;
+  final List<HabitLog> logs;
   final DateTime today;
   final Color primary;
 
@@ -317,7 +337,8 @@ class _WeeklyHabitCard extends StatelessWidget {
     Color habitColor;
     try {
       habitColor = Color(
-          int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16));
+        int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
+      );
     } catch (_) {
       habitColor = primary;
     }
@@ -339,9 +360,13 @@ class _WeeklyHabitCard extends StatelessWidget {
             children: [
               Text(habit.icon, style: const TextStyle(fontSize: 20)),
               const SizedBox(width: 10),
-              Text(habit.name,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 15)),
+              Text(
+                habit.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -356,27 +381,34 @@ class _WeeklyHabitCard extends StatelessWidget {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: done
-                          ? habitColor
-                          : habitColor.withValues(alpha: 0.15),
+                      color:
+                          done
+                              ? habitColor
+                              : habitColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(7),
                     ),
-                    child: done
-                        ? const Icon(Icons.check_rounded,
-                            color: Colors.white, size: 14)
-                        : null,
+                    child:
+                        done
+                            ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            )
+                            : null,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     dayLabels[i],
                     style: TextStyle(
                       fontSize: 11,
-                      color: i == today.weekday % 7
-                          ? habitColor
-                          : AppColors.textMuted,
-                      fontWeight: i == today.weekday % 7
-                          ? FontWeight.w700
-                          : FontWeight.normal,
+                      color:
+                          i == today.weekday % 7
+                              ? habitColor
+                              : AppColors.textMuted,
+                      fontWeight:
+                          i == today.weekday % 7
+                              ? FontWeight.w700
+                              : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -396,8 +428,11 @@ class _MiniRing extends StatelessWidget {
   final int total;
   final Color color;
 
-  const _MiniRing(
-      {required this.done, required this.total, required this.color});
+  const _MiniRing({
+    required this.done,
+    required this.total,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -436,26 +471,27 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('💪', style: TextStyle(fontSize: 56)),
-              const SizedBox(height: 16),
-              const Text('No habits yet',
-                  style:
-                      TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              const Text(
-                'Tap + to add your first habit.',
-                style: TextStyle(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('💪', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
+          const Text(
+            'No habits yet',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
-        ),
-      );
+          const SizedBox(height: 8),
+          const Text(
+            'Tap + to add your first habit.',
+            style: TextStyle(color: AppColors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _NoTodayHabits extends StatelessWidget {
@@ -463,10 +499,9 @@ class _NoTodayHabits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Center(
-        child: Text(
-          'No habits scheduled for today',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-      );
+    child: Text(
+      'No habits scheduled for today',
+      style: TextStyle(color: AppColors.textSecondary),
+    ),
+  );
 }
-
