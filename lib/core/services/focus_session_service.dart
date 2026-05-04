@@ -112,6 +112,8 @@ class FocusSessionService extends ChangeNotifier {
   FocusSession? buildSession(String id) {
     final started = _startedAt;
     if (started == null) return null;
+    // Don't persist a session where nothing was actually timed.
+    if (_elapsed == 0) return null;
     return FocusSession(
       id: id,
       category: _category,

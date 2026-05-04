@@ -10,6 +10,11 @@ class SyncService {
 
   DateTime? _lastKnownModified;
 
+  /// Resets the stored timestamp.
+  /// Call whenever the current user changes (sign-out / sign-in) so the next
+  /// [checkAndReload] compares against the new user's file, not the old one's.
+  void reset() => _lastKnownModified = null;
+
   /// Checks whether the backing file was modified since we last read it.
   /// If so, triggers a [DataNotifier.reload]. Safe to call frequently.
   Future<void> checkAndReload(DataNotifier notifier) async {

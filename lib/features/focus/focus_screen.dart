@@ -201,18 +201,36 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   Future<void> _onSaveSession(FocusSessionService svc) async {
     final id = const Uuid().v4();
     final session = svc.buildSession(id);
-    if (session == null) return;
-    await ref.read(dataNotifierProvider.notifier).addFocusSession(session);
-    svc.reset();
-    svc.configure(
-      plannedDuration: _selectedPreset,
-      category: _selectedCategory,
-    );
-    if (mounted) {
-      HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Session saved ✓')));
+    if (session == null) {
+      // Nothing to save (timer never ran or 0 seconds elapsed).
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Start the timer before saving.')),
+        );
+      }
+      return;
+    }
+    try {
+      await ref.read(dataNotifierProvider.notifier).addFocusSession(session);
+      svc.reset();
+      svc.configure(
+        plannedDuration: _selectedPreset,
+        category: _selectedCategory,
+      );
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Session saved ✓')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save session. Please try again.'),
+          ),
+        );
+      }
     }
   }
 

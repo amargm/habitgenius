@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -12,6 +14,7 @@ import '../models/journal_entry.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../services/data_service.dart';
+import '../services/sync_service.dart';
 import '../utils/habit_helpers.dart';
 
 // ── Service ───────────────────────────────────────────────
@@ -26,6 +29,13 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   String? _filePath;
   bool? _isGuest;
   String? _customDir;
+
+  /// Broadcast stream that emits a human-readable message whenever a disk
+  /// write fails.  Listeners (e.g. [HabitGeniusApp]) show a snackbar so the
+  /// user knows their latest change was not persisted.
+  final StreamController<String> _saveErrors =
+      StreamController<String>.broadcast();
+  Stream<String> get saveErrors => _saveErrors.stream;
 
   DataNotifier(this._service) : super(const AsyncValue.loading());
 
@@ -64,6 +74,8 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     _isGuest = null;
     _customDir = null;
     state = const AsyncValue.loading();
+    // Clear the sync timestamp so the next user's file is compared fresh.
+    SyncService.instance.reset();
   }
 
   /// Applies [updater] to the current [AppData], updates state, and persists.
@@ -77,9 +89,20 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     } catch (e) {
       // Roll back the optimistic state update so the UI stays consistent.
       state = AsyncValue.data(current);
-      // Non-fatal: surface via debugPrint — the in-memory state is still valid.
       debugPrint('[DataNotifier] Save failed (rolled back): $e');
+      // Notify listeners (e.g. global snackbar in HabitGeniusApp).
+      if (!_saveErrors.isClosed) {
+        _saveErrors.add(
+          'Could not save your changes — please check your storage.',
+        );
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _saveErrors.close();
+    super.dispose();
   }
 
   // ── Settings ──────────────────────────────────────────────

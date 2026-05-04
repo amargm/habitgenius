@@ -238,14 +238,14 @@ class _ProCardState extends ConsumerState<_ProCard> {
       _loading = true;
       _error = null;
     });
-    try {
-      await ref.read(purchaseServiceProvider).restore();
-      // Give the purchase stream up to 3 seconds to deliver the result.
-      await Future.delayed(const Duration(seconds: 3));
-    } catch (_) {}
+    // restore() now resets _loading internally once the request is submitted;
+    // results will arrive via the purchase stream asynchronously.
+    await ref.read(purchaseServiceProvider).restore();
     if (!mounted) return;
-    final isPro = ref.read(purchaseServiceProvider).isPro;
-    if (isPro) {
+    final svc = ref.read(purchaseServiceProvider);
+    if (svc.error != null) {
+      setState(() => _error = svc.error);
+    } else if (svc.isPro) {
       ref.read(authNotifierProvider.notifier).upgradeToPro();
       ScaffoldMessenger.of(
         context,

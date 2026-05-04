@@ -123,6 +123,14 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       }
 
       if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save habit. Please try again.'),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

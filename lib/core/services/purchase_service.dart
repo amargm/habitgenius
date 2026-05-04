@@ -54,7 +54,16 @@ class PurchaseService extends ChangeNotifier {
     if (!_available) return;
 
     // Listen to the purchase stream.
-    _sub = _iap.purchaseStream.listen(_onPurchaseUpdates, onError: (_) {});
+    _sub = _iap.purchaseStream.listen(
+      _onPurchaseUpdates,
+      onError: (e) {
+        // Stream errors reset the loading flag so the UI doesn’t spin forever.
+        _loading = false;
+        _error = 'Purchase stream error. Please try again.';
+        debugPrint('[PurchaseService] stream error: $e');
+        notifyListeners();
+      },
+    );
 
     // Restore any past purchases (handles reinstalls). Fire-and-forget:
     // if the store is unreachable the stream simply won't emit anything.
@@ -106,31 +115,55 @@ class PurchaseService extends ChangeNotifier {
   }
 
   /// Restores a previously completed purchase (e.g. after reinstall).
+  /// Results are delivered via the purchase stream so [_loading] is reset
+  /// to false as soon as the restore request is submitted (not after the
+  /// stream delivers, which could take an arbitrarily long time).
   Future<void> restore() async {
     _loading = true;
     _error = null;
     notifyListeners();
-    await _iap.restorePurchases();
+    try {
+      await _iap.restorePurchases();
+    } catch (e) {
+      _error = 'Could not contact the store. Check your connection.';
+      debugPrint('[PurchaseService] restore failed: $e');
+    } finally {
+      // The restore request has been sent (or failed).  Reset the spinner
+      // now; the purchase stream will update isPro when results arrive.
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   // ── Stream handler ────────────────────────────────────────
 
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
+    bool anyPending = false;
     for (final purchase in purchases) {
       if (purchase.productID != kProProductId) continue;
 
-      if (purchase.status == PurchaseStatus.purchased ||
-          purchase.status == PurchaseStatus.restored) {
-        await _deliverPro();
-        if (purchase.pendingCompletePurchase) {
-          await _iap.completePurchase(purchase);
-        }
-      } else if (purchase.status == PurchaseStatus.error) {
-        _error = purchase.error?.message;
+      switch (purchase.status) {
+        case PurchaseStatus.purchased:
+        case PurchaseStatus.restored:
+          await _deliverPro();
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+        case PurchaseStatus.pending:
+          // Payment is in progress (e.g. carrier billing) — keep spinner.
+          anyPending = true;
+        case PurchaseStatus.error:
+          _error =
+              purchase.error?.message ?? 'Purchase failed. Please try again.';
+        case PurchaseStatus.canceled:
+          break;
       }
     }
-    _loading = false;
-    notifyListeners();
+    // Only clear the loading state when there are no pending payments left.
+    if (!anyPending) {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _deliverPro() async {

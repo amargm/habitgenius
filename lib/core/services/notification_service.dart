@@ -69,7 +69,9 @@ class NotificationService {
     List<int> scheduleDays = const [],
   }) async {
     if (!_initialised) {
-      debugPrint('[NotificationService] scheduleHabitReminder called before init; skipping.');
+      debugPrint(
+        '[NotificationService] scheduleHabitReminder called before init; skipping.',
+      );
       return;
     }
 
@@ -86,23 +88,31 @@ class NotificationService {
 
     final scheduledDate = _nextInstanceOfTime(timeOfDay);
 
-    await _plugin.zonedSchedule(
-      id,
-      'Time for: $habitName',
-      'Tap to log your progress',
-      scheduledDate,
-      const NotificationDetails(android: androidDetails),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        'Time for: $habitName',
+        'Tap to log your progress',
+        scheduledDate,
+        const NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('[NotificationService] scheduleHabitReminder failed: $e');
+    }
   }
 
   /// Cancels the reminder for a specific habit.
   static Future<void> cancelHabitReminder(String habitId) async {
     final id = habitId.hashCode.abs() % 100000;
-    await _plugin.cancel(id);
+    try {
+      await _plugin.cancel(id);
+    } catch (e) {
+      debugPrint('[NotificationService] cancelHabitReminder failed: $e');
+    }
   }
 
   /// Cancels all scheduled notifications.
