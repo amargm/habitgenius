@@ -47,7 +47,23 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Write google-services.json
-        script: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+        script: |
+          # Strip any whitespace/newlines that may have been introduced when
+          # the base64 value was pasted into the Codemagic UI, then decode.
+          echo "$GOOGLE_SERVICES_JSON" | tr -d '[:space:]' | base64 -d > android/app/google-services.json
+          # Fail fast with a clear message rather than letting Gradle spend
+          # 7 minutes before reporting "Malformed root json".
+          if [ ! -s android/app/google-services.json ]; then
+            echo "ERROR: google-services.json is empty. Check that GOOGLE_SERVICES_JSON is set correctly in Codemagic environment variables."
+            exit 1
+          fi
+          if ! python3 -c "import json,sys; json.load(open('android/app/google-services.json'))" 2>/dev/null; then
+            echo "ERROR: google-services.json is not valid JSON. The base64 value may be corrupted."
+            echo "File contents (first 200 chars):"
+            head -c 200 android/app/google-services.json
+            exit 1
+          fi
+          echo "google-services.json decoded and validated OK."
 
       - name: Get Flutter packages
         script: flutter pub get
@@ -111,7 +127,18 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Write google-services.json
-        script: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+        script: |
+          echo "$GOOGLE_SERVICES_JSON" | tr -d '[:space:]' | base64 -d > android/app/google-services.json
+          if [ ! -s android/app/google-services.json ]; then
+            echo "ERROR: google-services.json is empty. Check GOOGLE_SERVICES_JSON in Codemagic environment variables."
+            exit 1
+          fi
+          if ! python3 -c "import json,sys; json.load(open('android/app/google-services.json'))" 2>/dev/null; then
+            echo "ERROR: google-services.json is not valid JSON."
+            head -c 200 android/app/google-services.json
+            exit 1
+          fi
+          echo "google-services.json decoded and validated OK."
 
       - name: Decode keystore
         script: |
