@@ -334,11 +334,90 @@ class _HabitTile extends StatelessWidget {
             ),
           ),
           HabitCheckWidget(habit: habit, dateStr: dateStr),
+          const SizedBox(width: 4),
+          // Long-press menu: archive or delete the habit.
+          PopupMenuButton<_HabitAction>(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              size: 18,
+              color: AppColors.textMuted,
+            ),
+            onSelected: (action) => _onAction(context, action),
+            itemBuilder:
+                (_) => const [
+                  PopupMenuItem(
+                    value: _HabitAction.archive,
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Archive'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _HabitAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: AppColors.danger,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Delete',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+          ),
         ],
       ),
     );
   }
+
+  Future<void> _onAction(BuildContext context, _HabitAction action) async {
+    final ref = ProviderScope.containerOf(context);
+    if (action == _HabitAction.archive) {
+      final archived = habit.copyWith(
+        archivedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+      await ref.read(dataNotifierProvider.notifier).updateHabit(archived);
+    } else {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('Delete habit?'),
+              content: Text(
+                'All logs for "${habit.name}" will also be deleted. This cannot be undone.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+      );
+      if (confirmed == true) {
+        await ref.read(dataNotifierProvider.notifier).deleteHabit(habit.id);
+      }
+    }
+  }
 }
+
+enum _HabitAction { archive, delete }
 
 // ── Weekly card ───────────────────────────────────────────
 

@@ -455,11 +455,17 @@ class _MoodStats extends StatelessWidget {
     if (moods.isEmpty) return const SizedBox.shrink();
 
     final now = DateTime.now();
-    final cutoff = now.subtract(const Duration(days: 30));
+    // Use local-midnight cutoff so entries on the boundary day are not
+    // accidentally excluded due to UTC-offset when parsing YYYY-MM-DD.
+    final cutoff = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 30));
     final recent =
         moods.where((m) {
-          final d = DateTime.tryParse(m.date);
-          return d != null && d.isAfter(cutoff);
+          final d = DateTime.tryParse(m.date); // parses as local midnight
+          return d != null && !d.isBefore(cutoff);
         }).toList();
 
     if (recent.isEmpty) return const SizedBox.shrink();

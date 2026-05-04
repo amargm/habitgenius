@@ -101,6 +101,9 @@ class FocusSessionService extends ChangeNotifier {
   void skipCycle() {
     if (_mode != FocusMode.pomodoro) return;
     _completedCycles++;
+    // Credit the time elapsed so far for this cycle so buildSession()
+    // doesn't return null (which happens when _elapsed == 0).
+    _elapsed += _plannedDuration - _remaining;
     _remaining = _plannedDuration;
     _state = TimerState.finished;
     _timer?.cancel();

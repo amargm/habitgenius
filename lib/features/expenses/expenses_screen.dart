@@ -253,13 +253,21 @@ class _TransactionsTab extends StatelessWidget {
         monthTxs.isEmpty
             ? 0.0
             : monthTxs.map((t) => t.amount).reduce((a, b) => a + b);
+    // Use the most common currency among this month's expenses (or the first).
+    final summaryCurrency =
+        monthTxs.isEmpty
+            ? (transactions.isNotEmpty ? transactions.first.currency : 'USD')
+            : monthTxs.first.currency;
 
     return Column(
       children: [
         if (transactions.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: _SummaryCard(monthTotal: monthTotal),
+            child: _SummaryCard(
+              monthTotal: monthTotal,
+              currency: summaryCurrency,
+            ),
           ),
         Expanded(
           child:
@@ -326,9 +334,21 @@ class _AccountsTab extends StatelessWidget {
     double bal = a.startingBalance;
     for (final tx in transactions) {
       if (tx.accountId == a.id) {
-        bal += tx.type == TransactionType.income ? tx.amount : -tx.amount;
+        if (tx.type == TransactionType.income) {
+          bal += tx.amount;
+        } else if (tx.type == TransactionType.expense) {
+          bal -= tx.amount;
+        } else if (tx.type == TransactionType.transfer) {
+          // Deduct from source account; credit handled by toAccountId check.
+          bal -= tx.amount;
+        }
       }
-      if (tx.toAccountId == a.id) {
+      // Credit the destination account only for transfers, and only if it is
+      // a different account (guards against same-account transfers which would
+      // otherwise double-count the amount).
+      if (tx.type == TransactionType.transfer &&
+          tx.toAccountId == a.id &&
+          tx.toAccountId != tx.accountId) {
         bal += tx.amount;
       }
     }
@@ -413,7 +433,8 @@ class _AccountsTab extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final double monthTotal;
-  const _SummaryCard({required this.monthTotal});
+  final String currency;
+  const _SummaryCard({required this.monthTotal, required this.currency});
 
   @override
   Widget build(BuildContext context) {
@@ -432,11 +453,11 @@ class _SummaryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'This month',
+                'Spent this month',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
               Text(
-                monthTotal.toStringAsFixed(2),
+                '$currency ${monthTotal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 22,
