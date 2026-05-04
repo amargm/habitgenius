@@ -37,8 +37,17 @@ dev_dependencies:
   json_serializable: ^6.9.5
   riverpod_generator: ^2.6.1
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
   # assets:  # Uncomment and add real asset paths when needed
   #   - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "iconHG.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "iconHG.png"
+  min_sdk_android: 26

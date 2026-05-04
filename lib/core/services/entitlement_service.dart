@@ -40,7 +40,9 @@ class EntitlementService {
     try {
       final doc = _userDoc;
       if (doc == null) return false;
-      final snap = await doc.get(const GetOptions(source: Source.serverAndCache));
+      final snap = await doc.get(
+        const GetOptions(source: Source.serverAndCache),
+      );
       return snap.data()?['isPro'] == true;
     } catch (_) {
       return false;
@@ -53,13 +55,10 @@ class EntitlementService {
     try {
       final doc = _userDoc;
       if (doc == null) return;
-      await doc.set(
-        {
-          'isPro': true,
-          'proGrantedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      await doc.set({
+        'isPro': true,
+        'proGrantedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } catch (_) {}
   }
 }
