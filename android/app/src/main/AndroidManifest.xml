@@ -3,8 +3,12 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Exact alarms for habit reminders -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Exact alarms for habit reminders:
+         - API 31-32 (Android 12): SCHEDULE_EXACT_ALARM needs a user grant via Settings.
+         - API 33+  (Android 13): USE_EXACT_ALARM is auto-granted when declared; no
+           runtime prompt. Both are declared so the right one applies per OS version. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <!-- Reschedule notifications after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>

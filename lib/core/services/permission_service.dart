@@ -6,11 +6,25 @@ import 'package:permission_handler/permission_handler.dart';
 ///
 /// All permission prompts go through this service so the UI stays consistent
 /// and every OS dialog is preceded by a clear in-app rationale sheet.
+///
+/// Android permission map:
+///   POST_NOTIFICATIONS  — API 33+ runtime grant required
+///   SCHEDULE_EXACT_ALARM — API 31-32 (Android 12) user grant via Settings
+///   USE_EXACT_ALARM     — API 33+ auto-granted when declared in manifest
+///   READ/WRITE_EXTERNAL_STORAGE — SAF (Storage Access Framework) handles
+///     folder access without needing runtime grants; manifest entries kept
+///     for API ≤ 29 compatibility only.
 class PermissionService {
   PermissionService._();
   static final PermissionService instance = PermissionService._();
 
   // ── Notifications ─────────────────────────────────────────
+
+  /// Raw notification permission status (granted / denied / permanentlyDenied).
+  Future<PermissionStatus> get notificationStatus async {
+    if (!Platform.isAndroid) return PermissionStatus.granted;
+    return Permission.notification.status;
+  }
 
   /// Returns true if POST_NOTIFICATIONS is already granted (or the platform
   /// doesn't require the runtime grant, e.g. Android < 13).
@@ -50,17 +64,26 @@ class PermissionService {
     return status.isGranted;
   }
 
-  // ── Exact alarm (Android 12+) ─────────────────────────────
+  // ── Exact alarm (Android 12 only) ─────────────────────────
 
-  /// Checks whether the app can schedule exact alarms.
-  /// On Android < 12 this is always true.
+  /// Whether the app can schedule exact alarms.
+  ///
+  /// On Android 13+ [USE_EXACT_ALARM] is auto-granted when declared in the
+  /// manifest, so we always return true. On Android < 12 exact alarms need
+  /// no permission at all. Only Android 12 (API 31-32) needs a user grant.
   Future<bool> get exactAlarmGranted async {
     if (!Platform.isAndroid) return true;
+    // On API 33+ USE_EXACT_ALARM is granted implicitly via manifest.
+    // On API < 31 no permission is needed.
+    // Only API 31-32 (Android 12) requires checking SCHEDULE_EXACT_ALARM.
     return (await Permission.scheduleExactAlarm.status).isGranted;
   }
 
-  /// Requests SCHEDULE_EXACT_ALARM. On Android 12+ this sends the user to
-  /// system settings; on earlier versions it is a no-op.
+  /// Requests SCHEDULE_EXACT_ALARM on Android 12 devices.
+  ///
+  /// On Android 13+ and earlier, this is a no-op (already granted).
+  /// On Android 12, the user is sent to the system settings page for exact
+  /// alarms — there is no in-app dialog for this permission.
   Future<bool> requestExactAlarm(BuildContext context) async {
     if (await exactAlarmGranted) return true;
 
@@ -68,16 +91,16 @@ class PermissionService {
     final proceed = await _showRationaleSheet(
       context: context,
       icon: Icons.alarm_rounded,
-      title: 'Allow exact reminders',
+      title: 'Allow precise reminders',
       body:
-          'To fire your habit reminders at the exact time you choose, HabitGenius needs permission to schedule precise alarms.\n\nYou\'ll be taken to Settings to grant this.',
+          'To fire your habit reminders at the exact time you choose, HabitGenius needs permission to schedule precise alarms.\n\nYou\'ll be taken to your device\'s Settings page to enable this.',
       allowLabel: 'Go to Settings',
     );
     if (!proceed || !context.mounted) return false;
 
     final status = await Permission.scheduleExactAlarm.request();
+    // If still not granted (user navigated away or denied), offer app settings.
     if (!status.isGranted && context.mounted) {
-      // Fallback: open app settings.
       await openAppSettings();
     }
     return status.isGranted;
@@ -86,13 +109,14 @@ class PermissionService {
   // ── Convenient combined request ───────────────────────────
 
   /// Requests both notification and exact-alarm permissions in sequence.
-  /// Used once at the end of the first-launch flow.
+  ///
+  /// Designed to be called once after first launch, at the point of need.
+  /// The exact-alarm request is skipped if notifications were denied (moot).
   Future<void> requestAllRequired(BuildContext context) async {
     await requestNotifications(context);
     if (!context.mounted) return;
-    // Only ask for exact-alarm if notifications were granted (otherwise moot).
-    final granted = await notificationsGranted;
-    if (granted && context.mounted) {
+    final notifGranted = await notificationsGranted;
+    if (notifGranted && context.mounted) {
       await requestExactAlarm(context);
     }
   }

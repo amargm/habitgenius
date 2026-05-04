@@ -1,12 +1,14 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/permission_service.dart';
 import '../../core/services/purchase_service.dart';
 import '../../core/theme/theme_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -772,11 +774,12 @@ class _NotificationsSection extends ConsumerStatefulWidget {
       _NotificationsSectionState();
 }
 
-class _NotificationsSectionState
-    extends ConsumerState<_NotificationsSection> {
+class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
   bool _enabled = false;
   TimeOfDay _time = const TimeOfDay(hour: 8, minute: 0);
   bool _loaded = false;
+  // Tracks OS-level permission status so we can show actionable UI.
+  PermissionStatus _permStatus = PermissionStatus.denied;
 
   @override
   void initState() {
@@ -786,20 +789,42 @@ class _NotificationsSectionState
 
   Future<void> _load() async {
     final prefs = ref.read(sharedPreferencesProvider);
+    final permStatus =
+        await PermissionService.instance.notificationStatus;
+    if (!mounted) return;
     setState(() {
-      _enabled = prefs.getBool(PrefKeys.notificationsEnabled) ?? false;
+      _enabled =
+          (prefs.getBool(PrefKeys.notificationsEnabled) ?? false) &&
+          permStatus.isGranted;
       _time = TimeOfDay(
         hour: prefs.getInt(PrefKeys.reminderHour) ?? 8,
         minute: prefs.getInt(PrefKeys.reminderMinute) ?? 0,
       );
+      _permStatus = permStatus;
       _loaded = true;
     });
   }
 
+  /// Called when the user flips the toggle.
   Future<void> _setEnabled(bool val) async {
     final prefs = ref.read(sharedPreferencesProvider);
+
+    if (val) {
+      // Request permission first. requestNotifications() is a no-op if
+      // already granted; shows rationale + OS dialog if not.
+      if (!_permStatus.isGranted) {
+        final granted =
+            await PermissionService.instance.requestNotifications(context);
+        if (!mounted) return;
+        final newStatus =
+            await PermissionService.instance.notificationStatus;
+        setState(() => _permStatus = newStatus);
+        if (!granted) return; // stay off if user denied
+      }
+    }
+
     await prefs.setBool(PrefKeys.notificationsEnabled, val);
-    setState(() => _enabled = val);
+    if (mounted) setState(() => _enabled = val);
   }
 
   Future<void> _pickTime() async {
@@ -815,6 +840,8 @@ class _NotificationsSectionState
   Widget build(BuildContext context) {
     if (!_loaded) return const SizedBox.shrink();
     final primary = Theme.of(context).colorScheme.primary;
+    final isPermanentlyDenied = _permStatus.isPermanentlyDenied;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -822,6 +849,7 @@ class _NotificationsSectionState
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -829,25 +857,72 @@ class _NotificationsSectionState
               children: [
                 Icon(
                   Icons.notifications_outlined,
-                  color: AppColors.textSecondary,
+                  color:
+                      isPermanentlyDenied
+                          ? AppColors.textMuted
+                          : AppColors.textSecondary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
                     'Daily habit reminders',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 Switch(
                   value: _enabled,
-                  onChanged: _setEnabled,
+                  onChanged: isPermanentlyDenied ? null : _setEnabled,
                   activeColor: primary,
                 ),
               ],
             ),
           ),
-          if (_enabled) ...[
+          // ── Permanently denied banner ─────────────────────
+          if (isPermanentlyDenied) ...[  
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            InkWell(
+              onTap: openAppSettings,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.warning,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Notification permission denied. Tap to open Settings and enable it.',
+                        style: TextStyle(
+                          color: AppColors.warning,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      color: AppColors.warning,
+                      size: 14,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          // ── Time picker row (only when enabled) ───────────
+          if (_enabled && !isPermanentlyDenied) ...[  
             const Divider(height: 1, indent: 16, endIndent: 16),
             InkWell(
               onTap: _pickTime,
@@ -1010,9 +1085,7 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
         children: [
           InkWell(
             onTap: _pickFirstDay,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(16),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -1108,9 +1181,9 @@ class _AboutSection extends StatelessWidget {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open: $url')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not open: $url')));
       }
     }
   }
@@ -1141,11 +1214,7 @@ class _AboutSection extends StatelessWidget {
             icon: Icons.star_rounded,
             label: 'Rate on Google Play',
             color: const Color(0xFFFDCB6E),
-            onTap:
-                () => _open(
-                  context,
-                  'market://details?id=com.habitgenius',
-                ),
+            onTap: () => _open(context, 'market://details?id=com.habitgenius'),
             isFirst: true,
           ),
           _AboutRow(
@@ -1156,20 +1225,12 @@ class _AboutSection extends StatelessWidget {
           _AboutRow(
             icon: Icons.privacy_tip_outlined,
             label: 'Privacy Policy',
-            onTap:
-                () => _open(
-                  context,
-                  'https://habitgenius.app/privacy',
-                ),
+            onTap: () => _open(context, 'https://habitgenius.app/privacy'),
           ),
           _AboutRow(
             icon: Icons.description_outlined,
             label: 'Terms of Service',
-            onTap:
-                () => _open(
-                  context,
-                  'https://habitgenius.app/terms',
-                ),
+            onTap: () => _open(context, 'https://habitgenius.app/terms'),
           ),
           _AboutRow(
             icon: Icons.mail_outline_rounded,

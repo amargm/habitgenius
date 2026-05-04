@@ -71,13 +71,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     _ctrl.forward();
 
-    // Ask for notification + exact-alarm permissions once, after the first
-    // frame so the screen is visible when the rationale sheet appears.
+    // Request notification + exact-alarm permissions at the point of need:
+    // only fire when the user has at least one habit (so they have a concrete
+    // reason to want reminders). On a completely empty first launch the
+    // rationale would feel disconnected from any action the user has taken.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      // Only prompt if not already granted (PermissionService checks first).
-      final granted = await PermissionService.instance.notificationsGranted;
-      if (!granted && mounted) {
+      final alreadyGranted =
+          await PermissionService.instance.notificationsGranted;
+      if (alreadyGranted) return; // already handled — nothing to do
+      // Check habit count without triggering a rebuild.
+      final data = ref.read(appDataProvider);
+      if (data.habits.isNotEmpty && mounted) {
         await PermissionService.instance.requestAllRequired(context);
       }
     });

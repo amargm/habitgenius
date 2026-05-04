@@ -21,6 +21,36 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
   bool _isLoading = false;
 
   Future<void> _pickFolder() async {
+    // Show an in-app explanation before the system folder picker opens.
+    // This is required by Google Play policy: users must understand WHY
+    // the app is accessing storage before the OS prompt appears.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Choose a data folder'),
+            content: const Text(
+              'HabitGenius stores all your habits, journal, moods, focus sessions, '
+              'and expenses in a single JSON file.\n\n'
+              'Pick any folder on your device — a Google Drive or Dropbox folder '
+              'lets you sync automatically across your devices.\n\n'
+              'The app only reads and writes this one file. It does not access '
+              'any other files or photos on your device.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Choose folder'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true || !mounted) return;
+
     final dir = await FilePicker.platform.getDirectoryPath(
       dialogTitle: 'Choose folder for HabitGenius data',
     );
