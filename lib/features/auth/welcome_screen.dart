@@ -90,11 +90,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   Future<void> _onContinueAsGuest() async {
     setState(() => _signingIn = true);
-    await ref.read(authNotifierProvider.notifier).continueAsGuest();
-    await ref
-        .read(dataNotifierProvider.notifier)
-        .load(isGuest: true, customDir: null);
-    if (mounted) context.go(AppRoutes.home);
+    try {
+      await ref.read(authNotifierProvider.notifier).continueAsGuest();
+      await ref
+          .read(dataNotifierProvider.notifier)
+          .load(isGuest: true, customDir: null);
+      if (mounted) context.go(AppRoutes.home);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not start guest session. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _signingIn = false);
+    }
   }
 
   @override

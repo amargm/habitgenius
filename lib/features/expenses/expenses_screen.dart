@@ -502,9 +502,13 @@ class _TxTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isExpense = tx.type == TransactionType.expense;
     final isIncome = tx.type == TransactionType.income;
-    final color = isIncome ? AppColors.success : AppColors.danger;
+    final isTransfer = tx.type == TransactionType.transfer;
+    final color = isIncome
+        ? AppColors.success
+        : isTransfer
+            ? AppColors.textSecondary
+            : AppColors.danger;
 
     return GestureDetector(
       onLongPress: () => _confirmDelete(context, ref),
@@ -529,9 +533,9 @@ class _TxTile extends ConsumerWidget {
                 child: Text(
                   isIncome
                       ? '↑'
-                      : isExpense
-                      ? '↓'
-                      : '⇄',
+                      : isTransfer
+                      ? '⇄'
+                      : '↓',
                   style: TextStyle(
                     color: color,
                     fontSize: 18,
@@ -567,7 +571,7 @@ class _TxTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isIncome ? '+' : '-'}${tx.currency} ${tx.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : isTransfer ? '' : '-'}${tx.currency} ${tx.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w700,
@@ -613,7 +617,7 @@ class _TxTile extends ConsumerWidget {
             ],
           ),
     );
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       await ref.read(dataNotifierProvider.notifier).deleteTransaction(tx.id);
     }
   }

@@ -171,7 +171,7 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
             ],
           ),
     );
-    if (confirmed == true) {
+    if (confirmed == true && mounted) {
       await ref.read(dataNotifierProvider.notifier).deleteJournalEntry(id);
     }
   }

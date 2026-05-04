@@ -238,8 +238,11 @@ class _ProCardState extends ConsumerState<_ProCard> {
       _loading = true;
       _error = null;
     });
-    await ref.read(purchaseServiceProvider).restore();
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      await ref.read(purchaseServiceProvider).restore();
+      // Give the purchase stream up to 3 seconds to deliver the result.
+      await Future.delayed(const Duration(seconds: 3));
+    } catch (_) {}
     if (!mounted) return;
     final isPro = ref.read(purchaseServiceProvider).isPro;
     if (isPro) {
@@ -250,7 +253,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
     } else {
       setState(() => _error = 'No previous Pro purchase found');
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
