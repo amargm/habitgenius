@@ -47,7 +47,7 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Write google-services.json
-        script: echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
+        script: echo $GOOGLE_SERVICES_JSON | base64 -d > android/app/google-services.json
 
       - name: Get Flutter packages
         script: flutter pub get
@@ -111,11 +111,8 @@ workflows:
       - name: Set Android SDK path
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
-      - name: Set Android SDK path
-        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-
       - name: Write google-services.json
-        script: echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
+        script: echo $GOOGLE_SERVICES_JSON | base64 -d > android/app/google-services.json
 
       - name: Decode keystore
         script: |
