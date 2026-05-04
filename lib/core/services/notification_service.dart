@@ -16,26 +16,42 @@ class NotificationService {
   static const _habitChannelName = 'Habit Reminders';
 
   /// Initialise the plugin and timezone data. Safe to call multiple times.
+  /// All failures are non-fatal — the app runs without notifications rather
+  /// than crashing.
   static Future<void> init() async {
     if (_initialised) return;
 
-    tz_data.initializeTimeZones();
+    try {
+      tz_data.initializeTimeZones();
+    } catch (e) {
+      debugPrint('[NotificationService] Timezone init failed: $e');
+      return;
+    }
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _plugin.initialize(const InitializationSettings(android: android));
+    try {
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _plugin.initialize(const InitializationSettings(android: android));
+    } catch (e) {
+      debugPrint('[NotificationService] Plugin init failed: $e');
+      return;
+    }
 
-    // Create the Android notification channel.
-    const channel = AndroidNotificationChannel(
-      _habitChannelId,
-      _habitChannelName,
-      description: 'Daily reminders for your tracked habits',
-      importance: Importance.high,
-    );
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
+    try {
+      // Create the Android notification channel.
+      const channel = AndroidNotificationChannel(
+        _habitChannelId,
+        _habitChannelName,
+        description: 'Daily reminders for your tracked habits',
+        importance: Importance.high,
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(channel);
+    } catch (e) {
+      debugPrint('[NotificationService] Channel creation failed: $e');
+    }
 
     _initialised = true;
   }

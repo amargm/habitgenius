@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,9 +11,33 @@ import 'core/services/purchase_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Catch any unhandled Flutter framework errors — log, don't crash.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('[FlutterError] ${details.exceptionAsString()}');
+  };
+
+  // Catch unhandled async/platform errors — log, don't crash.
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[PlatformError] $error\n$stack');
+    return true; // handled — prevents crash-to-desktop
+  };
+
   final prefs = await SharedPreferences.getInstance();
-  await NotificationService.init();
-  await PurchaseService.instance.init();
+
+  // Non-fatal startup services — failures must never prevent the app from
+  // reaching runApp().
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('[Startup] NotificationService.init failed: $e');
+  }
+
+  try {
+    await PurchaseService.instance.init();
+  } catch (e) {
+    debugPrint('[Startup] PurchaseService.init failed: $e');
+  }
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

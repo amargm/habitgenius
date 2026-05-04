@@ -38,18 +38,30 @@ class PurchaseService extends ChangeNotifier {
 
   Future<void> init() async {
     // Restore persisted purchase state first.
-    final prefs = await SharedPreferences.getInstance();
-    _isPro = prefs.getBool(_kProPurchasedKey) ?? false;
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isPro = prefs.getBool(_kProPurchasedKey) ?? false;
+      notifyListeners();
+    } catch (_) {}
 
-    _available = await _iap.isAvailable();
+    try {
+      _available = await _iap.isAvailable();
+    } catch (_) {
+      _available = false;
+      return;
+    }
     if (!_available) return;
 
     // Listen to the purchase stream.
     _sub = _iap.purchaseStream.listen(_onPurchaseUpdates, onError: (_) {});
 
-    // Restore any past purchases (handles reinstalls).
-    await _iap.restorePurchases();
+    // Restore any past purchases (handles reinstalls). Fire-and-forget:
+    // if the store is unreachable the stream simply won't emit anything.
+    try {
+      await _iap.restorePurchases();
+    } catch (_) {
+      // Non-fatal — purchase state already loaded from SharedPreferences.
+    }
   }
 
   // ── Buy ───────────────────────────────────────────────────

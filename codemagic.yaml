@@ -39,23 +39,21 @@ workflows:
     environment:
       flutter: stable
       java: 17
-      groups:
-        - keystore_credentials
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
     scripts:
+      - name: Set Android SDK path
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
       - name: Get Flutter packages
         script: flutter pub get
 
-      - name: Generate code (json_serializable)
+      - name: Generate code (json_serializable + riverpod)
         script: dart run build_runner build --delete-conflicting-outputs
 
       - name: Dart code analysis
         script: flutter analyze --no-fatal-infos
-
-      - name: Set Android SDK path
-        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Build debug APK
         script: flutter build apk --debug
