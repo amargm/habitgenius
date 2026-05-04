@@ -1,0 +1,143 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HabitGenius — Codemagic CI/CD
+#
+# Required variable groups (configure in Codemagic UI → Teams → Global vars
+# or per-app):
+#
+#   keystore_credentials
+#     CM_KEYSTORE           base64 of android/app/habitgenius-release.keystore
+#                           (contents of keystore_base64.txt)
+#     CM_KEYSTORE_PASSWORD  HabitGenius@2026
+#     CM_KEY_ALIAS          habitgenius
+#     CM_KEY_PASSWORD       HabitGenius@2026
+#
+#   firebase  (add in Sprint 2 when Firebase is configured)
+#     GOOGLE_SERVICES_JSON_BASE64  base64 of android/app/google-services.json
+#
+# Two workflows:
+#   1. android-debug   — fast debug APK on every push to dev/*  or main
+#   2. android-release — signed release AAB on push to main only
+# ─────────────────────────────────────────────────────────────────────────────
+
+workflows:
+
+  # ── 1. Android Debug APK ────────────────────────────────────────────────────
+  android-debug:
+    name: Android Debug APK
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "dev/*"
+          include: true
+        - pattern: main
+          include: true
+
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - keystore_credentials
+      vars:
+        PACKAGE_NAME: "com.habitgenius"
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Dart code analysis
+        script: flutter analyze --no-fatal-infos
+
+      - name: Set Android SDK path
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Build debug APK
+        script: flutter build apk --debug
+
+    artifacts:
+      - build/app/outputs/apk/debug/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - mugaliamar@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  # ── 2. Android Release AAB (Signed) ─────────────────────────────────────────
+  android-release:
+    name: Android Release AAB (Signed)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: main
+          include: true
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - keystore_credentials
+        # Uncomment when Firebase is added in Sprint 2:
+        # - firebase
+      vars:
+        PACKAGE_NAME: "com.habitgenius"
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Dart code analysis
+        script: flutter analyze --no-fatal-infos
+
+      - name: Set Android SDK path
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      # Uncomment when google-services.json is added (Sprint 2):
+      # - name: Place google-services.json
+      #   script: echo $GOOGLE_SERVICES_JSON_BASE64 | base64 --decode > android/app/google-services.json
+
+      - name: Decode keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/habitgenius-release.keystore
+
+      - name: Build release AAB
+        script: |
+          flutter build appbundle --release \
+            --build-name=1.0.0 \
+            --build-number=$PROJECT_BUILD_NUMBER
+
+      - name: Build release APK (for direct install testing)
+        script: |
+          flutter build apk --release \
+            --build-name=1.0.0 \
+            --build-number=$PROJECT_BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/apk/release/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - mugaliamar@gmail.com
+        notify:
+          success: true
+          failure: true
+      # Uncomment to publish to Play Store internal track when ready:
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+      #   submit_as_draft: true
