@@ -5,6 +5,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/sync_service.dart';
 
 /// Splash screen: animates logo, restores auth session, then routes to the
 /// correct destination based on session state.
@@ -60,9 +61,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // Guest session → load from internal storage and go home.
     if (auth.isGuest) {
-      await ref
-          .read(dataNotifierProvider.notifier)
-          .load(isGuest: true, customDir: null);
+      final notifier = ref.read(dataNotifierProvider.notifier);
+      await notifier.load(isGuest: true, customDir: null);
+      await SyncService.instance.seedTimestamp(notifier.filePath);
       if (mounted) context.go(AppRoutes.home);
       return;
     }
@@ -75,9 +76,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     // Load data then decide whether to show onboarding.
-    await ref
-        .read(dataNotifierProvider.notifier)
-        .load(isGuest: false, customDir: dataDir);
+    final notifier = ref.read(dataNotifierProvider.notifier);
+    await notifier.load(isGuest: false, customDir: dataDir);
+    await SyncService.instance.seedTimestamp(notifier.filePath);
 
     if (!mounted) return;
     final hasSeenOnboarding =

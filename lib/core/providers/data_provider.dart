@@ -23,12 +23,18 @@ final dataServiceProvider = Provider<DataService>((_) => DataService());
 class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   final DataService _service;
   String? _filePath;
+  bool? _isGuest;
+  String? _customDir;
 
   DataNotifier(this._service) : super(const AsyncValue.loading());
+
+  String? get filePath => _filePath;
 
   /// Resolves the file path and loads [AppData] from disk.
   /// Call this from [SplashScreen] after auth is resolved.
   Future<void> load({required bool isGuest, required String? customDir}) async {
+    _isGuest = isGuest;
+    _customDir = customDir;
     state = const AsyncValue.loading();
     try {
       _filePath = await _service.resolveFilePath(
@@ -40,6 +46,13 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  /// Re-reads the file from the same path used in [load].
+  /// No-op if [load] was never called.
+  Future<void> reload() async {
+    if (_isGuest == null) return;
+    await load(isGuest: _isGuest!, customDir: _customDir);
   }
 
   /// Applies [updater] to the current [AppData], updates state, and persists.
