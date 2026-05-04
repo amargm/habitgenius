@@ -649,7 +649,8 @@ class _QuickActionsGrid extends StatelessWidget {
         label: 'Add habit',
         icon: Icons.add_circle_outline_rounded,
         route: AppRoutes.addHabit,
-        color: const Color(0xFF6C5CE7),
+        // null → _ActionTile will use colorScheme.primary (theme-reactive)
+        color: null,
       ),
       _ActionItem(
         label: 'Log mood',
@@ -691,14 +692,14 @@ class _ActionItem {
   final String label;
   final IconData icon;
   final String route;
-  final Color color;
+  final Color? color; // null = use colorScheme.primary
   final bool hidden;
 
   const _ActionItem({
     required this.label,
     required this.icon,
     required this.route,
-    required this.color,
+    this.color,
     this.hidden = false,
   });
 }
@@ -709,6 +710,7 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = item.color ?? Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -723,19 +725,19 @@ class _ActionTile extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: item.color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: item.color.withValues(alpha: 0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(item.icon, color: item.color, size: 26),
+            Icon(item.icon, color: color, size: 26),
             const SizedBox(height: 6),
             Text(
               item.label,
               style: TextStyle(
-                color: item.color,
+                color: color,
                 fontWeight: FontWeight.w600,
                 fontSize: 11,
               ),

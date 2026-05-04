@@ -1,9 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
+import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/purchase_service.dart';
 import '../../core/theme/theme_provider.dart';
@@ -38,8 +40,8 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   'Settings',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -63,26 +65,60 @@ class SettingsScreen extends ConsumerWidget {
             _ThemeColorGrid(themeState: themeState, tier: tier),
             const SizedBox(height: 24),
 
+            // ── Notifications ─────────────────────────────
+            _SectionHeader(label: 'Notifications'),
+            const SizedBox(height: 12),
+            const _NotificationsSection(),
+            const SizedBox(height: 24),
+
+            // ── General ───────────────────────────────────
+            _SectionHeader(label: 'General'),
+            const SizedBox(height: 12),
+            const _GeneralSection(),
+            const SizedBox(height: 24),
+
             // ── Data ──────────────────────────────────────
             _SectionHeader(label: 'Data'),
             const SizedBox(height: 12),
             _DataSection(tier: tier),
             const SizedBox(height: 24),
 
+            // ── About & Support ───────────────────────────
+            _SectionHeader(label: 'About & Support'),
+            const SizedBox(height: 12),
+            const _AboutSection(),
+            const SizedBox(height: 24),
+
             // ── Account ───────────────────────────────────
             _SectionHeader(label: 'Account'),
             const SizedBox(height: 12),
             _AccountSection(authState: authState),
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
 
-            // Version
+            // ── Version footer ────────────────────────────
             Center(
-              child: Text(
-                'HabitGenius · v1.0.0',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12,
-                ),
+              child: Column(
+                children: [
+                  Text(
+                    'HabitGenius',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Version 1.0.0 (1)',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    '© 2026 HabitGenius. All rights reserved.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  ),
+                ],
               ),
             ),
           ],
@@ -724,4 +760,493 @@ class _SectionHeader extends StatelessWidget {
       letterSpacing: 1.0,
     ),
   );
+}
+
+// ── Notifications section ─────────────────────────────────
+
+class _NotificationsSection extends ConsumerStatefulWidget {
+  const _NotificationsSection();
+
+  @override
+  ConsumerState<_NotificationsSection> createState() =>
+      _NotificationsSectionState();
+}
+
+class _NotificationsSectionState
+    extends ConsumerState<_NotificationsSection> {
+  bool _enabled = false;
+  TimeOfDay _time = const TimeOfDay(hour: 8, minute: 0);
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    setState(() {
+      _enabled = prefs.getBool(PrefKeys.notificationsEnabled) ?? false;
+      _time = TimeOfDay(
+        hour: prefs.getInt(PrefKeys.reminderHour) ?? 8,
+        minute: prefs.getInt(PrefKeys.reminderMinute) ?? 0,
+      );
+      _loaded = true;
+    });
+  }
+
+  Future<void> _setEnabled(bool val) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(PrefKeys.notificationsEnabled, val);
+    setState(() => _enabled = val);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _time);
+    if (picked == null || !mounted) return;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setInt(PrefKeys.reminderHour, picked.hour);
+    await prefs.setInt(PrefKeys.reminderMinute, picked.minute);
+    setState(() => _time = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Daily habit reminders',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                Switch(
+                  value: _enabled,
+                  onChanged: _setEnabled,
+                  activeColor: primary,
+                ),
+              ],
+            ),
+          ),
+          if (_enabled) ...[
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            InkWell(
+              onTap: _pickTime,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Reminder time',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _time.format(context),
+                      style: TextStyle(
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── General section ───────────────────────────────────────
+
+class _GeneralSection extends ConsumerStatefulWidget {
+  const _GeneralSection();
+
+  @override
+  ConsumerState<_GeneralSection> createState() => _GeneralSectionState();
+}
+
+class _GeneralSectionState extends ConsumerState<_GeneralSection> {
+  int _firstDayOfWeek = 1; // 0=Sun, 1=Mon
+  String _currency = 'USD';
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    setState(() {
+      _firstDayOfWeek = prefs.getInt(PrefKeys.firstDayOfWeek) ?? 1;
+      _currency = prefs.getString(PrefKeys.defaultCurrency) ?? 'USD';
+      _loaded = true;
+    });
+  }
+
+  Future<void> _pickFirstDay() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final picked = await showDialog<int>(
+      context: context,
+      builder:
+          (_) => SimpleDialog(
+            title: const Text('First day of week'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, 0),
+                child: const Text('Sunday'),
+              ),
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, 1),
+                child: const Text('Monday'),
+              ),
+            ],
+          ),
+    );
+    if (picked == null) return;
+    await prefs.setInt(PrefKeys.firstDayOfWeek, picked);
+    setState(() => _firstDayOfWeek = picked);
+  }
+
+  Future<void> _pickCurrency() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    const currencies = [
+      'USD',
+      'EUR',
+      'GBP',
+      'INR',
+      'JPY',
+      'CAD',
+      'AUD',
+      'CHF',
+      'CNY',
+      'BRL',
+      'MXN',
+      'SGD',
+      'AED',
+      'KRW',
+      'SAR',
+    ];
+    final picked = await showDialog<String>(
+      context: context,
+      builder:
+          (_) => SimpleDialog(
+            title: const Text('Default currency'),
+            children:
+                currencies
+                    .map(
+                      (c) => SimpleDialogOption(
+                        onPressed: () => Navigator.pop(context, c),
+                        child: Text(c),
+                      ),
+                    )
+                    .toList(),
+          ),
+    );
+    if (picked == null) return;
+    await prefs.setString(PrefKeys.defaultCurrency, picked);
+    setState(() => _currency = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    final primary = Theme.of(context).colorScheme.primary;
+    final dayLabel = _firstDayOfWeek == 1 ? 'Monday' : 'Sunday';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: _pickFirstDay,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'First day of week',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    dayLabel,
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          InkWell(
+            onTap: _pickCurrency,
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.attach_money_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Default currency',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _currency,
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── About & Support section ───────────────────────────────
+
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  static Future<void> _open(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open: $url')),
+        );
+      }
+    }
+  }
+
+  static Future<void> _share(BuildContext context) async {
+    // Copy link to clipboard since share_plus is not installed.
+    const link =
+        'https://play.google.com/store/apps/details?id=com.habitgenius';
+    await Clipboard.setData(const ClipboardData(text: link));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('App link copied to clipboard')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          _AboutRow(
+            icon: Icons.star_rounded,
+            label: 'Rate on Google Play',
+            color: const Color(0xFFFDCB6E),
+            onTap:
+                () => _open(
+                  context,
+                  'market://details?id=com.habitgenius',
+                ),
+            isFirst: true,
+          ),
+          _AboutRow(
+            icon: Icons.share_rounded,
+            label: 'Share HabitGenius',
+            onTap: () => _share(context),
+          ),
+          _AboutRow(
+            icon: Icons.privacy_tip_outlined,
+            label: 'Privacy Policy',
+            onTap:
+                () => _open(
+                  context,
+                  'https://habitgenius.app/privacy',
+                ),
+          ),
+          _AboutRow(
+            icon: Icons.description_outlined,
+            label: 'Terms of Service',
+            onTap:
+                () => _open(
+                  context,
+                  'https://habitgenius.app/terms',
+                ),
+          ),
+          _AboutRow(
+            icon: Icons.mail_outline_rounded,
+            label: 'Contact Support',
+            onTap:
+                () => _open(
+                  context,
+                  'mailto:support@habitgenius.app?subject=HabitGenius%20Support',
+                ),
+          ),
+          _AboutRow(
+            icon: Icons.info_outline_rounded,
+            label: 'Open Source Licenses',
+            isLast: true,
+            onTap: () => showLicensePage(context: context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+  final bool isFirst;
+  final bool isLast;
+
+  const _AboutRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = color ?? AppColors.textSecondary;
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? const Radius.circular(16) : Radius.zero,
+            bottom: isLast ? const Radius.circular(16) : Radius.zero,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icon, color: iconColor, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textMuted,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
+    );
+  }
 }

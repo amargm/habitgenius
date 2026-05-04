@@ -26,4 +26,21 @@ class PrefKeys {
 
   /// Set to true after the registered-user onboarding is completed.
   static const hasSeenOnboarding = 'has_seen_onboarding';
+
+  // ── Notifications ─────────────────────────────────────────
+  /// Whether global daily reminders are enabled.
+  static const notificationsEnabled = 'notifications_enabled';
+
+  /// Hour part of the global default reminder time (0-23).
+  static const reminderHour = 'reminder_hour';
+
+  /// Minute part of the global default reminder time (0-59).
+  static const reminderMinute = 'reminder_minute';
+
+  // ── General ───────────────────────────────────────────────
+  /// 0 = Sunday, 1 = Monday (first day of the week for habit views).
+  static const firstDayOfWeek = 'first_day_of_week';
+
+  /// ISO 4217 currency code used as default in the Expenses feature.
+  static const defaultCurrency = 'default_currency';
 }
