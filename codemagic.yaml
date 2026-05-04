@@ -154,7 +154,14 @@ workflows:
 
       - name: Decode keystore
         script: |
-          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/habitgenius-release.keystore
+          KEYSTORE_PATH=$CM_BUILD_DIR/android/app/habitgenius-release.keystore
+          echo "$CM_KEYSTORE" | tr -d '[:space:]' | base64 -d > "$KEYSTORE_PATH"
+          if [ ! -s "$KEYSTORE_PATH" ]; then
+            echo "ERROR: keystore is empty. Check CM_KEYSTORE in Codemagic keystore_credentials group."
+            exit 1
+          fi
+          echo "CM_KEYSTORE_PATH=$KEYSTORE_PATH" >> $CM_ENV
+          echo "Keystore decoded OK → $KEYSTORE_PATH"
 
       - name: Build release AAB
         script: |
