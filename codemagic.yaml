@@ -48,6 +48,9 @@ workflows:
       - name: Get Flutter packages
         script: flutter pub get
 
+      - name: Generate code (json_serializable)
+        script: dart run build_runner build --delete-conflicting-outputs
+
       - name: Dart code analysis
         script: flutter analyze --no-fatal-infos
 
@@ -98,6 +101,9 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+
+      - name: Generate code (json_serializable)
+        script: dart run build_runner build --delete-conflicting-outputs
 
       - name: Dart code analysis
         script: flutter analyze --no-fatal-infos

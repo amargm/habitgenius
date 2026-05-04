@@ -23,10 +23,9 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Good Morning',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayLarge
-                                  ?.copyWith(fontSize: 28),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.displayLarge?.copyWith(fontSize: 28),
                             ),
                             const SizedBox(height: 4),
                             Text(

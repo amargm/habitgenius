@@ -58,39 +58,35 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: AppRoutes.home,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: HomeScreen(),
-          ),
+          pageBuilder:
+              (context, state) => const NoTransitionPage(child: HomeScreen()),
         ),
         GoRoute(
           path: AppRoutes.habits,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: HabitsScreen(),
-          ),
+          pageBuilder:
+              (context, state) => const NoTransitionPage(child: HabitsScreen()),
         ),
         GoRoute(
           path: AppRoutes.mood,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: MoodScreen(),
-          ),
+          pageBuilder:
+              (context, state) => const NoTransitionPage(child: MoodScreen()),
         ),
         GoRoute(
           path: AppRoutes.focus,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: FocusScreen(),
-          ),
+          pageBuilder:
+              (context, state) => const NoTransitionPage(child: FocusScreen()),
         ),
         GoRoute(
           path: AppRoutes.journal,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: JournalScreen(),
-          ),
+          pageBuilder:
+              (context, state) =>
+                  const NoTransitionPage(child: JournalScreen()),
         ),
         GoRoute(
           path: AppRoutes.expenses,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: ExpensesScreen(),
-          ),
+          pageBuilder:
+              (context, state) =>
+                  const NoTransitionPage(child: ExpensesScreen()),
         ),
       ],
     ),

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_limits.dart';
+import '../providers/auth_provider.dart';
 import '../router/app_router.dart';
 
 /// The main navigation shell that wraps all tab screens with the
 /// floating bottom navigation bar that matches the prototype design.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
@@ -55,16 +57,16 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // TODO(auth): replace with real tier from AuthProvider
-    const currentTier = UserTier.registered;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentTier = ref.watch(authNotifierProvider).tier;
     final currentRoute = _currentRoute(context);
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
 
-    final visibleTabs = _tabs
-        .where((t) => _tierIndex(currentTier) >= _tierIndex(t.minTier))
-        .toList();
+    final visibleTabs =
+        _tabs
+            .where((t) => _tierIndex(currentTier) >= _tierIndex(t.minTier))
+            .toList();
 
     return Scaffold(
       body: child,
@@ -87,46 +89,48 @@ class MainShell extends StatelessWidget {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: visibleTabs.map((tab) {
-                final isActive = currentRoute == tab.route;
-                return GestureDetector(
-                  onTap: () => context.go(tab.route),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isActive ? 16 : 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isActive ? primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          tab.icon,
-                          size: 22,
-                          color: isActive ? Colors.white : AppColors.textMuted,
+              children:
+                  visibleTabs.map((tab) {
+                    final isActive = currentRoute == tab.route;
+                    return GestureDetector(
+                      onTap: () => context.go(tab.route),
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isActive ? 16 : 12,
+                          vertical: 10,
                         ),
-                        if (isActive) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            tab.label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                        decoration: BoxDecoration(
+                          color: isActive ? primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              tab.icon,
+                              size: 22,
+                              color:
+                                  isActive ? Colors.white : AppColors.textMuted,
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                            if (isActive) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                tab.label,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
         ),

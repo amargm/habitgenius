@@ -96,9 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: i == _page ? 24 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: i == _page
-                              ? primary
-                              : AppColors.textMuted,
+                          color: i == _page ? primary : AppColors.textMuted,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -150,18 +148,17 @@ class _SlidePage extends StatelessWidget {
             slide.title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                ),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             slide.body,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.6,
-                  fontSize: 15,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.6, fontSize: 15),
           ),
         ],
       ),

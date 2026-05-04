@@ -13,10 +13,7 @@ class ThemeState {
   final ThemeColor themeColor;
   final ThemeMode themeMode;
 
-  const ThemeState({
-    required this.themeColor,
-    required this.themeMode,
-  });
+  const ThemeState({required this.themeColor, required this.themeMode});
 
   ThemeState copyWith({ThemeColor? themeColor, ThemeMode? themeMode}) {
     return ThemeState(
@@ -29,10 +26,12 @@ class ThemeState {
 // ── Notifier ──────────────────────────────────────────────
 class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeNotifier()
-      : super(ThemeState(
+    : super(
+        ThemeState(
           themeColor: AppColors.defaultTheme,
           themeMode: ThemeMode.dark,
-        )) {
+        ),
+      ) {
     _load();
   }
 
