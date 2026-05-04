@@ -39,6 +39,8 @@ workflows:
     environment:
       flutter: stable
       java: 17
+      groups:
+        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
@@ -47,7 +49,7 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Write google-services.json
-        script: echo $GOOGLE_SERVICES_JSON | base64 -d > android/app/google-services.json
+        script: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
 
       - name: Get Flutter packages
         script: flutter pub get
@@ -112,7 +114,7 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Write google-services.json
-        script: echo $GOOGLE_SERVICES_JSON | base64 -d > android/app/google-services.json
+        script: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
 
       - name: Decode keystore
         script: |
