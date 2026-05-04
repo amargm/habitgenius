@@ -6,6 +6,7 @@ import '../../features/auth/file_setup_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/habits/habits_screen.dart';
+import '../../features/habits/add_habit_screen.dart';
 import '../../features/mood/mood_screen.dart';
 import '../../features/focus/focus_screen.dart';
 import '../../features/journal/journal_screen.dart';
@@ -21,6 +22,7 @@ class AppRoutes {
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const habits = '/habits';
+  static const addHabit = '/habits/add';
   static const mood = '/mood';
   static const focus = '/focus';
   static const journal = '/journal';
@@ -51,6 +53,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.settings,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.addHabit,
+      builder: (context, state) => const AddHabitScreen(),
     ),
     // ── Main shell with bottom nav ─────────────────────────
     ShellRoute(

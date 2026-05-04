@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/app_data.dart';
 import '../models/app_settings.dart';
@@ -10,6 +11,7 @@ import '../models/journal_entry.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../services/data_service.dart';
+import '../utils/habit_helpers.dart';
 
 // ── Service ───────────────────────────────────────────────
 
@@ -75,6 +77,85 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   );
 
   // ── Habit Logs ────────────────────────────────────────────
+
+  /// Toggles checkbox completion OR increments counter/timer value by [delta].
+  /// Creates a new log if none exists for today. Writes a completedAt timestamp
+  /// when the habit transitions to completed.
+  Future<void> toggleHabit({
+    required String habitId,
+    String? dateStr, // defaults to today
+    int delta = 1, // for counter / timer increments
+  }) async {
+    final today = dateStr ?? HabitHelpers.todayStr();
+    return _save((d) {
+      final habit = d.habits.firstWhere((h) => h.id == habitId);
+      final existing = HabitHelpers.logForDate(d.habitLogs, habitId, today);
+
+      final HabitLog updated;
+      if (existing == null) {
+        // New log for today.
+        if (habit.progressType == HabitProgressType.checkbox ||
+            habit.progressType == HabitProgressType.checklist ||
+            habit.progressType == HabitProgressType.stopwatch) {
+          updated = HabitLog(
+            id: const Uuid().v4(),
+            habitId: habitId,
+            date: today,
+            completed: true,
+            value: 1,
+            completedAt: DateTime.now().toUtc().toIso8601String(),
+          );
+        } else {
+          // counter / timer — increment toward target
+          final newValue = delta.clamp(0, habit.targetValue);
+          final done = newValue >= habit.targetValue;
+          updated = HabitLog(
+            id: const Uuid().v4(),
+            habitId: habitId,
+            date: today,
+            completed: done,
+            value: newValue,
+            completedAt:
+                done ? DateTime.now().toUtc().toIso8601String() : null,
+          );
+        }
+      } else {
+        // Update existing log.
+        if (habit.progressType == HabitProgressType.checkbox ||
+            habit.progressType == HabitProgressType.checklist ||
+            habit.progressType == HabitProgressType.stopwatch) {
+          final toggled = !existing.completed;
+          updated = existing.copyWith(
+            completed: toggled,
+            completedAt:
+                toggled ? DateTime.now().toUtc().toIso8601String() : null,
+          );
+        } else {
+          final newValue = (existing.value + delta).clamp(0, habit.targetValue * 2);
+          final done = newValue >= habit.targetValue;
+          updated = existing.copyWith(
+            value: newValue,
+            completed: done,
+            completedAt:
+                done && !existing.completed
+                    ? DateTime.now().toUtc().toIso8601String()
+                    : existing.completedAt,
+          );
+        }
+      }
+
+      final idx = d.habitLogs.indexWhere(
+        (l) => l.habitId == habitId && l.date == today,
+      );
+      final logs = [...d.habitLogs];
+      if (idx >= 0) {
+        logs[idx] = updated;
+      } else {
+        logs.add(updated);
+      }
+      return d.copyWith(habitLogs: logs);
+    });
+  }
 
   /// Inserts or replaces the log entry for a given habit + date.
   Future<void> upsertHabitLog(HabitLog log) => _save((d) {
