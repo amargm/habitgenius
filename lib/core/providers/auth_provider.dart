@@ -94,8 +94,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Creates and saves a guest session (no account required).
   Future<void> continueAsGuest() async {
     state = AuthState(isLoading: true);
-    final user = await _service.continueAsGuest();
-    state = AuthState(user: user);
+    try {
+      final user = await _service.continueAsGuest();
+      state = AuthState(user: user);
+    } catch (e) {
+      state = AuthState(error: e.toString());
+      rethrow;
+    }
   }
 
   /// Signs out and clears the session state.

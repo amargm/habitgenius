@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,8 +23,10 @@ class EntitlementService {
 
   static const _kCollection = 'users';
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Lazy getters — avoids a constructor crash if Firebase.initializeApp()
+  // failed before this service is first used.
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
 
   DocumentReference<Map<String, dynamic>>? get _userDoc {
     final uid = _auth.currentUser?.uid;
@@ -40,9 +44,13 @@ class EntitlementService {
     try {
       final doc = _userDoc;
       if (doc == null) return false;
-      final snap = await doc.get(
-        const GetOptions(source: Source.serverAndCache),
-      );
+      final snap = await doc
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout:
+                () => throw TimeoutException('Firestore checkPro timeout'),
+          );
       return snap.data()?['isPro'] == true;
     } catch (_) {
       return false;

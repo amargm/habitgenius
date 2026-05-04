@@ -68,7 +68,10 @@ class NotificationService {
     required TimeOfDay timeOfDay,
     List<int> scheduleDays = const [],
   }) async {
-    assert(_initialised, 'Call NotificationService.init() first');
+    if (!_initialised) {
+      debugPrint('[NotificationService] scheduleHabitReminder called before init; skipping.');
+      return;
+    }
 
     final id = habitId.hashCode.abs() % 100000;
 

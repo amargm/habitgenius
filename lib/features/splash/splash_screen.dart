@@ -42,48 +42,55 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _init() async {
-    // Run the minimum splash delay and session restore concurrently.
-    await Future.wait([
-      Future<void>.delayed(const Duration(milliseconds: 1800)),
-      ref.read(authNotifierProvider.notifier).restore(),
-    ]);
+    try {
+      // Run the minimum splash delay and session restore concurrently.
+      await Future.wait([
+        Future<void>.delayed(const Duration(milliseconds: 1800)),
+        ref.read(authNotifierProvider.notifier).restore(),
+      ]);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final auth = ref.read(authNotifierProvider);
-    final prefs = ref.read(sharedPreferencesProvider);
+      final auth = ref.read(authNotifierProvider);
+      final prefs = ref.read(sharedPreferencesProvider);
 
-    // No session at all → show welcome screen.
-    if (auth.user == null) {
-      context.go(AppRoutes.welcome);
-      return;
-    }
+      // No session at all → show welcome screen.
+      if (auth.user == null) {
+        context.go(AppRoutes.welcome);
+        return;
+      }
 
-    // Guest session → load from internal storage and go home.
-    if (auth.isGuest) {
+      // Guest session → load from internal storage and go home.
+      if (auth.isGuest) {
+        final notifier = ref.read(dataNotifierProvider.notifier);
+        await notifier.load(isGuest: true, customDir: null);
+        await SyncService.instance.seedTimestamp(notifier.filePath);
+        if (mounted) context.go(AppRoutes.home);
+        return;
+      }
+
+      // Registered user: check whether the data folder has been configured.
+      final dataDir = prefs.getString(PrefKeys.dataFilePath);
+      if (dataDir == null || dataDir.isEmpty) {
+        if (mounted) context.go(AppRoutes.fileSetup);
+        return;
+      }
+
+      // Load data then decide whether to show onboarding.
       final notifier = ref.read(dataNotifierProvider.notifier);
-      await notifier.load(isGuest: true, customDir: null);
+      await notifier.load(isGuest: false, customDir: dataDir);
       await SyncService.instance.seedTimestamp(notifier.filePath);
-      if (mounted) context.go(AppRoutes.home);
-      return;
+
+      if (!mounted) return;
+      final hasSeenOnboarding =
+          prefs.getBool(PrefKeys.hasSeenOnboarding) ?? false;
+      context.go(hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding);
+    } catch (e, st) {
+      debugPrint('[SplashScreen] Init error: $e\n$st');
+      // Any unhandled exception during startup falls back to the welcome
+      // screen so the user is never permanently stuck on the splash.
+      if (mounted) context.go(AppRoutes.welcome);
     }
-
-    // Registered user: check whether the data folder has been configured.
-    final dataDir = prefs.getString(PrefKeys.dataFilePath);
-    if (dataDir == null || dataDir.isEmpty) {
-      if (mounted) context.go(AppRoutes.fileSetup);
-      return;
-    }
-
-    // Load data then decide whether to show onboarding.
-    final notifier = ref.read(dataNotifierProvider.notifier);
-    await notifier.load(isGuest: false, customDir: dataDir);
-    await SyncService.instance.seedTimestamp(notifier.filePath);
-
-    if (!mounted) return;
-    final hasSeenOnboarding =
-        prefs.getBool(PrefKeys.hasSeenOnboarding) ?? false;
-    context.go(hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding);
   }
 
   @override

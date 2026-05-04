@@ -54,7 +54,9 @@ class AuthService {
   static const _kIsGuest = 'auth_is_guest';
 
   final SharedPreferences _prefs;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Lazy getters — avoids a constructor crash if Firebase.initializeApp()
+  // failed before this service is first used.
+  FirebaseAuth get _auth => FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   AuthService(this._prefs);
