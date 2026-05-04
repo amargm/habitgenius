@@ -30,6 +30,27 @@ class AppRoutes {
   static const settings = '/settings';
 }
 
+// ── Fade transition helper (for auth-gateway routes) ────────
+
+CustomTransitionPage<void> _fadePage(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 400),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (ctx, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+        child: child,
+      );
+    },
+  );
+}
+
 // ── Slide transition helper ───────────────────────────────
 
 CustomTransitionPage<void> _slidePage(
@@ -74,19 +95,19 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.welcome,
       pageBuilder:
-          (context, state) => _slidePage(context, state, const WelcomeScreen()),
+          (context, state) => _fadePage(context, state, const WelcomeScreen()),
     ),
     GoRoute(
       path: AppRoutes.fileSetup,
       pageBuilder:
           (context, state) =>
-              _slidePage(context, state, const FileSetupScreen()),
+              _fadePage(context, state, const FileSetupScreen()),
     ),
     GoRoute(
       path: AppRoutes.onboarding,
       pageBuilder:
           (context, state) =>
-              _slidePage(context, state, const OnboardingScreen()),
+              _fadePage(context, state, const OnboardingScreen()),
     ),
     GoRoute(
       path: AppRoutes.settings,

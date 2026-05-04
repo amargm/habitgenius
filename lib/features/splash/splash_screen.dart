@@ -17,10 +17,14 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
   late Animation<double> _scaleAnim;
+
+  // Exit animation — fades the whole screen out before navigation.
+  late AnimationController _exitController;
+  late Animation<double> _exitFade;
 
   @override
   void initState() {
@@ -37,6 +41,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       begin: 0.85,
       end: 1,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    _exitController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _exitFade = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _exitController, curve: Curves.easeInCubic),
+    );
+
     _controller.forward();
     _init();
   }
@@ -56,7 +69,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       // No session at all → show welcome screen.
       if (auth.user == null) {
-        context.go(AppRoutes.welcome);
+        await _goFaded(AppRoutes.welcome);
         return;
       }
 
@@ -65,14 +78,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         final notifier = ref.read(dataNotifierProvider.notifier);
         await notifier.load(isGuest: true, customDir: null);
         await SyncService.instance.seedTimestamp(notifier.filePath);
-        if (mounted) context.go(AppRoutes.home);
+        await _goFaded(AppRoutes.home);
         return;
       }
 
       // Registered user: check whether the data folder has been configured.
       final dataDir = prefs.getString(PrefKeys.dataFilePath);
       if (dataDir == null || dataDir.isEmpty) {
-        if (mounted) context.go(AppRoutes.fileSetup);
+        await _goFaded(AppRoutes.fileSetup);
         return;
       }
 
@@ -84,18 +97,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
       final hasSeenOnboarding =
           prefs.getBool(PrefKeys.hasSeenOnboarding) ?? false;
-      context.go(hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding);
+      await _goFaded(
+        hasSeenOnboarding ? AppRoutes.home : AppRoutes.onboarding,
+      );
     } catch (e, st) {
       debugPrint('[SplashScreen] Init error: $e\n$st');
       // Any unhandled exception during startup falls back to the welcome
       // screen so the user is never permanently stuck on the splash.
-      if (mounted) context.go(AppRoutes.welcome);
+      await _goFaded(AppRoutes.welcome);
     }
+  }
+
+  /// Fades the splash out then navigates to [route].
+  Future<void> _goFaded(String route) async {
+    if (!mounted) return;
+    await _exitController.forward();
+    if (mounted) context.go(route);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _exitController.dispose();
     super.dispose();
   }
 
@@ -103,51 +126,54 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: ScaleTransition(
-            scale: _scaleAnim,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [primary, const Color(0xFF00CEC9)],
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primary.withValues(alpha: 0.4),
-                        blurRadius: 32,
-                        offset: const Offset(0, 8),
+      body: FadeTransition(
+        opacity: _exitFade,
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: ScaleTransition(
+              scale: _scaleAnim,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [primary, const Color(0xFF00CEC9)],
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primary.withValues(alpha: 0.4),
+                          blurRadius: 32,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.bolt_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.bolt_rounded,
-                    color: Colors.white,
-                    size: 48,
+                  const SizedBox(height: 20),
+                  Text(
+                    'HabitGenius',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.displayLarge?.copyWith(letterSpacing: -1),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'HabitGenius',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.displayLarge?.copyWith(letterSpacing: -1),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your life, organised.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your life, organised.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
