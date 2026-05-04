@@ -11,8 +11,8 @@
 #     CM_KEY_ALIAS          habitgenius
 #     CM_KEY_PASSWORD       HabitGenius@2026
 #
-#   firebase  (add in Sprint 2 when Firebase is configured)
-#     GOOGLE_SERVICES_JSON_BASE64  base64 of android/app/google-services.json
+#   firebase
+#     GOOGLE_SERVICES_JSON  base64 of android/app/google-services.json
 #
 # Two workflows:
 #   1. android-debug   — fast debug APK on every push to dev/*  or main
@@ -45,6 +45,9 @@ workflows:
     scripts:
       - name: Set Android SDK path
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Write google-services.json
+        script: echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
 
       - name: Get Flutter packages
         script: flutter pub get
@@ -91,8 +94,7 @@ workflows:
       java: 17
       groups:
         - keystore_credentials
-        # Uncomment when Firebase is added in Sprint 2:
-        # - firebase
+        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
@@ -109,9 +111,11 @@ workflows:
       - name: Set Android SDK path
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
-      # Uncomment when google-services.json is added (Sprint 2):
-      # - name: Place google-services.json
-      #   script: echo $GOOGLE_SERVICES_JSON_BASE64 | base64 --decode > android/app/google-services.json
+      - name: Set Android SDK path
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Write google-services.json
+        script: echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
 
       - name: Decode keystore
         script: |
