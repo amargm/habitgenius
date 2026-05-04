@@ -657,6 +657,10 @@ class _AccountSection extends ConsumerWidget {
           ),
     );
     if (confirmed == true) {
+      // Clear in-memory data BEFORE signing out so the previous user's
+      // habits, journal entries and transactions are not accessible to
+      // the next session while the sign-out completes.
+      ref.read(dataNotifierProvider.notifier).reset();
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) context.go(AppRoutes.welcome);
     }

@@ -258,6 +258,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                         if (n == null || n < 1) {
                           return 'Enter a positive number';
                         }
+                        if (n > 9999) return 'Maximum is 9999';
                         return null;
                       },
                     ),

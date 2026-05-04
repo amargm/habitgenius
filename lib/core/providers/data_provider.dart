@@ -56,6 +56,16 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     await load(isGuest: _isGuest!, customDir: _customDir);
   }
 
+  /// Clears all in-memory state and stored file-path metadata.
+  /// Must be called on sign-out so the previous user's data is not
+  /// accessible to the next session before a fresh [load] is performed.
+  void reset() {
+    _filePath = null;
+    _isGuest = null;
+    _customDir = null;
+    state = const AsyncValue.loading();
+  }
+
   /// Applies [updater] to the current [AppData], updates state, and persists.
   Future<void> _save(AppData Function(AppData current) updater) async {
     final current = state.valueOrNull;

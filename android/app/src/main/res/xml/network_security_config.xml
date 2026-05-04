@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Explicitly disallow cleartext (plain HTTP) traffic for all domains.
+  The app communicates only with Google Sign-In and Google Play (both HTTPS),
+  so there is no legitimate reason to permit cleartext connections.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

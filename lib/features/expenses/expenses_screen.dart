@@ -504,9 +504,10 @@ class _TxTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isIncome = tx.type == TransactionType.income;
     final isTransfer = tx.type == TransactionType.transfer;
-    final color = isIncome
-        ? AppColors.success
-        : isTransfer
+    final color =
+        isIncome
+            ? AppColors.success
+            : isTransfer
             ? AppColors.textSecondary
             : AppColors.danger;
 
@@ -571,7 +572,11 @@ class _TxTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isIncome ? '+' : isTransfer ? '' : '-'}${tx.currency} ${tx.amount.toStringAsFixed(2)}',
+                  '${isIncome
+                      ? '+'
+                      : isTransfer
+                      ? ''
+                      : '-'}${tx.currency} ${tx.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w700,
@@ -662,7 +667,8 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
 
   Future<void> _save() async {
     final amount = double.tryParse(_amountCtrl.text);
-    if (amount == null || amount <= 0 || _account == null) return;
+    // Guard against absurdly large values that would break display / arithmetic.
+    if (amount == null || amount <= 0 || amount > 1e9 || _account == null) return;
     setState(() => _saving = true);
     try {
       final dateStr =

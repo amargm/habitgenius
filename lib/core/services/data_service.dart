@@ -14,6 +14,10 @@ class DataService {
   /// * **Guest** users → app's internal documents directory (not user-visible).
   /// * **Registered/Pro** users → their chosen [customDirPath] (e.g. a Google
   ///   Drive folder), set during the [FileSetupScreen] flow.
+  ///
+  /// Throws [ArgumentError] if [customDirPath] contains directory-traversal
+  /// components (`..`) — this guards against a tampered SharedPreferences
+  /// value being used to escape the intended storage location.
   Future<String> resolveFilePath({
     required bool isGuest,
     required String? customDirPath,
@@ -22,6 +26,16 @@ class DataService {
       final dir = await getApplicationDocumentsDirectory();
       return '${dir.path}/$_kFileName';
     }
+
+    // Guard against path-traversal: reject any segment that is '..' or '.'.
+    // Split on both Unix and Windows separators to be safe.
+    final segments = customDirPath.split(RegExp(r'[/\\]'));
+    if (segments.any((s) => s == '..' || s == '.')) {
+      throw ArgumentError(
+        'Invalid data directory: path traversal components are not allowed.',
+      );
+    }
+
     final dir =
         customDirPath.endsWith('/')
             ? customDirPath.substring(0, customDirPath.length - 1)
