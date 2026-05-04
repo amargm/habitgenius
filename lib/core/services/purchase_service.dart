@@ -46,10 +46,7 @@ class PurchaseService extends ChangeNotifier {
     if (!_available) return;
 
     // Listen to the purchase stream.
-    _sub = _iap.purchaseStream.listen(
-      _onPurchaseUpdates,
-      onError: (_) {},
-    );
+    _sub = _iap.purchaseStream.listen(_onPurchaseUpdates, onError: (_) {});
 
     // Restore any past purchases (handles reinstalls).
     await _iap.restorePurchases();
@@ -105,8 +102,7 @@ class PurchaseService extends ChangeNotifier {
 
   // ── Stream handler ────────────────────────────────────────
 
-  Future<void> _onPurchaseUpdates(
-      List<PurchaseDetails> purchases) async {
+  Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       if (purchase.productID != kProProductId) continue;
 

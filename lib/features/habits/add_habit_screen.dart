@@ -131,12 +131,12 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   Future<void> _pickReminder() async {
     // Ask for notification permission contextually before showing the time
     // picker — the user is clearly about to set a reminder.
-    final granted =
-        await PermissionService.instance.notificationsGranted;
+    final granted = await PermissionService.instance.notificationsGranted;
     if (!granted) {
       if (!mounted) return;
-      final allow = await PermissionService.instance
-          .requestNotifications(context);
+      final allow = await PermissionService.instance.requestNotifications(
+        context,
+      );
       if (!allow) return; // User declined — don't show time picker.
     }
 

@@ -104,7 +104,9 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   }) async {
     final today = dateStr ?? HabitHelpers.todayStr();
     return _save((d) {
-      final habit = d.habits.firstWhere((h) => h.id == habitId);
+      final habitIdx = d.habits.indexWhere((h) => h.id == habitId);
+      if (habitIdx == -1) return d; // habit deleted since toggle was tapped
+      final habit = d.habits[habitIdx];
       final existing = HabitHelpers.logForDate(d.habitLogs, habitId, today);
 
       final HabitLog updated;
@@ -254,8 +256,10 @@ final dataNotifierProvider =
       return DataNotifier(ref.watch(dataServiceProvider));
     });
 
-/// Convenience provider — unwraps [AsyncValue] and throws if not yet loaded.
-/// Only use after [DataNotifier.load] has completed successfully.
+/// Convenience provider — unwraps [AsyncValue].
+/// Returns [AppData.empty] when data is still loading or in an error state
+/// so that feature screens never crash even if the file is temporarily
+/// unavailable (the HomeScreen handles the error state visually).
 final appDataProvider = Provider<AppData>((ref) {
-  return ref.watch(dataNotifierProvider).requireValue;
+  return ref.watch(dataNotifierProvider).valueOrNull ?? AppData.empty();
 });

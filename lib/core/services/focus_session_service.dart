@@ -117,7 +117,7 @@ class FocusSessionService extends ChangeNotifier {
       category: _category,
       mode: _mode,
       plannedDuration: _plannedDuration,
-      actualDuration: _mode == FocusMode.stopwatch ? _elapsed : _elapsed,
+      actualDuration: _elapsed,
       completedCycles: _completedCycles,
       startedAt: started.toIso8601String(),
       endedAt: DateTime.now().toUtc().toIso8601String(),

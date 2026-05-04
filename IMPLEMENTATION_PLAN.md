@@ -4,6 +4,10 @@
 **Date:** May 4, 2026  
 **Stack:** Flutter (Dart) · Android first
 
+> **Implementation status as of May 4 2026**  
+> Sprints 1–8 in progress. Sprints 1–7 fully shipped. Sprint 8 stability/polish shipped; testing and Play Store release prep remain.
+> Latest commit: `e591de1` · Repo: https://github.com/amargm/habitgenius
+
 ---
 
 ## Development Environment Setup (Before Sprint 1)
@@ -145,155 +149,154 @@ Each sprint = 1 week. Estimated total: **8 sprints (8 weeks)**.
 
 ---
 
-### Sprint 1 — Project Foundation
+### Sprint 1 — Project Foundation ✅
 **Goal:** Running app shell with navigation and theming working end-to-end.
 
-- [ ] Create Flutter project, configure `pubspec.yaml`
-- [ ] Define all 10 `AppColors` constants + `AppLimits` constants
-- [ ] Build `AppTheme` — `ThemeData` with `ColorScheme.fromSeed()`, dark/light variants
-- [ ] Build `ThemeProvider` (Riverpod) — persists selection to `SharedPreferences`
-- [ ] Scaffold all 6 main screens as empty placeholders
-- [ ] Build `BottomNavWidget` with tier-aware tab visibility
-- [ ] Wire up `GoRouter` or `Navigator` for screen routing
-- [ ] Build `SplashScreen` (logo + 1.5s delay, routes to auth or home)
-- [ ] Verify hot reload, theming switch, navigation all work on emulator
+- [x] Create Flutter project, configure `pubspec.yaml`
+- [x] Define all 10 `AppColors` constants + `AppLimits` constants
+- [x] Build `AppTheme` — `ThemeData` with `ColorScheme.fromSeed()`, dark/light variants
+- [x] Build `ThemeProvider` (Riverpod) — persists selection to `SharedPreferences`
+- [x] Scaffold all 6 main screens as empty placeholders
+- [x] Build `BottomNavWidget` with tier-aware tab visibility
+- [x] Wire up `GoRouter` or `Navigator` for screen routing
+- [x] Build `SplashScreen` (logo + 1.5s delay, routes to auth or home)
+- [x] Verify hot reload, theming switch, navigation all work on emulator
 
 **Deliverable:** Navigable shell app with correct colors, dark mode, all screens reachable.
 
 ---
 
-### Sprint 2 — Auth, Onboarding & Data Layer
+### Sprint 2 — Auth, Onboarding & Data Layer ✅
 **Goal:** User can sign in or continue as guest; data file is read/written correctly.
 
-- [ ] Build `WelcomeScreen` — Google Sign-In button + Continue as Guest button
-- [ ] Implement `AuthService` — Google OAuth flow via `firebase_auth` + `google_sign_in`
-- [ ] Implement guest session (stored in `SharedPreferences`, no Firebase call)
-- [ ] Build guest-upgrade notice dialog (shown when guest taps Sign In)
-- [ ] Build `FileSetupScreen` — folder picker via `file_picker`, saves path to prefs
-- [ ] Build 3-slide `OnboardingScreen` (shown once for new Registered accounts)
-- [ ] Define all model classes with `json_serializable` code gen:
+- [x] Build `WelcomeScreen` — Google Sign-In button + Continue as Guest button
+- [x] Implement `AuthService` — Google OAuth flow via `firebase_auth` + `google_sign_in`
+- [x] Implement guest session (stored in `SharedPreferences`, no Firebase call)
+- [x] Build guest-upgrade notice dialog (shown when guest taps Sign In)
+- [x] Build `FileSetupScreen` — folder picker via `file_picker`, saves path to prefs
+- [x] Build 3-slide `OnboardingScreen` (shown once for new Registered accounts)
+- [x] Define all model classes with `json_serializable` code gen:
   - `Habit`, `HabitLog`, `Mood`, `FocusSession`, `JournalEntry`, `Account`, `Transaction`, `AppSettings`, `AppData`
-- [ ] Build `DataService` — `loadData()`, `saveData()`, file path resolution for guest vs registered
-- [ ] Build `DataProvider` (Riverpod) — holds `AppData` in memory, exposes mutate methods that auto-save
-- [ ] Write unit tests for `DataService` read/write round-trip
+- [x] Build `DataService` — `loadData()`, `saveData()`, file path resolution for guest vs registered
+- [x] Build `DataProvider` (Riverpod) — holds `AppData` in memory, exposes mutate methods that auto-save
+- [ ] Write unit tests for `DataService` read/write round-trip _(deferred to physical-device testing phase)_
 
 **Deliverable:** Full auth flow working; data persists across app restarts.
 
 ---
 
-### Sprint 3 — Habits Feature
+### Sprint 3 — Habits Feature ✅
 **Goal:** Complete habits screen matching prototype design, tier limits enforced.
 
-- [ ] Build `HabitsScreen` — chip filter (Today/Week/Month/All), progress bar, habit list
-- [ ] Build `HabitCheckWidget` — checkbox / counter / timer / stopwatch / checklist variants
-- [ ] Implement `toggleHabit()` — writes `HabitLog`, updates streak calculation
-- [ ] Build streak logic — calculate from `habitLogs`, handle missed days
-- [ ] Build weekly bar chart (custom `CustomPainter`)
-- [ ] Build yearly heatmap grid (35-cell → expand to 365 cells)
-- [ ] Build `AddHabitScreen` — name, progress type, schedule, reminder time, icon/emoji picker
-- [ ] Implement habit limit enforcement per tier (1/3/unlimited) → show `UpgradePromptSheet`
-- [ ] Schedule local notifications for habit reminders via `NotificationService`
-- [ ] Wire + / FAB → `AddHabitScreen`, back saves to `DataProvider`
+- [x] Build `HabitsScreen` — chip filter (Today/Week/All), progress bar, habit list
+- [x] Build `HabitCheckWidget` — checkbox / counter / timer / stopwatch / checklist variants
+- [x] Implement `toggleHabit()` — writes `HabitLog`, updates streak calculation
+- [x] Build streak logic — calculate from `habitLogs`, handle missed days
+- [x] Build weekly completion grid (`_WeeklyHabitCard` with 7-day dot row per habit)
+- [ ] Build yearly heatmap grid _(not implemented — deferred)_
+- [x] Build `AddHabitScreen` — name, progress type, schedule, reminder time, icon/emoji picker
+- [x] Implement habit limit enforcement per tier (1/3/unlimited) → show `UpgradePromptSheet`
+- [x] Schedule local notifications for habit reminders via `NotificationService`
+- [x] Wire + / FAB → `AddHabitScreen`, back saves to `DataProvider`
 
 **Deliverable:** Fully working Habits tab with real data persistence and streak tracking.
 
 ---
 
-### Sprint 4 — Mood & Focus Features
+### Sprint 4 — Mood & Focus Features ✅
 **Goal:** Both screens working with real data, focus timer runs as foreground service.
 
 **Mood (Registered/Pro only):**
-- [ ] Build `MoodScreen` — mood selector (5 levels), tag grid, monthly calendar, insight card, stats
-- [ ] Implement `selectMood()` — one entry per day, update existing if re-selected
-- [ ] Build mood calendar — dynamic from `moods` data, tap to view/edit past entry
-- [ ] Build mood trend stats — calculate % positive from last 30 days
-- [ ] Build locked placeholder for Guest on Mood tab
+- [x] Build `MoodScreen` — mood selector (5 levels), tag grid, monthly calendar, insight card, stats
+- [x] Implement `selectMood()` — one entry per day, update existing if re-selected
+- [x] Build mood calendar — dynamic from `moods` data, tap to view/edit past entry
+- [x] Build mood trend stats — calculate % positive from last 30 days
+- [x] Build locked placeholder for Guest on Mood tab
 
 **Focus:**
-- [ ] Build `FocusScreen` — category chips, timer ring (SVG), controls, toggle group (25/45/60/Custom)
-- [ ] Implement `FocusSessionService` — countdown timer logic, pause/resume, Pomodoro cycles
-- [ ] Run timer as Android foreground service (persistent notification shows time remaining)
-- [ ] Save completed `FocusSession` to `DataProvider` on session end
-- [ ] Build recent sessions list on Focus screen
-- [ ] Custom duration input — locked for Guest (shows upgrade prompt)
-- [ ] Build focus stats (today / this week / score)
+- [x] Build `FocusScreen` — category chips, timer ring (SVG), controls, toggle group (25/45/60/Custom)
+- [x] Implement `FocusSessionService` — countdown timer logic, pause/resume, Pomodoro cycles
+- [ ] Run timer as Android foreground service _(not implemented — timer works in foreground, no persistent notification while running)_
+- [x] Save completed `FocusSession` to `DataProvider` on session end
+- [x] Build recent sessions list on Focus screen
+- [x] Custom duration input — locked for Guest (shows upgrade prompt)
+- [x] Build focus stats (today / this week / score)
 
 **Deliverable:** Mood logs and focus sessions save and display correctly; timer survives screen lock.
 
 ---
 
-### Sprint 5 — Journal & Expenses Features
+### Sprint 5 — Journal & Expenses Features ✅
 **Goal:** Both screens fully working with tier limits enforced.
 
 **Journal:**
-- [ ] Build `JournalScreen` — chip filter by tag, entry list (title, preview, tags, date)
-- [ ] Build `JournalWriteScreen` — title input, tag selector, rich text area, toolbar
-- [ ] Implement rich text via `flutter_quill` or simple markdown approach
-- [ ] Implement tag creation (Registered/Pro custom tags)
-- [ ] Enforce limit: 5 (Guest) / 30 active (Registered) / unlimited (Pro) — show `UpgradePromptSheet`
-- [ ] Registered deletion frees slot immediately (count = `journal.where(active).length`)
-- [ ] Journal search by keyword (Registered/Pro only)
-- [ ] Link mood to journal entry if mood logged same day
+- [x] Build `JournalScreen` — search bar, entry list (title, preview, tags, date)
+- [x] Build new/edit entry sheet — title input, tag selector, body text area _(inline bottom sheet, no separate route)_
+- [x] Implement rich text storage via `flutter_quill` (body stored as plain text + quill delta)
+- [x] Implement tag entry (free-text tags, up to 10 per entry)
+- [x] Enforce limit: 5 (Guest) / 30 active (Registered) / unlimited (Pro) — show `UpgradePromptSheet`
+- [x] Registered deletion frees slot immediately
+- [x] Journal search by keyword (title, body, tags)
+- [ ] Link mood to journal entry if mood logged same day _(deferred)_
 
 **Expenses (Registered/Pro only):**
-- [ ] Build `ExpensesScreen` — balance card, toggle (Transactions/Analytics/Budget), transaction list grouped by day
-- [ ] Build `AddExpenseScreen` — type toggle, amount input, category grid, account picker, note
-- [ ] Implement daily limit: count transactions where `date == today (local)`, enforce 4 for Registered
-- [ ] Daily counter resets at midnight local time (use `timezone` package)
-- [ ] Build Analytics view — pie chart via `CustomPainter` (conic gradient), category breakdown list
-- [ ] Build account management — 2 accounts max for Registered, unlimited for Pro
-- [ ] Build locked placeholder for Guest on Money tab
+- [x] Build `ExpensesScreen` — monthly summary card, Transactions/Accounts tabs, transaction list grouped by date
+- [x] Build transaction entry sheet — type toggle, amount, category chips, account picker, note, date picker
+- [x] Implement daily limit: count transactions where `date == today`, enforce 4 for Registered
+- [ ] Midnight counter reset while app is open _(deferred — resets correctly on next app launch)_
+- [ ] Build Analytics view — pie chart via `CustomPainter` _(deferred)_
+- [x] Build account management — 2 accounts max for Registered, unlimited for Pro
+- [x] Build locked placeholder for Guest on Money tab
 
 **Deliverable:** Journal and Expenses fully functional with all tier limits correctly enforced.
 
 ---
 
-### Sprint 6 — Settings, Theming & Upgrade Flow
+### Sprint 6 — Settings, Theming & Upgrade Flow ✅
 **Goal:** Settings screen complete; Pro upgrade purchase flow working.
 
-- [ ] Build `SettingsScreen` — profile section, appearance, data & storage, notifications, about
-- [ ] Color picker grid — 10 colors, grayed-out Pro-only ones for Registered with lock icon
-- [ ] Tapping a locked color shows upgrade prompt for Registered; hidden entirely for Guest
-- [ ] Dark / Light / System toggle — applies immediately via `ThemeProvider`
-- [ ] Data file location row — shows current path, tap to change (opens `file_picker`)
-- [ ] Manual sync button — re-reads file from current path
-- [ ] Export backup — copies `habitgenius_data.json` to user-chosen location via SAF
-- [ ] Import backup — reads JSON from user-chosen file, merges into current data
-- [ ] Implement `PurchaseService` using `in_app_purchase` — connect to Google Play product
-- [ ] Build `UpgradeScreen` — feature list, one-time price, Purchase button, Restore Purchase button
-- [ ] On successful purchase: update `userTier` to `pro` in settings, persist, reload UI
-- [ ] Notification settings: per-notification-type toggles, habit reminder time picker
-- [ ] Currency picker — list of common currencies, updates symbol throughout app
-- [ ] Sign out — clears auth state, returns to Welcome screen (data file stays untouched)
+- [x] Build `SettingsScreen` — profile card, appearance, data summary, account section
+- [x] Color picker grid — 10 colors, grayed-out Pro-only colors with lock icon for Registered
+- [x] Tapping a locked color shows snackbar upgrade prompt
+- [x] Dark / Light / System toggle — applies immediately via `ThemeProvider`
+- [ ] Data file location row — tap to change folder _(Settings shows data counts; folder-change button deferred)_
+- [ ] Manual sync button _(deferred — auto-sync on resume via `SyncService`)_
+- [ ] Export / Import backup _(deferred)_
+- [x] Implement `PurchaseService` — `in_app_purchase`, product `habitgenius_pro_lifetime`, buy + restore
+- [x] Pro upgrade card in Settings — feature bullets, gold gradient, Buy + Restore buttons
+- [x] On successful purchase: elevate tier to Pro, persist `isPro` to `SharedPreferences`
+- [ ] Notification settings toggles _(deferred)_
+- [ ] Currency picker _(deferred)_
+- [x] Sign out — clears auth state, returns to Welcome screen
 
 **Deliverable:** Complete settings, theme switching, and working in-app purchase flow.
 
 ---
 
-### Sprint 7 — Home Screen, Animations & Polish
+### Sprint 7 — Home Screen, Animations & Polish ✅
 **Goal:** Home screen is fully dynamic; all animations match prototype.
 
-- [ ] Build dynamic `HomeScreen` — all stats computed from live `DataProvider` data
-- [ ] Dynamic greeting (Good Morning / Afternoon / Evening based on time)
-- [ ] Quick Actions grid — shows only actions available to current tier
-- [ ] Insight card logic — simple rule engine (e.g., "You focus better after meditation")
-- [ ] Implement all screen transition animations (slide-in from right for tabs, slide-up for detail screens)
-- [ ] Implement `fadeInUp` staggered animations on Home stats and habit list items
-- [ ] Add `HapticFeedback` on habit check, mood selection, timer controls
-- [ ] Add animated habit check (scale + color transition)
-- [ ] Implement `SyncService` — on app foreground, check file `lastModified`, reload if changed
-- [ ] Empty state illustrations for all screens (no habits yet, no journal entries, etc.)
-- [ ] Upgrade prompt sheet polish — smooth bottom sheet, feature list with icons
-- [ ] Loading states — skeleton loaders while data reads from file on launch
+- [x] Build dynamic `HomeScreen` — all stats computed from live `DataProvider` data
+- [x] Dynamic greeting (Good Morning / Afternoon / Evening based on time)
+- [x] Quick Actions grid — shows only actions available to current tier
+- [x] Insight card logic — rule engine (all done, streak, focus, mood, fallback)
+- [x] Implement screen transition animations (slide-from-right + push-left for detail routes via `CustomTransitionPage`)
+- [x] Implement `fadeInUp` staggered animations on Home stats cards (5 slots, 900ms, `Interval` curves)
+- [x] Add `HapticFeedback` on habit check, mood selection, timer controls, quick actions
+- [ ] Add animated habit check (scale + color transition) _(basic toggle only; scale animation deferred)_
+- [x] Implement `SyncService` — on app resume checks file `lastModified`, calls `reload()` if changed
+- [x] Empty state illustrations for all screens
+- [x] Upgrade prompt sheet polish — smooth bottom sheet, feature list with icons
+- [x] Loading states — skeleton shimmer loader while `AsyncValue` is loading
 
 **Deliverable:** App feels polished and animated; Home screen reflects real data.
 
 ---
 
-### Sprint 8 — Testing, Edge Cases & Release Prep
+### Sprint 8 — Testing, Edge Cases & Release Prep 🔄 In Progress
 **Goal:** App is stable, tested, and ready for Play Store submission.
 
-**Testing:**
+**Testing:** _(physical-device testing by user — pending)_
 - [ ] Unit tests: `DataService`, streak logic, daily limit counter, tier limit checks
 - [ ] Widget tests: `HabitCheckWidget`, `UpgradePromptSheet`, `MoodSelector`
 - [ ] Integration test: full flow — sign in → add habit → log habit → check home stats
@@ -302,12 +305,23 @@ Each sprint = 1 week. Estimated total: **8 sprints (8 weeks)**.
 - [ ] Test purchase flow with Play Store sandbox account
 
 **Edge cases:**
-- [ ] File deleted externally while app is open → graceful error + offer to pick new location
-- [ ] Data file corrupted / invalid JSON → show recovery screen, offer to start fresh
-- [ ] No storage permission granted → explain why permission needed
-- [ ] Timer running while app backgrounded → foreground service keeps it alive
-- [ ] Habit reminder fires while phone is in Do Not Disturb → respects system DND setting
-- [ ] Midnight rollover while app is open → reset daily expense counter without restart
+- [ ] File deleted externally while app is open → graceful error + offer to pick new location _(DataService returns empty data; recovery UI not shown yet)_
+- [x] Data file corrupted / invalid JSON → `DataService.loadData()` catches parse errors, returns `AppData.empty()`
+- [x] No storage permission granted → `PermissionService` with rationale sheet + OS dialog + permanently-denied path
+- [ ] Timer running while app backgrounded → foreground service keeps it alive _(not implemented)_
+- [ ] Habit reminder fires while phone is in Do Not Disturb → respects system DND setting _(handled by OS)_
+- [ ] Midnight rollover while app is open → reset daily expense counter without restart _(deferred)_
+
+**Stability & polish shipped in Sprint 8:**
+- [x] `DataNotifier._save` — non-fatal disk write failure; rolls back in-memory state, logs via `debugPrint`
+- [x] `FileSetupScreen`, `_JournalEntrySheet`, `_TransactionSheet`, `_AccountSheet` — all save methods wrapped in `try/catch/finally`; `_saving` always reset
+- [x] `RefreshIndicator` pull-to-refresh on Habits, Journal, Expenses lists
+- [x] `EmptyStateWidget` + `DataErrorWidget` reusable widgets used across all screens
+- [x] Slide-from-right `CustomTransitionPage` on all non-tab routes
+- [x] Guest tier shows locked `EmptyStateWidget` instead of rendering Expenses UI
+- [x] `PermissionService` — `POST_NOTIFICATIONS` + `SCHEDULE_EXACT_ALARM` with in-app rationale sheets
+- [x] Manifest: added `INTERNET`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE`
+- [x] Core library desugaring enabled (`isCoreLibraryDesugaringEnabled = true` + `desugar_jdk_libs:2.1.4`)
 
 **Release prep:**
 - [ ] App icon (adaptive icon for Android) — all sizes
@@ -324,18 +338,19 @@ Each sprint = 1 week. Estimated total: **8 sprints (8 weeks)**.
 
 ## Timeline Summary
 
-| Sprint | Focus | Week |
+| Sprint | Focus | Status |
 |---|---|---|
-| 1 | Foundation — shell, nav, theming | Week 1 |
-| 2 | Auth, onboarding, data layer | Week 2 |
-| 3 | Habits feature | Week 3 |
-| 4 | Mood + Focus features | Week 4 |
-| 5 | Journal + Expenses features | Week 5 |
-| 6 | Settings + upgrade/purchase flow | Week 6 |
-| 7 | Home screen, animations, polish | Week 7 |
-| 8 | Testing, edge cases, release prep | Week 8 |
+| 1 | Foundation — shell, nav, theming | ✅ Shipped |
+| 2 | Auth, onboarding, data layer | ✅ Shipped |
+| 3 | Habits feature | ✅ Shipped |
+| 4 | Mood + Focus features | ✅ Shipped |
+| 5 | Journal + Expenses features | ✅ Shipped |
+| 6 | Settings + upgrade/purchase flow | ✅ Shipped |
+| 7 | Home screen, animations, polish | ✅ Shipped |
+| 8 | Testing, edge cases, release prep | 🔄 In Progress — stability shipped; tests + release prep pending |
 
-**Estimated release:** ~8 weeks from sprint 1 start
+**Latest commit:** `e591de1` on `main`  
+**Remaining:** unit/widget/integration tests · app icon · Play Store listing · signed AAB
 
 ---
 

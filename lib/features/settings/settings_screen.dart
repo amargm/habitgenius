@@ -27,10 +27,9 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Text(
               'Settings',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 24),
 
@@ -69,7 +68,9 @@ class SettingsScreen extends ConsumerWidget {
               child: Text(
                 'HabitGenius · v1.0.0',
                 style: const TextStyle(
-                    color: AppColors.textMuted, fontSize: 12),
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -85,20 +86,20 @@ class _ProfileCard extends StatelessWidget {
   final AuthState authState;
   final UserTier tier;
 
-  const _ProfileCard(
-      {required this.authState, required this.tier});
+  const _ProfileCard({required this.authState, required this.tier});
 
   @override
   Widget build(BuildContext context) {
     final user = authState.user;
-    final initials = user?.displayName != null
-        ? user!.displayName!
-            .split(' ')
-            .map((w) => w.isNotEmpty ? w[0] : '')
-            .take(2)
-            .join()
-            .toUpperCase()
-        : '?';
+    final initials =
+        user?.displayName != null
+            ? user!.displayName!
+                .split(' ')
+                .map((w) => w.isNotEmpty ? w[0] : '')
+                .take(2)
+                .join()
+                .toUpperCase()
+            : '?';
 
     final tierLabel = switch (tier) {
       UserTier.guest => 'Guest',
@@ -126,19 +127,19 @@ class _ProfileCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primary
-                  .withValues(alpha: 0.2),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 initials,
                 style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
           ),
@@ -151,19 +152,26 @@ class _ProfileCard extends StatelessWidget {
                   user?.displayName ??
                       (authState.isGuest ? 'Guest User' : 'User'),
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 16),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
                 if (user?.email != null) ...[
                   const SizedBox(height: 2),
-                  Text(user!.email!,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13)),
+                  Text(
+                    user!.email!,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: tierColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -171,9 +179,10 @@ class _ProfileCard extends StatelessWidget {
                   child: Text(
                     tierLabel,
                     style: TextStyle(
-                        color: tierColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700),
+                      color: tierColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -213,9 +222,9 @@ class _ProCardState extends ConsumerState<_ProCard> {
       case PurchaseResult.alreadyOwned:
         ref.read(authNotifierProvider.notifier).upgradeToPro();
         HapticFeedback.heavyImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Welcome to Pro! ⭐')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Welcome to Pro! ⭐')));
       case PurchaseResult.cancelled:
         break;
       case PurchaseResult.error:
@@ -235,9 +244,9 @@ class _ProCardState extends ConsumerState<_ProCard> {
     final isPro = ref.read(purchaseServiceProvider).isPro;
     if (isPro) {
       ref.read(authNotifierProvider.notifier).upgradeToPro();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pro restored! ⭐')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pro restored! ⭐')));
     } else {
       setState(() => _error = 'No previous Pro purchase found');
     }
@@ -270,9 +279,10 @@ class _ProCardState extends ConsumerState<_ProCard> {
             children: [
               const Text('⭐', style: TextStyle(fontSize: 24)),
               const SizedBox(width: 8),
-              const Text('Upgrade to Pro',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 18)),
+              const Text(
+                'Upgrade to Pro',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -283,17 +293,24 @@ class _ProCardState extends ConsumerState<_ProCard> {
             '✓ 4 exclusive Pro theme colors',
             '✓ Custom focus durations',
             '✓ One-time payment, forever',
-          ].map((b) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(b,
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary)),
-              )),
+          ].map(
+            (b) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                b,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!,
-                style: const TextStyle(
-                    color: AppColors.danger, fontSize: 12)),
+            Text(
+              _error!,
+              style: const TextStyle(color: AppColors.danger, fontSize: 12),
+            ),
           ],
           const SizedBox(height: 16),
           Row(
@@ -306,26 +323,32 @@ class _ProCardState extends ConsumerState<_ProCard> {
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: _loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
+                  child:
+                      _loading
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.black),
-                        )
-                      : const Text('Upgrade to Pro',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
+                              color: Colors.black,
+                            ),
+                          )
+                          : const Text(
+                            'Upgrade to Pro',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                 ),
               ),
               const SizedBox(width: 12),
               TextButton(
                 onPressed: _loading ? null : _onRestore,
-                child: const Text('Restore',
-                    style:
-                        TextStyle(color: AppColors.textSecondary)),
+                child: const Text(
+                  'Restore',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               ),
             ],
           ),
@@ -351,43 +374,47 @@ class _ThemeModeRow extends ConsumerWidget {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Row(
-      children: modes.map((m) {
-        final sel = themeState.themeMode == m.$1;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () =>
-                ref.read(themeProvider.notifier).setThemeMode(m.$1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: sel
-                    ? primary.withValues(alpha: 0.15)
-                    : AppColors.bgCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: sel ? primary : AppColors.border),
-              ),
-              child: Column(
-                children: [
-                  Icon(m.$2,
-                      size: 20,
-                      color: sel ? primary : AppColors.textSecondary),
-                  const SizedBox(height: 4),
-                  Text(m.$3,
-                      style: TextStyle(
+      children:
+          modes.map((m) {
+            final sel = themeState.themeMode == m.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap:
+                    () => ref.read(themeProvider.notifier).setThemeMode(m.$1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color:
+                        sel
+                            ? primary.withValues(alpha: 0.15)
+                            : AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: sel ? primary : AppColors.border),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        m.$2,
+                        size: 20,
+                        color: sel ? primary : AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        m.$3,
+                        style: TextStyle(
                           fontSize: 11,
                           color: sel ? primary : AppColors.textSecondary,
-                          fontWeight: sel
-                              ? FontWeight.w600
-                              : FontWeight.normal)),
-                ],
+                          fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 }
@@ -398,8 +425,7 @@ class _ThemeColorGrid extends ConsumerWidget {
   final ThemeState themeState;
   final UserTier tier;
 
-  const _ThemeColorGrid(
-      {required this.themeState, required this.tier});
+  const _ThemeColorGrid({required this.themeState, required this.tier});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -413,77 +439,88 @@ class _ThemeColorGrid extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Accent color',
-              style: TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+          const Text(
+            'Accent color',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: AppColors.themeColors.map((tc) {
-              final locked = tc.requiredTier == UserTier.pro &&
-                  tier != UserTier.pro;
-              final sel = themeState.themeColor.id == tc.id;
+            children:
+                AppColors.themeColors.map((tc) {
+                  final locked =
+                      tc.requiredTier == UserTier.pro && tier != UserTier.pro;
+                  final sel = themeState.themeColor.id == tc.id;
 
-              return GestureDetector(
-                onTap: () {
-                  if (locked) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Upgrade to Pro to unlock this color')),
-                    );
-                    return;
-                  }
-                  ref
-                      .read(themeProvider.notifier)
-                      .setThemeColor(tc);
-                },
-                child: Stack(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: locked
-                            ? tc.primary.withValues(alpha: 0.3)
-                            : tc.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: sel
-                              ? Colors.white
-                              : Colors.transparent,
-                          width: 3,
+                  return GestureDetector(
+                    onTap: () {
+                      if (locked) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Upgrade to Pro to unlock this color',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      ref.read(themeProvider.notifier).setThemeColor(tc);
+                    },
+                    child: Stack(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color:
+                                locked
+                                    ? tc.primary.withValues(alpha: 0.3)
+                                    : tc.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: sel ? Colors.white : Colors.transparent,
+                              width: 3,
+                            ),
+                            boxShadow:
+                                sel
+                                    ? [
+                                      BoxShadow(
+                                        color: tc.primary.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                    : null,
+                          ),
                         ),
-                        boxShadow: sel
-                            ? [
-                                BoxShadow(
-                                    color: tc.primary
-                                        .withValues(alpha: 0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 1)
-                              ]
-                            : null,
-                      ),
+                        if (locked)
+                          const Positioned.fill(
+                            child: Center(
+                              child: Icon(
+                                Icons.lock_rounded,
+                                size: 14,
+                                color: Colors.white60,
+                              ),
+                            ),
+                          ),
+                        if (sel && !locked)
+                          const Positioned.fill(
+                            child: Center(
+                              child: Icon(
+                                Icons.check_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    if (locked)
-                      const Positioned.fill(
-                        child: Center(
-                          child: Icon(Icons.lock_rounded,
-                              size: 14, color: Colors.white60),
-                        ),
-                      ),
-                    if (sel && !locked)
-                      const Positioned.fill(
-                        child: Center(
-                          child: Icon(Icons.check_rounded,
-                              size: 18, color: Colors.white),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           ),
         ],
       ),
@@ -518,10 +555,7 @@ class _DataSection extends ConsumerWidget {
           _DataRow(label: 'Transactions', value: '$txCount'),
           _DataRow(label: 'Mood logs', value: '$moodCount'),
           if (tier != UserTier.guest)
-            _DataRow(
-                label: 'Storage',
-                value: 'Local JSON file',
-                isLast: true),
+            _DataRow(label: 'Storage', value: 'Local JSON file', isLast: true),
         ],
       ),
     );
@@ -533,30 +567,34 @@ class _DataRow extends StatelessWidget {
   final String value;
   final bool isLast;
 
-  const _DataRow(
-      {required this.label, required this.value, this.isLast = false});
+  const _DataRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label,
-                    style: const TextStyle(fontSize: 14)),
-                Text(value,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 14)),
-              ],
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 14)),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
             ),
-          ),
-          if (!isLast)
-            const Divider(height: 1, indent: 16, endIndent: 16),
-        ],
-      );
+          ],
+        ),
+      ),
+      if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+    ],
+  );
 }
 
 // ── Account section ───────────────────────────────────────
@@ -594,25 +632,26 @@ class _AccountSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmSignOut(
-      BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-            'Your data file will remain intact. You can sign back in any time.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Sign out?'),
+            content: const Text(
+              'Your data file will remain intact. You can sign back in any time.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Sign out'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign out'),
-          ),
-        ],
-      ),
     );
     if (confirmed == true) {
       await ref.read(authNotifierProvider.notifier).signOut();
@@ -636,16 +675,18 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-        leading: Icon(icon, color: color, size: 22),
-        title: Text(label,
-            style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w500,
-                fontSize: 15)),
-        trailing: const Icon(Icons.chevron_right_rounded,
-            color: AppColors.textMuted, size: 20),
-        onTap: onTap,
-      );
+    leading: Icon(icon, color: color, size: 22),
+    title: Text(
+      label,
+      style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 15),
+    ),
+    trailing: const Icon(
+      Icons.chevron_right_rounded,
+      color: AppColors.textMuted,
+      size: 20,
+    ),
+    onTap: onTap,
+  );
 }
 
 // ── Section header ────────────────────────────────────────
@@ -656,13 +697,12 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        label.toUpperCase(),
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-        ),
-      );
+    label.toUpperCase(),
+    style: const TextStyle(
+      color: AppColors.textSecondary,
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 1.0,
+    ),
+  );
 }
-

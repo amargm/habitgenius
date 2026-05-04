@@ -6,8 +6,9 @@ import '../services/purchase_service.dart';
 import 'settings_provider.dart';
 // ── Purchase service provider ─────────────────────────────────
 
-final purchaseServiceProvider =
-    Provider<PurchaseService>((_) => PurchaseService.instance);
+final purchaseServiceProvider = Provider<PurchaseService>(
+  (_) => PurchaseService.instance,
+);
 // ── Service ───────────────────────────────────────────────
 
 final authServiceProvider = Provider<AuthService>((ref) {
