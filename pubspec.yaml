@@ -24,7 +24,7 @@ dependencies:
   in_app_purchase: ^3.2.0
   json_annotation: ^4.9.0
   uuid: ^4.5.1
-  flutter_quill: ^10.8.5
+  flutter_quill: ^11.5.0
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
