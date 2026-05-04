@@ -2,8 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/purchase_service.dart';
 import 'settings_provider.dart';
+// ── Purchase service provider ─────────────────────────────────
 
+final purchaseServiceProvider =
+    Provider<PurchaseService>((_) => PurchaseService.instance);
 // ── Service ───────────────────────────────────────────────
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -16,16 +20,21 @@ class AuthState {
   final AppUser? user;
   final bool isLoading;
   final String? error;
+  final bool isPro;
 
-  const AuthState({this.user, this.isLoading = false, this.error});
+  const AuthState({
+    this.user,
+    this.isLoading = false,
+    this.error,
+    this.isPro = false,
+  });
 
   bool get isGuest => user?.isGuest == true;
   bool get isAuthenticated => user != null && !user!.isGuest;
 
-  /// Derived tier used for feature-gating throughout the app.
-  // TODO(sprint6): elevate to [UserTier.pro] when purchase is confirmed.
   UserTier get tier {
     if (user == null || user!.isGuest) return UserTier.guest;
+    if (isPro) return UserTier.pro;
     return UserTier.registered;
   }
 }
@@ -42,7 +51,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(isLoading: true);
     try {
       final user = await _service.restoreSession();
-      state = AuthState(user: user);
+      final isPro = PurchaseService.instance.isPro;
+      state = AuthState(user: user, isPro: isPro);
     } catch (_) {
       state = const AuthState();
     }
@@ -72,6 +82,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     await _service.signOut();
     state = const AuthState();
+  }
+
+  /// Called after a successful IAP purchase to elevate the user to Pro.
+  void upgradeToPro() {
+    state = AuthState(user: state.user, isPro: true);
   }
 }
 
