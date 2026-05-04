@@ -48,11 +48,12 @@ class AnalyticsService {
   // ── Focus ─────────────────────────────────────────────────
 
   /// Call when a focus session is completed.
-  static Future<void> logFocusSession(int durationSeconds) =>
-      _fa.logEvent(
+  static Future<void> logFocusSession(int durationSeconds) => _fa
+      .logEvent(
         name: 'focus_session_completed',
         parameters: {'duration_seconds': durationSeconds},
-      ).catchError((_) {});
+      )
+      .catchError((_) {});
 
   // ── Purchases ─────────────────────────────────────────────
 
@@ -68,8 +69,6 @@ class AnalyticsService {
   // ── Generic ───────────────────────────────────────────────
 
   /// Log any custom event by name.
-  static Future<void> log(
-    String name, {
-    Map<String, Object>? parameters,
-  }) => _fa.logEvent(name: name, parameters: parameters).catchError((_) {});
+  static Future<void> log(String name, {Map<String, Object>? parameters}) =>
+      _fa.logEvent(name: name, parameters: parameters).catchError((_) {});
 }

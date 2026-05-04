@@ -55,8 +55,7 @@ class AuthService {
 
   final SharedPreferences _prefs;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn =
-      GoogleSignIn(scopes: ['email', 'profile']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   AuthService(this._prefs);
 
@@ -118,10 +117,7 @@ class AuthService {
 
   /// Signs out of Firebase and Google, and removes the guest flag.
   Future<void> signOut() async {
-    await Future.wait([
-      _auth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
     await _prefs.remove(_kIsGuest);
   }
 

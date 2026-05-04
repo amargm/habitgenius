@@ -99,7 +99,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not start guest session. Please try again.')),
+        const SnackBar(
+          content: Text('Could not start guest session. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _signingIn = false);
