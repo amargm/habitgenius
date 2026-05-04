@@ -39,6 +39,8 @@ workflows:
     environment:
       flutter: stable
       java: 17
+      groups:
+        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
@@ -110,6 +112,7 @@ workflows:
       java: 17
       groups:
         - keystore_credentials
+        - firebase
       vars:
         PACKAGE_NAME: "com.habitgenius"
 
