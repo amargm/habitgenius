@@ -28,7 +28,6 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   final DataService _service;
   String? _filePath;
   bool? _isGuest;
-  String? _customDir;
 
   /// Broadcast stream that emits a human-readable message whenever a disk
   /// write fails.  Listeners (e.g. [HabitGeniusApp]) show a snackbar so the
@@ -45,7 +44,6 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   /// Call this from [SplashScreen] after auth is resolved.
   Future<void> load({required bool isGuest, required String? customDir}) async {
     _isGuest = isGuest;
-    _customDir = customDir;
     state = const AsyncValue.loading();
     try {
       _filePath = await _service.resolveFilePath(
@@ -59,11 +57,20 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     }
   }
 
-  /// Re-reads the file from the same path used in [load].
-  /// No-op if [load] was never called.
+  /// Re-reads the file from the same path used in [load] WITHOUT
+  /// transitioning through [AsyncValue.loading].
+  ///
+  /// Skipping the loading state prevents all feature screens (which use
+  /// [appDataProvider]) from briefly flashing empty content on every refresh.
+  /// No-op if [load] was never called or the file path is unknown.
   Future<void> reload() async {
-    if (_isGuest == null) return;
-    await load(isGuest: _isGuest!, customDir: _customDir);
+    if (_isGuest == null || _filePath == null) return;
+    try {
+      final data = await _service.loadData(_filePath!);
+      state = AsyncValue.data(data);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   /// Clears all in-memory state and stored file-path metadata.
@@ -72,7 +79,6 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   void reset() {
     _filePath = null;
     _isGuest = null;
-    _customDir = null;
     state = const AsyncValue.loading();
     // Clear the sync timestamp so the next user's file is compared fresh.
     SyncService.instance.reset();
@@ -86,6 +92,10 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     state = AsyncValue.data(next);
     try {
       await _service.saveData(next, _filePath!);
+      // Update the SyncService baseline so a resume immediately after a save
+      // does NOT trigger a spurious reload (the file mtime just changed but
+      // the change originated from this app, not an external source).
+      SyncService.instance.markUpdated();
     } catch (e) {
       // Roll back the optimistic state update so the UI stays consistent.
       state = AsyncValue.data(current);
@@ -122,7 +132,12 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   );
 
   Future<void> deleteHabit(String habitId) => _save(
-    (d) => d.copyWith(habits: d.habits.where((h) => h.id != habitId).toList()),
+    (d) => d.copyWith(
+      habits: d.habits.where((h) => h.id != habitId).toList(),
+      // Also remove orphaned logs — deleted habit logs bloat the file and
+      // would corrupt streak / stats if a new habit reused the same ID.
+      habitLogs: d.habitLogs.where((l) => l.habitId != habitId).toList(),
+    ),
   );
 
   // ── Habit Logs ────────────────────────────────────────────

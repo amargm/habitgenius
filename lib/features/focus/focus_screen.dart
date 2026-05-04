@@ -172,9 +172,11 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
 
   String _todayStats(List<FocusSession> sessions) {
     final today = DateTime.now();
+    // FocusSession.startedAt is stored as UTC; convert to local so sessions
+    // are attributed to the correct local calendar day.
     final todaySess =
         sessions.where((s) {
-          final d = DateTime.tryParse(s.startedAt);
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
           return d != null &&
               d.year == today.year &&
               d.month == today.month &&

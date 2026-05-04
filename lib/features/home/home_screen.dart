@@ -147,11 +147,16 @@ class _Body extends StatelessWidget {
     // Today's mood
     final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
 
-    // Focus minutes this week (Mon–Sun)
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    // Focus minutes this week (Mon–Sun).
+    // weekStart is set to local midnight on Monday so sessions logged
+    // earlier the same day are not accidentally excluded.
+    // FocusSession.startedAt is stored as UTC — convert to local before
+    // comparing so sessions are attributed to the correct calendar day.
+    final weekStart = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: today.weekday - 1));
     final weekFocusMinutes = data.focusSessions
         .where((s) {
-          final d = DateTime.tryParse(s.startedAt);
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
           return d != null && !d.isBefore(weekStart);
         })
         .fold<int>(0, (sum, s) => sum + (s.actualDuration ~/ 60));

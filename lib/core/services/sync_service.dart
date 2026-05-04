@@ -15,6 +15,13 @@ class SyncService {
   /// [checkAndReload] compares against the new user's file, not the old one's.
   void reset() => _lastKnownModified = null;
 
+  /// Records the current instant as the baseline modification time.
+  ///
+  /// Call after every successful in-app save so that a subsequent app-resume
+  /// does NOT trigger a spurious reload.  The file mtime just changed because
+  /// of this app's own write — not because of an external modification.
+  void markUpdated() => _lastKnownModified = DateTime.now();
+
   /// Checks whether the backing file was modified since we last read it.
   /// If so, triggers a [DataNotifier.reload]. Safe to call frequently.
   Future<void> checkAndReload(DataNotifier notifier) async {
