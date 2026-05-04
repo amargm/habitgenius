@@ -1,4 +1,4 @@
-package com.habitgenius.habitgenius
+package com.habitgenius
 
 import io.flutter.embedding.android.FlutterActivity
 
