@@ -239,11 +239,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                   child: Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(
-                      color: context.appColors.bgCard,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: context.appColors.border),
-                    ),
+                    decoration: context.cardDecorationR(14),
                     child: Center(
                       child: Text(_emoji, style: const TextStyle(fontSize: 28)),
                     ),
@@ -577,8 +573,9 @@ class _ReminderTile extends StatelessWidget {
             color:
                 time != null
                     ? primary.withValues(alpha: 0.4)
-                    : context.appColors.border,
+                    : Colors.transparent,
           ),
+          boxShadow: context.appColors.cardShadow,
         ),
         child: Row(
           children: [

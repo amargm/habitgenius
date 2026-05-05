@@ -24,7 +24,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   final Color bgCard;
   final Color bgElevated;
 
-  /// Subtle separator / outline colour.
+  /// Subtle separator / outline colour (transparent in dark — depth via shadow).
   final Color border;
 
   /// High-emphasis body text.
@@ -35,6 +35,22 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 
   /// De-emphasised / hint text — intentionally low contrast.
   final Color textMuted;
+
+  /// Standard card shadow. Adapts to brightness: prominent in dark, soft in light.
+  List<BoxShadow> get cardShadow {
+    final isDarkMode =
+        ThemeData.estimateBrightnessForColor(bgCard) == Brightness.dark;
+    return [
+      BoxShadow(
+        color:
+            isDarkMode
+                ? const Color(0x40000000) // 25% black — depth on dark bg
+                : const Color(0x12000000), // 7% black — subtle on light bg
+        blurRadius: isDarkMode ? 24 : 12,
+        offset: const Offset(0, 6),
+      ),
+    ];
+  }
 
   // ── Pre-built instances ────────────────────────────────────
 
@@ -50,8 +66,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   static const AppColorsExtension light = AppColorsExtension(
     bgCard: Colors.white,
     bgElevated: Color(0xFFEEEEF5),
-    border: Color(0x1A000000), // black 10 %
-    textPrimary: Color(0xFF1A1A24),
+    border: Color(0x1A000000), // black 10%
+    textPrimary: Color(0xFF15151A),
     textSecondary: Color(0xFF5C5C6E),
     textMuted: Color(0xFF8E8EA0),
   );
@@ -98,4 +114,18 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 /// without a verbose `Theme.of(context).extension<AppColorsExtension>()!`.
 extension AppThemeX on BuildContext {
   AppColorsExtension get appColors => AppColorsExtension.of(this);
+
+  /// Standard card [BoxDecoration]: card background + shadow, radius 16.
+  BoxDecoration get cardDecoration => BoxDecoration(
+    color: appColors.bgCard,
+    borderRadius: BorderRadius.circular(16),
+    boxShadow: appColors.cardShadow,
+  );
+
+  /// Card decoration with a custom [radius].
+  BoxDecoration cardDecorationR(double radius) => BoxDecoration(
+    color: appColors.bgCard,
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: appColors.cardShadow,
+  );
 }

@@ -416,20 +416,20 @@ class _TodayRingCard extends StatelessWidget {
           color:
               allDone
                   ? primary.withValues(alpha: 0.35)
-                  : context.appColors.border,
-          width: allDone ? 1.5 : 1.0,
+                  : Colors.transparent,
+          width: 1.5,
         ),
         boxShadow:
             allDone
                 ? [
                   BoxShadow(
-                    color: primary.withValues(alpha: 0.15),
-                    blurRadius: 24,
+                    color: primary.withValues(alpha: 0.20),
+                    blurRadius: 28,
                     spreadRadius: 2,
                     offset: const Offset(0, 4),
                   ),
                 ]
-                : null,
+                : context.appColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -628,11 +628,7 @@ class _StatTile extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecoration,
       child: Column(
         children: [
           Icon(icon, size: 18, color: primary),

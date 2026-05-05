@@ -74,16 +74,20 @@ class MainShell extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Container(
-            height: 64,
+            height: 68,
             decoration: BoxDecoration(
-              color: context.appColors.bgCard.withValues(alpha: 0.92),
+              color: context.appColors.bgCard,
               borderRadius: BorderRadius.circular(40),
-              border: Border.all(color: context.appColors.border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: 40,
-                  offset: const Offset(0, 8),
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -96,15 +100,25 @@ class MainShell extends ConsumerWidget {
                       onTap: () => context.go(tab.route),
                       behavior: HitTestBehavior.opaque,
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeInOutCubic,
                         padding: EdgeInsets.symmetric(
-                          horizontal: isActive ? 16 : 12,
+                          horizontal: isActive ? 18 : 12,
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: isActive ? primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow:
+                              isActive
+                                  ? [
+                                    BoxShadow(
+                                      color: primary.withValues(alpha: 0.35),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                  : null,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -118,13 +132,14 @@ class MainShell extends ConsumerWidget {
                                       : context.appColors.textMuted,
                             ),
                             if (isActive) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 7),
                               Text(
                                 tab.label,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
                                 ),
                               ),
                             ],

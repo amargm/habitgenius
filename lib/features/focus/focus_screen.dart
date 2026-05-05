@@ -736,11 +736,7 @@ class _PresetRow extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.only(right: 0),
               padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: context.appColors.bgCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.appColors.border),
-              ),
+              decoration: context.cardDecorationR(12),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -790,11 +786,7 @@ class _SessionTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecorationR(14),
       child: Row(
         children: [
           Text(modeIcon, style: const TextStyle(fontSize: 24)),
@@ -921,11 +913,7 @@ class _FocusStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecorationR(12),
       child: Column(
         children: [
           Text(

@@ -8,15 +8,15 @@ class AppColors {
   AppColors._();
 
   // ── Background & surface ──────────────────────────────────
-  static const Color bg = Color(0xFF0F0F14);
-  static const Color bgCard = Color(0xFF1A1A24);
-  static const Color bgCardHover = Color(0xFF22222F);
-  static const Color bgElevated = Color(0xFF242432);
+  static const Color bg = Color(0xFF0D0D12);
+  static const Color bgCard = Color(0xFF15151A);
+  static const Color bgCardHover = Color(0xFF1C1C22);
+  static const Color bgElevated = Color(0xFF1C1C22);
 
   // ── Text ──────────────────────────────────────────────────
   static const Color text = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF8E8EA0);
-  static const Color textMuted = Color(0xFF5C5C6E);
+  static const Color textSecondary = Color(0xFF8B8BA0);
+  static const Color textMuted = Color(0xFF56566A);
 
   // ── Semantic ──────────────────────────────────────────────
   static const Color success = Color(0xFF00B894);
@@ -25,17 +25,25 @@ class AppColors {
   static const Color accent = Color(0xFF00CEC9);
 
   // ── Border ────────────────────────────────────────────────
-  static const Color border = Color(0x0FFFFFFF); // rgba(255,255,255,0.06)
+  static const Color border = Colors.transparent; // shadow-based depth in dark mode
 
-  // ── Theme palette (10 colors) ─────────────────────────────
+  // ── Theme palette ─────────────────────────────────────────
   static const List<ThemeColor> themeColors = [
+    ThemeColor(
+      id: 'ember',
+      name: 'Ember',
+      primary: Color(0xFFF47820),
+      primaryLight: Color(0xFFFF9A4A),
+      primaryDark: Color(0xFFC65C0E),
+      requiredTier: UserTier.guest, // default — available to everyone
+    ),
     ThemeColor(
       id: 'violet',
       name: 'Violet',
       primary: Color(0xFF6C5CE7),
       primaryLight: Color(0xFFA29BFE),
       primaryDark: Color(0xFF4A3DB5),
-      requiredTier: UserTier.guest, // available to everyone
+      requiredTier: UserTier.guest,
     ),
     ThemeColor(
       id: 'ocean',
@@ -112,7 +120,7 @@ class AppColors {
     ),
   ];
 
-  static ThemeColor defaultTheme = themeColors.first;
+  static ThemeColor defaultTheme = themeColors.first; // Ember Orange
 
   static ThemeColor? findById(String id) {
     try {

@@ -327,11 +327,7 @@ class _HabitTile extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecoration,
       child: Row(
         children: [
           Container(
@@ -494,11 +490,7 @@ class _ArchivedHabitTile extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecoration,
       child: Row(
         children: [
           Opacity(
@@ -648,11 +640,7 @@ class _WeeklyHabitCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -795,11 +783,7 @@ class _YearHeatmapCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border),
-      ),
+      decoration: context.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
