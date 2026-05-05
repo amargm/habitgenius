@@ -58,7 +58,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     // Rebuild when the active tab changes so the FAB updates.
     _tabs.addListener(() => setState(() {}));
   }
@@ -138,6 +138,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
                   tabs: const [
                     Tab(text: 'Transactions'),
                     Tab(text: 'Accounts'),
+                    Tab(text: 'Timeline'),
                   ],
                 ),
               ),
@@ -169,6 +170,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
                       tier: tier,
                       onAdd: () => _onAddAccount(context, tier, accounts),
                     ),
+                    _TimelineTab(transactions: transactions),
                   ],
                 ),
               ),
@@ -489,6 +491,174 @@ const _kCategoryColors = <String, Color>{
   'Travel': Color(0xFF0984E3),
   'Other': Color(0xFF636E72),
 };
+
+// ── Timeline tab ──────────────────────────────────────────
+
+class _TimelineTab extends StatelessWidget {
+  final List<Transaction> transactions;
+  const _TimelineTab({required this.transactions});
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  String _smartMoney(double v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return v.toStringAsFixed(0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (transactions.isEmpty) {
+      return const EmptyStateWidget(
+        icon: Icons.bar_chart_rounded,
+        title: 'No transactions yet',
+        subtitle: 'Add transactions to see your monthly spending over time.',
+      );
+    }
+
+    const expenseColor = Color(0xFFE74C3C);
+    const incomeColor = Color(0xFF2ECC71);
+
+    final Map<String, double> monthExpense = {};
+    final Map<String, double> monthIncome = {};
+    String? currency;
+    for (final tx in transactions) {
+      final month = tx.date.substring(0, 7);
+      if (tx.type == TransactionType.expense) {
+        monthExpense[month] = (monthExpense[month] ?? 0) + tx.amount;
+        currency ??= tx.currency;
+      } else {
+        monthIncome[month] = (monthIncome[month] ?? 0) + tx.amount;
+        currency ??= tx.currency;
+      }
+    }
+
+    final allMonths = {
+      ...monthExpense.keys,
+      ...monthIncome.keys,
+    }.toList()..sort();
+
+    if (allMonths.isEmpty) return const SizedBox.shrink();
+
+    final maxVal =
+        allMonths
+            .map(
+              (m) =>
+                  [monthExpense[m] ?? 0, monthIncome[m] ?? 0]
+                      .reduce((a, b) => a > b ? a : b),
+            )
+            .reduce((a, b) => a > b ? a : b);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 12, height: 12,
+                decoration: BoxDecoration(
+                  color: expenseColor, borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text('Expense', style: TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+              const SizedBox(width: 16),
+              Container(
+                width: 12, height: 12,
+                decoration: BoxDecoration(
+                  color: incomeColor, borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text('Income', style: TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+              const Spacer(),
+              Text(currency ?? '', style: TextStyle(fontSize: 11, color: context.appColors.textMuted, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        ...allMonths.reversed.map((m) {
+          final exp = monthExpense[m] ?? 0;
+          final inc = monthIncome[m] ?? 0;
+          final expRatio = maxVal > 0 ? (exp / maxVal).clamp(0.0, 1.0) : 0.0;
+          final incRatio = maxVal > 0 ? (inc / maxVal).clamp(0.0, 1.0) : 0.0;
+          final parts = m.split('-');
+          final monthIdx = (int.tryParse(parts[1]) ?? 1).clamp(1, 12);
+          final label = '${_months[monthIdx - 1]} ${parts[0]}';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: context.cardDecoration,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    if (inc > 0) Text('+${_smartMoney(inc)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: incomeColor)),
+                    if (inc > 0 && exp > 0) const SizedBox(width: 8),
+                    if (exp > 0) Text('-${_smartMoney(exp)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: expenseColor)),
+                  ],
+                ),
+                if (exp > 0) ...[
+                  const SizedBox(height: 8),
+                  _MonthBar(label: 'Exp', ratio: expRatio, color: expenseColor, ctx: context),
+                ],
+                if (inc > 0) ...[
+                  const SizedBox(height: 6),
+                  _MonthBar(label: 'Inc', ratio: incRatio, color: incomeColor, ctx: context),
+                ],
+                if (inc > 0 && exp > 0) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48),
+                    child: Text(
+                      'Net: ${inc >= exp ? '+' : ''}${_smartMoney(inc - exp)}',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: inc >= exp ? incomeColor : expenseColor),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _MonthBar extends StatelessWidget {
+  final String label;
+  final double ratio;
+  final Color color;
+  final BuildContext ctx;
+  const _MonthBar({required this.label, required this.ratio, required this.color, required this.ctx});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 48, child: Text(label, style: TextStyle(fontSize: 10, color: ctx.appColors.textMuted))),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 8,
+              backgroundColor: color.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _CategoryBreakdown extends StatefulWidget {
   final List<Transaction> transactions;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
+import '../../core/providers/settings_provider.dart';
 import '../../core/utils/habit_helpers.dart';
 
 /// Renders the interactive progress control for a single habit tile.
@@ -61,16 +62,60 @@ class HabitCheckWidget extends ConsumerWidget {
 
   Future<void> _toggle(WidgetRef ref) async {
     HapticFeedback.lightImpact();
+    final wasDone = HabitHelpers.isCompletedOn(
+      habit,
+      ref.read(appDataProvider).habitLogs,
+      dateStr,
+    );
     await ref
         .read(dataNotifierProvider.notifier)
         .toggleHabit(habitId: habit.id, dateStr: dateStr);
+    // Celebration on transition to completed
+    if (!wasDone) {
+      final celebrate =
+          ref.read(sharedPreferencesProvider).getBool(
+            PrefKeys.celebrationHaptic,
+          ) ??
+          true;
+      if (celebrate) _celebrate();
+    }
   }
 
   Future<void> _increment(WidgetRef ref, int delta) async {
     HapticFeedback.selectionClick();
+    final wasDone = HabitHelpers.isCompletedOn(
+      habit,
+      ref.read(appDataProvider).habitLogs,
+      dateStr,
+    );
     await ref
         .read(dataNotifierProvider.notifier)
         .toggleHabit(habitId: habit.id, dateStr: dateStr, delta: delta);
+    if (!wasDone && delta > 0) {
+      final nowDone = HabitHelpers.isCompletedOn(
+        habit,
+        ref.read(appDataProvider).habitLogs,
+        dateStr,
+      );
+      if (nowDone) {
+        final celebrate =
+            ref.read(sharedPreferencesProvider).getBool(
+              PrefKeys.celebrationHaptic,
+            ) ??
+            true;
+        if (celebrate) _celebrate();
+      }
+    }
+  }
+
+  static void _celebrate() {
+    HapticFeedback.heavyImpact();
+    Future<void>.delayed(const Duration(milliseconds: 120), () {
+      HapticFeedback.mediumImpact();
+    });
+    Future<void>.delayed(const Duration(milliseconds: 240), () {
+      HapticFeedback.lightImpact();
+    });
   }
 
   static Color _habitColor(String hex, Color fallback) {

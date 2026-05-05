@@ -43,4 +43,7 @@ class PrefKeys {
 
   /// ISO 4217 currency code used as default in the Expenses feature.
   static const defaultCurrency = 'default_currency';
+
+  /// Whether to play haptic celebration when a habit is completed (default: true).
+  static const celebrationHaptic = 'celebration_haptic';
 }

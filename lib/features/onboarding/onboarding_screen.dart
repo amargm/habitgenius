@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
 
@@ -41,6 +42,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _finish() async {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool(PrefKeys.hasSeenOnboarding, true);
+    // Load data for the newly signed-in registered user so the home screen
+    // is fully populated immediately (fixes first-login skeleton issue).
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .load(isGuest: false, customDir: null);
     if (mounted) context.go(AppRoutes.home);
   }
 

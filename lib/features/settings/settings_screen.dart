@@ -1217,6 +1217,7 @@ class _GeneralSection extends ConsumerStatefulWidget {
 class _GeneralSectionState extends ConsumerState<_GeneralSection> {
   int _firstDayOfWeek = 1; // 0=Sun, 1=Mon
   String _currency = 'USD';
+  bool _celebrationHaptic = true;
   bool _loaded = false;
 
   @override
@@ -1230,6 +1231,7 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
     setState(() {
       _firstDayOfWeek = prefs.getInt(PrefKeys.firstDayOfWeek) ?? 1;
       _currency = prefs.getString(PrefKeys.defaultCurrency) ?? 'USD';
+      _celebrationHaptic = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
       _loaded = true;
     });
   }
@@ -1441,6 +1443,33 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
                 ],
               ),
             ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Celebration haptic toggle
+          SwitchListTile.adaptive(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 2,
+            ),
+            secondary: const Icon(
+              Icons.celebration_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+            title: const Text(
+              'Celebration haptic',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            subtitle: const Text(
+              'Vibrate when a habit is completed',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            value: _celebrationHaptic,
+            onChanged: (v) async {
+              final prefs = ref.read(sharedPreferencesProvider);
+              await prefs.setBool(PrefKeys.celebrationHaptic, v);
+              setState(() => _celebrationHaptic = v);
+            },
           ),
         ],
       ),
