@@ -711,9 +711,9 @@ class _AccountSection extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       await ref.read(dataNotifierProvider.notifier).clearAllData();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All data cleared.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('All data cleared.')));
       }
     }
   }
