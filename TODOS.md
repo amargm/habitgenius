@@ -9,12 +9,12 @@
 
 - [x] **1** Focus weekly status visual: number above day label pushes "W" (Wednesday) up; also gray (unmarked) boxes appear above colored (marked) boxes on the horizontal row — fixed by rendering bar first, label below.
 - [x] **2** Mood weekly status visual: unmarked entries show dashes — fixed to use gray boxes (same as other rows).
-- [ ] **3** Habits weekly status calculation — review for correctness and edge cases (e.g. habit created mid-week, timezone rollover, archived habits).
+- [x] **3** Habits weekly status calculation — now filters habits by `createdAt` so days before a habit existed are not counted as missed.
 - [x] **4** "X/N done" counter in Today section: mood entry is now counted as +1 activity (total = habits + 1; done increments when today's mood is logged).
 - [x] **15** Home username: "HabitGenius" title replaced with the signed-in user's first name.
 - [x] **10** Notification bell icon removed from home header.
 - [x] **11** Settings avatar: gradient removed, now uses solid primary color.
-- [ ] **16** Light mode: the "+" FAB/button has low-contrast symbol — fix so the icon is clearly visible.
+- [x] **16** Light mode: `+` FAB icon now always readable — `floatingActionButtonTheme` added to `AppTheme` with `foregroundColor = onPrimary` (white for dark primaries, dark text for light primaries).
 
 ---
 
@@ -27,21 +27,21 @@
 
 ## Mood Screen
 
-- [ ] **5** Yearly vertical mood calendar (Jan–Dec of current year, with prev/next year arrows) — add as a tab beside the existing calendar tab, same navigation pattern as the habit yearly heatmap.
+- [x] **5** Yearly vertical mood calendar: new "Year" tab (3rd tab) in Mood screen — shows Jan–Dec month grid with colour-coded mood cells and prev/next year nav arrows.
 
 ---
 
 ## Focus Screen
 
-- [ ] **6** Auto-save timer/stopwatch session on completion — no save/discard prompt; log it automatically.
+- [x] **6** Focus auto-save: timer auto-saves on completion (existing `_onSvcChange` listener). Removed the redundant "Save" button from the finished state; user just taps "New Session" to reset.
 
 ---
 
 ## Journal / Notes Screen
 
-- [ ] **7.1** Dark mode: square + round border both visible in note entry — fix to single rounded design consistent across light and dark modes.
-- [ ] **7.2** Note toolbar must remain visible when the keyboard is open (currently may be hidden).
-- [ ] **7.3** Review markdown rendering: bold, heading, etc. applied via toolbar buttons add raw syntax characters but text is not rendered as formatted — either render markdown live or clearly indicate the mode (raw vs preview).
+- [x] **7.1** Dark mode: double border (square outer Container + round inner focus ring) — fixed by using `context.appColors.border` (theme-adaptive) and `filled: false` on the inner TextField.
+- [x] **7.2** Note toolbar now placed inside the body Column (not `bottomNavigationBar`) so it floats above the keyboard when open.
+- [ ] **7.3** Markdown rendering — toolbar inserts raw syntax (`**bold**`, etc.) but text is not rendered as formatted. `flutter_quill` is in pubspec but journal still uses plain TextField. Needs migration to QuillEditor or a preview-mode toggle.
 
 ---
 
@@ -74,7 +74,15 @@
 
 ## Journal Entry / Nav Bar
 
-- [ ] **18** Opening a journal entry then tapping another bottom nav item: the nav item highlights but the journal entry screen stays visible — fix so navigation actually closes the entry and goes to the tapped screen.
+- [x] **18** Journal entry screen: tapping a nav bar item now pops any open fullscreen entry before navigating — `main_shell.dart` calls `Navigator.popUntil(isFirst)` before `context.go()`.
+
+---
+
+## New (May 2026)
+
+- [x] **19** Habit templates: tapping "New Habit" now shows a template picker sheet with 16 pre-built habits (name, emoji, colour pre-filled). User must choose progress type (mandatory) and optionally set a reminder. "Start from scratch" option preserved.
+- [x] **20** Toast messages: replaced all `showSnackBar` calls app-wide with a styled `AppToast.show()` helper. 1.8 s duration, floating pill, dark background matching card surface, type-specific icons (info / success / error). SnackBar theme added to `AppTheme.build()`.
+- [x] **21** Bug review: fixed duplicate `_FirstHabitCta` class in `home_screen.dart` (compile error). Confirmed no other issues via `flutter analyze`. Verified recent batch changes (Timeline tab, first-login fix, celebration haptic) are all clean.
 
 ---
 

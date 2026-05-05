@@ -13,6 +13,7 @@ import '../../core/utils/habit_helpers.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/habit_check_widget.dart';
 import '../../shared/widgets/upgrade_prompt_sheet.dart';
+import 'add_habit_screen.dart';
 
 // ── View enum ─────────────────────────────────────────────
 
@@ -278,8 +279,27 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     if (currentCount >= limit) {
       UpgradePromptSheet.show(context, feature: 'More Habits');
     } else {
-      context.push(AppRoutes.addHabit);
+      _showNewHabitOptions();
     }
+  }
+
+  void _showNewHabitOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (_) => _TemplatePickerSheet(
+            onSelectTemplate: (template) {
+              Navigator.pop(context);
+              context.push(AppRoutes.addHabit, extra: template);
+            },
+            onScratch: () {
+              Navigator.pop(context);
+              context.push(AppRoutes.addHabit);
+            },
+          ),
+    );
   }
 
   static String _viewLabel(_HabitView v) {
@@ -450,7 +470,7 @@ class _HabitTile extends ConsumerWidget {
                     .updateHabit(habit);
               },
             ),
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1248,6 +1268,191 @@ class _HeatmapGrid extends StatelessWidget {
         height: gridHeight,
         child: Stack(children: stackChildren),
       ),
+    );
+  }
+}
+
+// ── Template picker sheet ─────────────────────────────────
+
+class _TemplatePickerSheet extends StatelessWidget {
+  final ValueChanged<HabitTemplate> onSelectTemplate;
+  final VoidCallback onScratch;
+  const _TemplatePickerSheet({
+    required this.onSelectTemplate,
+    required this.onScratch,
+  });
+
+  static Color _parseColor(String hex) {
+    try {
+      return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      return const Color(0xFF6C5CE7);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.92,
+      builder:
+          (_, scrollCtrl) => Container(
+            decoration: BoxDecoration(
+              color: context.appColors.bgCard,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Handle
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 16),
+                  decoration: BoxDecoration(
+                    color: context.appColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Title
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Start with a template',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                  child: Text(
+                    'Pick a template to get started quickly, then choose how to track it.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.appColors.textSecondary,
+                    ),
+                  ),
+                ),
+                // Templates grid
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    itemCount: kHabitTemplates.length,
+                    itemBuilder: (_, i) {
+                      final t = kHabitTemplates[i];
+                      final color = _parseColor(t.colorHex);
+                      return GestureDetector(
+                        onTap: () => onSelectTemplate(t),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.appColors.bgCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: context.appColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    t.emoji,
+                                    style: const TextStyle(fontSize: 22),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      t.name,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      t.description,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: context.appColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: context.appColors.textMuted,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // "Start from scratch" footer
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: GestureDetector(
+                      onTap: onScratch,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_rounded, size: 18, color: primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Start from scratch',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
     );
   }
 }

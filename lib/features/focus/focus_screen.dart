@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_toast.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/focus_session.dart';
@@ -256,12 +257,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     final id = const Uuid().v4();
     final session = svc.buildSession(id);
     if (session == null) {
-      // Nothing to save (timer never ran or 0 seconds elapsed).
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Start the timer before saving.')),
-        );
-      }
+      if (mounted) AppToast.show(context, 'Start the timer before saving.');
       return;
     }
     try {
@@ -273,16 +269,14 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
       );
       if (mounted) {
         HapticFeedback.mediumImpact();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Session saved ✓')));
+        AppToast.show(context, 'Session saved ✓', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save session. Please try again.'),
-          ),
+        AppToast.show(
+          context,
+          'Could not save session. Please try again.',
+          type: ToastType.error,
         );
       }
     }

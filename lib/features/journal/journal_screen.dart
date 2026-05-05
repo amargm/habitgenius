@@ -457,160 +457,165 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-        children: [
-          // Date display
-          Text(
-            _fmtFullDate(DateTime.now()),
-            style: TextStyle(
-              color: context.appColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Title field
-          TextField(
-            controller: _titleCtrl,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-            decoration: const InputDecoration(
-              hintText: 'Title',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-            ),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-
-          // Body field
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _bodyCtrl,
-            builder: (_, val, __) {
-              final words =
-                  val.text.trim().isEmpty
-                      ? 0
-                      : val.text.trim().split(RegExp(r'\s+')).length;
-              return Text(
-                '$words words  •  ${val.text.length} chars',
-                style: TextStyle(
-                  color: context.appColors.textMuted,
-                  fontSize: 11,
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: context.appColors.bgCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.appColors.border),
-            ),
-            padding: const EdgeInsets.all(14),
-            child: TextField(
-              controller: _bodyCtrl,
-              maxLines: null,
-              minLines: 12,
-              style: const TextStyle(fontSize: 15, height: 1.7),
-              decoration: InputDecoration(
-                hintText: 'Write your thoughts…',
-                alignLabelWithHint: true,
-                hintStyle: TextStyle(
-                  color: context.appColors.textMuted,
-                  fontSize: 15,
-                ),
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ),
-          const Divider(height: 32),
-
-          // Tags
-          Text(
-            'TAGS',
-            style: TextStyle(
-              color: context.appColors.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              ..._tags.map(
-                (t) => GestureDetector(
-                  onTap: () => setState(() => _tags.remove(t)),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          t,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.close, size: 12, color: primary),
-                      ],
-                    ),
+              children: [
+                // Date display
+                Text(
+                  _fmtFullDate(DateTime.now()),
+                  style: TextStyle(
+                    color: context.appColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _tagCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'Add tag…',
-                    hintStyle: TextStyle(
-                      color: context.appColors.textMuted,
-                      fontSize: 13,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                const SizedBox(height: 16),
+
+                // Title field
+                TextField(
+                  controller: _titleCtrl,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Title',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: primary.withValues(alpha: 0.4),
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+
+                // Body field
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _bodyCtrl,
+                  builder: (_, val, __) {
+                    final words =
+                        val.text.trim().isEmpty
+                            ? 0
+                            : val.text.trim().split(RegExp(r'\s+')).length;
+                    return Text(
+                      '$words words  •  ${val.text.length} chars',
+                      style: TextStyle(
+                        color: context.appColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: context.appColors.bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.appColors.border),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: TextField(
+                    controller: _bodyCtrl,
+                    maxLines: null,
+                    minLines: 12,
+                    style: const TextStyle(fontSize: 15, height: 1.7),
+                    decoration: InputDecoration(
+                      hintText: 'Write your thoughts…',
+                      alignLabelWithHint: true,
+                      hintStyle: TextStyle(
+                        color: context.appColors.textMuted,
+                        fontSize: 15,
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                ),
+                const Divider(height: 32),
+
+                // Tags
+                Text(
+                  'TAGS',
+                  style: TextStyle(
+                    color: context.appColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    ..._tags.map(
+                      (t) => GestureDetector(
+                        onTap: () => setState(() => _tags.remove(t)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                t,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.close, size: 12, color: primary),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  onSubmitted: (_) => _addTag(),
+                  ],
                 ),
-              ),
-              IconButton(
-                onPressed: _addTag,
-                icon: Icon(Icons.add_rounded, color: primary),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _tagCtrl,
+                        decoration: InputDecoration(
+                          hintText: 'Add tag…',
+                          hintStyle: TextStyle(
+                            color: context.appColors.textMuted,
+                            fontSize: 13,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: primary.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ),
+                        onSubmitted: (_) => _addTag(),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _addTag,
+                      icon: Icon(Icons.add_rounded, color: primary),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      ),
           _JournalToolbar(bodyCtrl: _bodyCtrl),
         ],
       ),

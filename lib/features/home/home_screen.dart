@@ -246,55 +246,6 @@ class _FirstHabitCta extends StatelessWidget {
   }
 }
 
-// ── First habit CTA (shown when user has no habits yet) ───
-
-class _FirstHabitCta extends StatelessWidget {
-  final Color primary;
-  const _FirstHabitCta({required this.primary});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primary.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        children: [
-          Text('🌱', style: const TextStyle(fontSize: 44)),
-          const SizedBox(height: 16),
-          Text(
-            'Start your journey',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: primary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first habit and begin building great routines, one day at a time.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: () => context.go(AppRoutes.habits),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add first habit'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Header ────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {

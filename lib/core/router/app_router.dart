@@ -119,9 +119,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.addHabit,
-      pageBuilder:
-          (context, state) =>
-              _slidePage(context, state, const AddHabitScreen()),
+      pageBuilder: (context, state) {
+        final template =
+            state.extra is HabitTemplate ? state.extra as HabitTemplate : null;
+        return _slidePage(context, state, AddHabitScreen(template: template));
+      },
     ),
     GoRoute(
       path: AppRoutes.editHabit,

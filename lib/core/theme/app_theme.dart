@@ -179,6 +179,24 @@ class AppTheme {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
 
+      // SnackBar — dark floating pill matching the card surface
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor:
+            isDark ? AppColors.bgElevated : const Color(0xFF2A2A2E),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.text,
+          height: 1.4,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 6,
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actionTextColor: themeColor.primary,
+      ),
+
       // Dialog (AlertDialog, SimpleDialog)
       dialogTheme: DialogThemeData(
         backgroundColor: isDark ? AppColors.bgElevated : Colors.white,

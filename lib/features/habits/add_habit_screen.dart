@@ -9,6 +9,7 @@ import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/permission_service.dart';
+import '../../core/utils/app_toast.dart';
 
 // ── Emoji picker data ──────────────────────────────────────
 
@@ -58,11 +59,129 @@ const _kColors = [
   '#2D3436',
 ];
 
+// ── Habit template ─────────────────────────────────────────
+
+class HabitTemplate {
+  final String name;
+  final String emoji;
+  final String colorHex;
+  final HabitSchedule schedule;
+  final String description;
+
+  const HabitTemplate({
+    required this.name,
+    required this.emoji,
+    required this.colorHex,
+    required this.description,
+    this.schedule = HabitSchedule.daily,
+  });
+}
+
+const kHabitTemplates = [
+  HabitTemplate(
+    name: 'Morning Run',
+    emoji: '🏃',
+    colorHex: '#0984E3',
+    description: 'Get moving every morning',
+  ),
+  HabitTemplate(
+    name: 'Drink Water',
+    emoji: '💧',
+    colorHex: '#00CEC9',
+    description: 'Stay hydrated throughout the day',
+  ),
+  HabitTemplate(
+    name: 'Read',
+    emoji: '📚',
+    colorHex: '#6C5CE7',
+    description: 'Read every day for personal growth',
+  ),
+  HabitTemplate(
+    name: 'Meditation',
+    emoji: '🧘',
+    colorHex: '#A29BFE',
+    description: 'Calm your mind daily',
+  ),
+  HabitTemplate(
+    name: 'Sleep Early',
+    emoji: '💤',
+    colorHex: '#636E72',
+    description: 'Get to bed at a consistent time',
+  ),
+  HabitTemplate(
+    name: 'Workout',
+    emoji: '🏋️',
+    colorHex: '#E17055',
+    description: 'Strength training or cardio',
+  ),
+  HabitTemplate(
+    name: 'Journaling',
+    emoji: '✍️',
+    colorHex: '#FDCB6E',
+    description: 'Reflect on your day in writing',
+  ),
+  HabitTemplate(
+    name: 'Healthy Eating',
+    emoji: '🥗',
+    colorHex: '#00B894',
+    description: 'Eat nutritious meals every day',
+  ),
+  HabitTemplate(
+    name: 'Learn Something',
+    emoji: '🧠',
+    colorHex: '#6C5CE7',
+    description: 'Dedicate time to learning daily',
+  ),
+  HabitTemplate(
+    name: 'Vitamins & Meds',
+    emoji: '💊',
+    colorHex: '#E17055',
+    description: 'Take your daily supplements',
+  ),
+  HabitTemplate(
+    name: 'Walk Outside',
+    emoji: '☀️',
+    colorHex: '#FDCB6E',
+    description: 'Get fresh air and sunlight',
+  ),
+  HabitTemplate(
+    name: 'Digital Detox',
+    emoji: '📵',
+    colorHex: '#2D3436',
+    description: 'Disconnect from screens for a while',
+  ),
+  HabitTemplate(
+    name: 'Stretch',
+    emoji: '🤸',
+    colorHex: '#00CEC9',
+    description: 'Keep your body flexible',
+  ),
+  HabitTemplate(
+    name: 'Practice Music',
+    emoji: '🎸',
+    colorHex: '#FDCB6E',
+    description: 'Practice your instrument daily',
+  ),
+  HabitTemplate(
+    name: 'Gratitude',
+    emoji: '❤️',
+    colorHex: '#FD79A8',
+    description: 'Note three things you\'re thankful for',
+  ),
+  HabitTemplate(
+    name: 'No Social Media',
+    emoji: '🌿',
+    colorHex: '#00B894',
+    description: 'Take a break from social media',
+  ),
+];
+
 // ── Screen ────────────────────────────────────────────────
 
 class AddHabitScreen extends ConsumerStatefulWidget {
   final Habit? initialHabit;
-  const AddHabitScreen({super.key, this.initialHabit});
+  final HabitTemplate? template;
+  const AddHabitScreen({super.key, this.initialHabit, this.template});
 
   @override
   ConsumerState<AddHabitScreen> createState() => _AddHabitScreenState();
@@ -81,8 +200,11 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   String _colorHex = '#6C5CE7';
   TimeOfDay? _reminderTime;
   bool _saving = false;
+  // True when user explicitly taps a progress type chip (required for templates)
+  bool _progressTypeChosen = false;
 
   bool get _isEditing => widget.initialHabit != null;
+  bool get _isTemplate => widget.template != null && !_isEditing;
 
   @override
   void initState() {
@@ -106,6 +228,16 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
           );
         }
       }
+    } else if (widget.template != null) {
+      // Pre-fill from template; user must still choose progress type.
+      final t = widget.template!;
+      _nameCtrl.text = t.name;
+      _emoji = t.emoji;
+      _colorHex = t.colorHex;
+      _schedule = t.schedule;
+      _scheduleDays = [];
+      // Do NOT pre-select progress type — user must choose.
+      _progressTypeChosen = false;
     }
   }
 
@@ -119,10 +251,12 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_isTemplate && !_progressTypeChosen) {
+      AppToast.show(context, 'Please choose how you will track this habit.');
+      return;
+    }
     if (_schedule == HabitSchedule.specific && _scheduleDays.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Select at least one day.')));
+      AppToast.show(context, 'Select at least one day.');
       return;
     }
     setState(() => _saving = true);
@@ -171,10 +305,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save habit. Please try again.'),
-          ),
+        AppToast.show(
+          context,
+          'Could not save habit. Please try again.',
+          type: ToastType.error,
         );
       }
     } finally {
@@ -210,7 +344,13 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Habit' : 'New Habit'),
+        title: Text(
+          _isEditing
+              ? 'Edit Habit'
+              : _isTemplate
+              ? 'Customise Template'
+              : 'New Habit',
+        ),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -272,17 +412,53 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             const SizedBox(height: 24),
 
             // ── Progress type ──────────────────────────────
+            // When using a template, show a required-selection banner.
+            if (_isTemplate && !_progressTypeChosen)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 16, color: primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Choose how you want to track this habit (required)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             _SectionLabel('Progress type'),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               children:
                   HabitProgressType.values.map((pt) {
-                    final selected = _progressType == pt;
+                    final selected =
+                        _progressType == pt &&
+                        (_progressTypeChosen || !_isTemplate);
                     return ChoiceChip(
                       label: Text(_progressLabel(pt)),
                       selected: selected,
-                      onSelected: (_) => setState(() => _progressType = pt),
+                      onSelected:
+                          (_) => setState(() {
+                            _progressType = pt;
+                            _progressTypeChosen = true;
+                          }),
                     );
                   }).toList(),
             ),

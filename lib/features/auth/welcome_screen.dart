@@ -6,6 +6,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/app_toast.dart';
 
 /// Auth entry point: Google Sign-In or Continue as Guest.
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -64,9 +65,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       } else {
         msg = 'Sign-in failed: $s';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), duration: const Duration(seconds: 8)),
-      );
+      AppToast.show(context, msg, type: ToastType.error);
     } finally {
       if (mounted) setState(() => _signingIn = false);
     }
@@ -108,10 +107,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       if (mounted) context.go(AppRoutes.home);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not start guest session. Please try again.'),
-        ),
+      AppToast.show(
+        context,
+        'Could not start guest session. Please try again.',
+        type: ToastType.error,
       );
     } finally {
       if (mounted) setState(() => _signingIn = false);

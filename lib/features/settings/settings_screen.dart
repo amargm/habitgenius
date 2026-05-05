@@ -13,6 +13,7 @@ import '../../core/router/app_router.dart';
 import '../../core/services/permission_service.dart';
 import '../../core/services/purchase_service.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/utils/app_toast.dart';
 import 'package:go_router/go_router.dart';
 
 // ── Settings screen ───────────────────────────────────────
@@ -270,9 +271,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
       case PurchaseResult.alreadyOwned:
         ref.read(authNotifierProvider.notifier).upgradeToPro();
         HapticFeedback.heavyImpact();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Welcome to Pro! ⭐')));
+        AppToast.show(context, 'Welcome to Pro! ⭐', type: ToastType.success);
       case PurchaseResult.cancelled:
         break;
       case PurchaseResult.error:
@@ -295,9 +294,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
       setState(() => _error = svc.error);
     } else if (svc.isPro) {
       ref.read(authNotifierProvider.notifier).upgradeToPro();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pro restored! ⭐')));
+      AppToast.show(context, 'Pro restored! ⭐', type: ToastType.success);
     } else {
       setState(() => _error = 'No previous Pro purchase found');
     }
@@ -636,10 +633,9 @@ class _ThemeColorGrid extends ConsumerWidget {
                 return GestureDetector(
                   onTap: () {
                     if (locked) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Upgrade to Pro to unlock this color'),
-                        ),
+                      AppToast.show(
+                        context,
+                        'Upgrade to Pro to unlock this colour',
                       );
                       return;
                     }
@@ -915,9 +911,7 @@ class _AccountSection extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       await ref.read(dataNotifierProvider.notifier).clearAllData();
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('All data cleared.')));
+        AppToast.show(context, 'All data cleared.');
       }
     }
   }
@@ -1486,9 +1480,7 @@ class _AboutSection extends StatelessWidget {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not open: $url')));
+        AppToast.show(context, 'Could not open link.', type: ToastType.error);
       }
     }
   }
@@ -1499,8 +1491,10 @@ class _AboutSection extends StatelessWidget {
         'https://play.google.com/store/apps/details?id=com.habitgenius';
     await Clipboard.setData(const ClipboardData(text: link));
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('App link copied to clipboard')),
+      AppToast.show(
+        context,
+        'App link copied to clipboard',
+        type: ToastType.success,
       );
     }
   }

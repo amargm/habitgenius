@@ -6,6 +6,7 @@ import 'core/providers/data_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/sync_service.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/utils/app_toast.dart';
 
 class HabitGeniusApp extends ConsumerStatefulWidget {
   const HabitGeniusApp({super.key});
@@ -28,13 +29,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
       message,
     ) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red[700],
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      AppToast.show(context, message, type: ToastType.error);
     });
   }
 

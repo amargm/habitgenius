@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/app_toast.dart';
 
 /// Shown once after the first Google Sign-In (at the end of Onboarding).
 /// The user picks the folder where their data file will be stored.
@@ -120,17 +121,11 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
       if (mounted) context.go(AppRoutes.home);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not access the selected folder: $e\n'
-              'Please choose a different location or use the default.',
-            ),
-            backgroundColor: const Color(0xFFE17055),
-            duration: const Duration(seconds: 6),
-          ),
+        AppToast.show(
+          context,
+          'Could not access the selected folder. Please choose a different location.',
+          type: ToastType.error,
         );
-        // Reset selection so the user can pick again.
         setState(() => _selectedPath = null);
       }
     } finally {

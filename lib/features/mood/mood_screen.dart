@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/app_toast.dart';
 
 // ── Mood level data ───────────────────────────────────────
 
@@ -259,9 +260,7 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
     if (mounted) {
       HapticFeedback.mediumImpact();
       setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Mood saved ✓')));
+      AppToast.show(context, 'Mood saved ✓', type: ToastType.success);
     }
   }
 
@@ -843,9 +842,7 @@ class _YearTabState extends State<_YearTab> {
               ),
               IconButton(
                 onPressed:
-                    _year >= now.year
-                        ? null
-                        : () => setState(() => _year++),
+                    _year >= now.year ? null : () => setState(() => _year++),
                 icon: const Icon(Icons.chevron_right_rounded),
               ),
             ],
@@ -882,8 +879,18 @@ class _MiniMonthMood extends StatelessWidget {
   final DateTime today;
 
   static const _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   const _MiniMonthMood({

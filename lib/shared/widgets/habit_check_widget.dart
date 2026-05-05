@@ -73,9 +73,9 @@ class HabitCheckWidget extends ConsumerWidget {
     // Celebration on transition to completed
     if (!wasDone) {
       final celebrate =
-          ref.read(sharedPreferencesProvider).getBool(
-            PrefKeys.celebrationHaptic,
-          ) ??
+          ref
+              .read(sharedPreferencesProvider)
+              .getBool(PrefKeys.celebrationHaptic) ??
           true;
       if (celebrate) _celebrate();
     }
@@ -99,9 +99,9 @@ class HabitCheckWidget extends ConsumerWidget {
       );
       if (nowDone) {
         final celebrate =
-            ref.read(sharedPreferencesProvider).getBool(
-              PrefKeys.celebrationHaptic,
-            ) ??
+            ref
+                .read(sharedPreferencesProvider)
+                .getBool(PrefKeys.celebrationHaptic) ??
             true;
         if (celebrate) _celebrate();
       }

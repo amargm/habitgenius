@@ -10,6 +10,7 @@ import '../../core/models/account.dart';
 import '../../core/models/transaction.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
+import '../../core/utils/app_toast.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
@@ -190,9 +191,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
     List<Account> accounts,
   ) {
     if (accounts.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Add an account first')));
+      AppToast.show(context, 'Add an account first.');
       return;
     }
     final today = _todayStr();
@@ -499,8 +498,18 @@ class _TimelineTab extends StatelessWidget {
   const _TimelineTab({required this.transactions});
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   String _smartMoney(double v) {
@@ -536,21 +545,19 @@ class _TimelineTab extends StatelessWidget {
       }
     }
 
-    final allMonths = {
-      ...monthExpense.keys,
-      ...monthIncome.keys,
-    }.toList()..sort();
+    final allMonths =
+        {...monthExpense.keys, ...monthIncome.keys}.toList()..sort();
 
     if (allMonths.isEmpty) return const SizedBox.shrink();
 
-    final maxVal =
-        allMonths
-            .map(
-              (m) =>
-                  [monthExpense[m] ?? 0, monthIncome[m] ?? 0]
-                      .reduce((a, b) => a > b ? a : b),
-            )
-            .reduce((a, b) => a > b ? a : b);
+    final maxVal = allMonths
+        .map(
+          (m) => [
+            monthExpense[m] ?? 0,
+            monthIncome[m] ?? 0,
+          ].reduce((a, b) => a > b ? a : b),
+        )
+        .reduce((a, b) => a > b ? a : b);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -560,24 +567,47 @@ class _TimelineTab extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 12, height: 12,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
-                  color: expenseColor, borderRadius: BorderRadius.circular(3),
+                  color: expenseColor,
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
               const SizedBox(width: 6),
-              Text('Expense', style: TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+              Text(
+                'Expense',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.appColors.textSecondary,
+                ),
+              ),
               const SizedBox(width: 16),
               Container(
-                width: 12, height: 12,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
-                  color: incomeColor, borderRadius: BorderRadius.circular(3),
+                  color: incomeColor,
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
               const SizedBox(width: 6),
-              Text('Income', style: TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+              Text(
+                'Income',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.appColors.textSecondary,
+                ),
+              ),
               const Spacer(),
-              Text(currency ?? '', style: TextStyle(fontSize: 11, color: context.appColors.textMuted, fontWeight: FontWeight.w600)),
+              Text(
+                currency ?? '',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.appColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -598,20 +628,52 @@ class _TimelineTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
-                    if (inc > 0) Text('+${_smartMoney(inc)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: incomeColor)),
+                    if (inc > 0)
+                      Text(
+                        '+${_smartMoney(inc)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: incomeColor,
+                        ),
+                      ),
                     if (inc > 0 && exp > 0) const SizedBox(width: 8),
-                    if (exp > 0) Text('-${_smartMoney(exp)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: expenseColor)),
+                    if (exp > 0)
+                      Text(
+                        '-${_smartMoney(exp)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: expenseColor,
+                        ),
+                      ),
                   ],
                 ),
                 if (exp > 0) ...[
                   const SizedBox(height: 8),
-                  _MonthBar(label: 'Exp', ratio: expRatio, color: expenseColor, ctx: context),
+                  _MonthBar(
+                    label: 'Exp',
+                    ratio: expRatio,
+                    color: expenseColor,
+                    ctx: context,
+                  ),
                 ],
                 if (inc > 0) ...[
                   const SizedBox(height: 6),
-                  _MonthBar(label: 'Inc', ratio: incRatio, color: incomeColor, ctx: context),
+                  _MonthBar(
+                    label: 'Inc',
+                    ratio: incRatio,
+                    color: incomeColor,
+                    ctx: context,
+                  ),
                 ],
                 if (inc > 0 && exp > 0) ...[
                   const SizedBox(height: 8),
@@ -619,7 +681,11 @@ class _TimelineTab extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 48),
                     child: Text(
                       'Net: ${inc >= exp ? '+' : ''}${_smartMoney(inc - exp)}',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: inc >= exp ? incomeColor : expenseColor),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: inc >= exp ? incomeColor : expenseColor,
+                      ),
                     ),
                   ),
                 ],
@@ -637,13 +703,24 @@ class _MonthBar extends StatelessWidget {
   final double ratio;
   final Color color;
   final BuildContext ctx;
-  const _MonthBar({required this.label, required this.ratio, required this.color, required this.ctx});
+  const _MonthBar({
+    required this.label,
+    required this.ratio,
+    required this.color,
+    required this.ctx,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(width: 48, child: Text(label, style: TextStyle(fontSize: 10, color: ctx.appColors.textMuted))),
+        SizedBox(
+          width: 48,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 10, color: ctx.appColors.textMuted),
+          ),
+        ),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -1305,9 +1382,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       return;
     }
     if (_type == TransactionType.transfer && _toAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a destination account.')),
-      );
+      AppToast.show(context, 'Please select a destination account.');
       return;
     }
     setState(() => _saving = true);
@@ -1336,8 +1411,10 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save transaction: $e')),
+        AppToast.show(
+          context,
+          'Could not save transaction. Please try again.',
+          type: ToastType.error,
         );
       }
     } finally {
@@ -1699,9 +1776,11 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Could not save account: $e')));
+          'Could not save account. Please try again.',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
