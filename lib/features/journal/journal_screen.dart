@@ -338,7 +338,12 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
   }
 
   Future<void> _save() async {
-    if (_bodyCtrl.text.trim().isEmpty) return;
+    if (_bodyCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Write something before saving.')),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       final now = DateTime.now().toUtc().toIso8601String();

@@ -365,10 +365,10 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
                             color:
                                 sel
                                     ? primary.withValues(alpha: 0.15)
-                                    : AppColors.bgElevated,
+                                    : context.appColors.bgElevated,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: sel ? primary : AppColors.border,
+                              color: sel ? primary : context.appColors.border,
                             ),
                           ),
                           child: Text(
@@ -751,7 +751,7 @@ class _CalendarTabState extends State<_CalendarTab> {
                             .map(
                               (t) => Chip(
                                 label: Text(t),
-                                backgroundColor: AppColors.bgElevated,
+                                backgroundColor: context.appColors.bgElevated,
                                 labelStyle: const TextStyle(fontSize: 12),
                               ),
                             )

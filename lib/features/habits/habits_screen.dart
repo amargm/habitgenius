@@ -438,6 +438,22 @@ class _HabitTile extends ConsumerWidget {
         archivedAt: DateTime.now().toUtc().toIso8601String(),
       );
       await ref.read(dataNotifierProvider.notifier).updateHabit(archived);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Habit archived'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                await ref
+                    .read(dataNotifierProvider.notifier)
+                    .updateHabit(habit);
+              },
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } else {
       final confirmed = await showDialog<bool>(
         context: context,

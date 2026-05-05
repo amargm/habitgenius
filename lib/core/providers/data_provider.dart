@@ -86,6 +86,23 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     SyncService.instance.reset();
   }
 
+  /// Erases all user content (habits, journal, moods, focus sessions,
+  /// transactions, accounts) while preserving settings and account meta.
+  /// The wiped state is immediately persisted to disk.
+  Future<void> clearAllData() => _save(
+    (current) => AppData(
+      meta: current.meta,
+      settings: current.settings,
+      habits: const [],
+      habitLogs: const [],
+      moods: const [],
+      focusSessions: const [],
+      journal: const [],
+      accounts: const [],
+      transactions: const [],
+    ),
+  );
+
   /// Loads data from [newPath] and updates [_filePath].
   ///
   /// Used by Settings when the user reconfigures the data folder.

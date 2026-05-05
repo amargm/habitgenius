@@ -44,6 +44,39 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   String _selectedCategory = _kCategories.first;
   FocusMode _selectedMode = FocusMode.pomodoro;
 
+  // Auto-save guard: prevents duplicate saves for the same finished session.
+  bool _autoSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Register the listener after the first frame so the provider is ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(_focusSvcProvider).addListener(_onSvcChange);
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(_focusSvcProvider).removeListener(_onSvcChange);
+    super.dispose();
+  }
+
+  /// Fires on every FocusSessionService change notification.
+  void _onSvcChange() {
+    if (!mounted) return;
+    final svc = ref.read(_focusSvcProvider);
+    if (svc.isFinished && !_autoSaved) {
+      // Timer hit zero — auto-save so the session is never lost.
+      _autoSaved = true;
+      _onSaveSession(svc);
+    } else if (svc.isIdle) {
+      // State reset (after save or manual reset) — enable auto-save for next
+      // session.
+      if (_autoSaved) setState(() => _autoSaved = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tier = ref.watch(authNotifierProvider).tier;
@@ -149,7 +182,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
               },
               onReset: () {
                 HapticFeedback.lightImpact();
-                _onReset(svc);
+                _onReset(svc); // async; fire-and-forget is intentional
               },
               onSkip: () {
                 HapticFeedback.mediumImpact();
@@ -194,7 +227,36 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     return '${todaySess.length} session${todaySess.length > 1 ? 's' : ''} · ${totalMin}m focused today';
   }
 
-  void _onReset(FocusSessionService svc) {
+  Future<void> _onReset(FocusSessionService svc) async {
+    // Ask for confirmation if a meaningful session is in progress.
+    if ((svc.isRunning || svc.isPaused) && svc.elapsed > 10) {
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('Discard session?'),
+              content: const Text(
+                'Your progress on this session will be lost.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Keep going'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Discard'),
+                ),
+              ],
+            ),
+      );
+      if (confirmed != true) return;
+    }
     // Do NOT reset _selectedPreset — preserve the user's chosen duration.
     svc.reset();
     svc.configure(

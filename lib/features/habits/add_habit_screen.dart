@@ -119,6 +119,12 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_schedule == HabitSchedule.specific && _scheduleDays.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select at least one day.')));
+      return;
+    }
     setState(() => _saving = true);
 
     try {
@@ -331,11 +337,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             Wrap(
               spacing: 8,
               children:
-                  [
-                    HabitSchedule.daily,
-                    HabitSchedule.weekly,
-                    HabitSchedule.specific,
-                  ].map((s) {
+                  [HabitSchedule.daily, HabitSchedule.specific].map((s) {
                     final selected = _schedule == s;
                     return ChoiceChip(
                       label: Text(_scheduleLabel(s)),
@@ -348,8 +350,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                     );
                   }).toList(),
             ),
-            if (_schedule == HabitSchedule.weekly ||
-                _schedule == HabitSchedule.specific) ...[
+            if (_schedule == HabitSchedule.specific) ...[
               const SizedBox(height: 12),
               _DayPicker(
                 selected: _scheduleDays,
@@ -446,7 +447,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                                 setState(() => _emoji = e);
                                 Navigator.pop(context);
                               },
-                              child: Text(e, style: const TextStyle(fontSize: 32)),
+                              child: Text(
+                                e,
+                                style: const TextStyle(fontSize: 32),
+                              ),
                             ),
                           )
                           .toList(),

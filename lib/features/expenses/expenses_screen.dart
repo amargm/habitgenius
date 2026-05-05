@@ -59,6 +59,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    // Rebuild when the active tab changes so the FAB updates.
+    _tabs.addListener(() => setState(() {}));
   }
 
   @override
@@ -86,6 +88,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
     }
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'expenses_fab',
+        onPressed:
+            _tabs.index == 0
+                ? () => _onAddTransaction(context, tier, transactions, accounts)
+                : () => _onAddAccount(context, tier, accounts),
+        child: const Icon(Icons.add_rounded),
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,15 +318,6 @@ class _TransactionsTab extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 80),
-                      Align(
-                        alignment: Alignment.center,
-                        child: FloatingActionButton(
-                          heroTag: 'add_tx',
-                          onPressed: onAdd,
-                          child: const Icon(Icons.add_rounded),
-                        ),
-                      ),
                     ],
                   ),
         ),
@@ -426,14 +427,6 @@ class _AccountsTab extends ConsumerWidget {
                 ),
               );
             }),
-            const SizedBox(height: 16),
-            Center(
-              child: FloatingActionButton(
-                heroTag: 'add_acc',
-                onPressed: onAdd,
-                child: const Icon(Icons.add_rounded),
-              ),
-            ),
           ],
         );
   }
@@ -989,7 +982,8 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                               : context.appColors.bgCard,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: sel ? c : context.appColors.border,
+                                        color:
+                                            sel ? c : context.appColors.border,
                                       ),
                                     ),
                                     child: Center(
@@ -1098,7 +1092,10 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                             : context.appColors.bgCard,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: sel ? primary : context.appColors.border,
+                                      color:
+                                          sel
+                                              ? primary
+                                              : context.appColors.border,
                                     ),
                                   ),
                                   child: Text(

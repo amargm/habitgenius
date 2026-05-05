@@ -664,6 +664,12 @@ class _AccountSection extends ConsumerWidget {
             ),
           ] else ...[
             _ActionRow(
+              icon: Icons.delete_sweep_rounded,
+              label: 'Clear all data',
+              color: AppColors.danger,
+              onTap: () => _confirmClearData(context, ref),
+            ),
+            _ActionRow(
               icon: Icons.logout_rounded,
               label: 'Sign out',
               color: AppColors.danger,
@@ -673,6 +679,43 @@ class _AccountSection extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmClearData(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Clear all data?'),
+            content: const Text(
+              'All habits, journal entries, mood logs, focus sessions, '
+              'transactions and accounts will be permanently deleted. '
+              'This cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Clear all'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(dataNotifierProvider.notifier).clearAllData();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All data cleared.')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {

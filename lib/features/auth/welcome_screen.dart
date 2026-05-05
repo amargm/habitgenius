@@ -185,9 +185,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 onPressed: _signingIn ? null : _onContinueAsGuest,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -195,13 +193,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 child: Text(
                   'Continue as Guest',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+              Text(
+                'Guest: 1 habit · 5 journal entries · no expenses or mood tracking',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 6),
               Text(
                 'Guest data is stored locally only and is not\nmigrated if you sign in later.',
                 textAlign: TextAlign.center,
