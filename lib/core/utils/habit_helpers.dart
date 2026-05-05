@@ -143,6 +143,45 @@ class HabitHelpers {
     return result;
   }
 
+  /// Returns a map of dateStr → completion level (0–4) for [habit] from its
+  /// creation date up to [today]. Use this when multi-year navigation is needed.
+  static Map<String, int> allTimeHeatmap(
+    Habit habit,
+    List<HabitLog> logs,
+    DateTime today,
+  ) {
+    final result = <String, int>{};
+    final createdAt = DateTime.tryParse(habit.createdAt)?.toLocal() ?? today;
+    final start = DateTime(createdAt.year, createdAt.month, createdAt.day);
+    final end = DateTime(today.year, today.month, today.day);
+    for (
+      DateTime day = start;
+      !day.isAfter(end);
+      day = day.add(const Duration(days: 1))
+    ) {
+      if (!isScheduledOn(habit, day)) continue;
+      final ds = _fmtDate(day);
+      final log = logForDate(logs, habit.id, ds);
+      if (log == null || !log.completed) {
+        result[ds] = 0;
+      } else if (habit.progressType == HabitProgressType.counter ||
+          habit.progressType == HabitProgressType.timer) {
+        final pct = (log.value / habit.targetValue).clamp(0.0, 1.0);
+        result[ds] =
+            pct < 0.25
+                ? 1
+                : pct < 0.50
+                ? 2
+                : pct < 0.75
+                ? 3
+                : 4;
+      } else {
+        result[ds] = 4;
+      }
+    }
+    return result;
+  }
+
   // ── Formatting ────────────────────────────────────────────
 
   static String _fmtDate(DateTime d) =>

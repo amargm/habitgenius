@@ -807,8 +807,8 @@ class _YearHeatmapCardState extends State<_YearHeatmapCard> {
       habitColor = primary;
     }
 
-    // Map of dateStr → intensity (0=missed, 1–4=partial/full completion)
-    final heatmap = HabitHelpers.yearlyHeatmap(habit, logs, today);
+    // Map of dateStr → intensity covering full habit history for multi-year navigation
+    final heatmap = HabitHelpers.allTimeHeatmap(habit, logs, today);
     final totalDone = heatmap.values.where((v) => v > 0).length;
     final createdAt =
         DateTime.tryParse(habit.createdAt)?.toLocal() ??
@@ -896,11 +896,25 @@ class _YearHeatmapCardState extends State<_YearHeatmapCard> {
 
 // ── Expanded 12-month grid (habits screen) ─────────────────
 
-class _ExpandedMonthGrid extends StatelessWidget {
+class _ExpandedMonthGrid extends StatefulWidget {
   final DateTime today;
   final Map<String, int> heatmap;
   final Color habitColor;
   final DateTime createdAt;
+
+  const _ExpandedMonthGrid({
+    required this.today,
+    required this.heatmap,
+    required this.habitColor,
+    required this.createdAt,
+  });
+
+  @override
+  State<_ExpandedMonthGrid> createState() => _ExpandedMonthGridState();
+}
+
+class _ExpandedMonthGridState extends State<_ExpandedMonthGrid> {
+  late int _year;
 
   static const _monthNames = [
     'Jan',
@@ -918,127 +932,156 @@ class _ExpandedMonthGrid extends StatelessWidget {
   ];
   static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  const _ExpandedMonthGrid({
-    required this.today,
-    required this.heatmap,
-    required this.habitColor,
-    required this.createdAt,
-  });
+  @override
+  void initState() {
+    super.initState();
+    _year = widget.today.year;
+  }
 
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Color _cellColor(int? v) {
-    if (v == null) return habitColor.withValues(alpha: 0.06);
+    if (v == null) return widget.habitColor.withValues(alpha: 0.06);
     switch (v) {
       case 0:
-        return habitColor.withValues(alpha: 0.12);
+        return widget.habitColor.withValues(alpha: 0.12);
       case 1:
-        return habitColor.withValues(alpha: 0.30);
+        return widget.habitColor.withValues(alpha: 0.30);
       case 2:
-        return habitColor.withValues(alpha: 0.55);
+        return widget.habitColor.withValues(alpha: 0.55);
       case 3:
-        return habitColor.withValues(alpha: 0.75);
+        return widget.habitColor.withValues(alpha: 0.75);
       default:
-        return habitColor;
+        return widget.habitColor;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentMonth = DateTime(today.year, today.month, 1);
-    final months = List.generate(12, (i) {
-      return DateTime(currentMonth.year, currentMonth.month - (11 - i), 1);
-    });
-    final todayMidnight = DateTime(today.year, today.month, today.day);
-    final createdMidnight = DateTime(
-      createdAt.year,
-      createdAt.month,
-      createdAt.day,
+    final todayMidnight = DateTime(
+      widget.today.year,
+      widget.today.month,
+      widget.today.day,
     );
+    final oldestYear = widget.createdAt.year;
+    final canGoBack = _year > oldestYear;
+    final canGoForward = _year < widget.today.year;
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.82,
-      ),
-      itemCount: 12,
-      itemBuilder: (_, idx) {
-        final monthStart = months[idx];
-        final firstWeekday = (monthStart.weekday - 1) % 7;
-        final daysInMonth = DateUtils.getDaysInMonth(
-          monthStart.year,
-          monthStart.month,
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        // Year navigation row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            IconButton(
+              onPressed: canGoBack ? () => setState(() => _year--) : null,
+              icon: const Icon(Icons.chevron_left_rounded),
+              iconSize: 20,
+              color:
+                  canGoBack ? widget.habitColor : context.appColors.textMuted,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
             Text(
-              '${_monthNames[monthStart.month - 1]} ${monthStart.year}',
+              '$_year',
               style: TextStyle(
-                color: context.appColors.textMuted,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: context.appColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
-              children: List.generate(
-                7,
-                (d) => Expanded(
-                  child: Text(
-                    _dayLabels[d],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.appColors.textMuted,
-                      fontSize: 6,
+            IconButton(
+              onPressed: canGoForward ? () => setState(() => _year++) : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+              iconSize: 20,
+              color:
+                  canGoForward
+                      ? widget.habitColor
+                      : context.appColors.textMuted,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.82,
+          ),
+          itemCount: 12,
+          itemBuilder: (_, idx) {
+            final monthStart = DateTime(_year, idx + 1, 1);
+            final firstWeekday = (monthStart.weekday - 1) % 7;
+            final daysInMonth = DateUtils.getDaysInMonth(_year, idx + 1);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _monthNames[idx],
+                  style: TextStyle(
+                    color: context.appColors.textMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: List.generate(
+                    7,
+                    (d) => Expanded(
+                      child: Text(
+                        _dayLabels[d],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: context.appColors.textMuted,
+                          fontSize: 6,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Expanded(
-              child: GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  mainAxisSpacing: 2,
-                  crossAxisSpacing: 2,
-                  childAspectRatio: 1,
+                const SizedBox(height: 2),
+                Expanded(
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 2,
+                          crossAxisSpacing: 2,
+                          childAspectRatio: 1,
+                        ),
+                    itemCount: 42,
+                    itemBuilder: (_, cellIdx) {
+                      final dayOffset = cellIdx - firstWeekday;
+                      if (dayOffset < 0 || dayOffset >= daysInMonth) {
+                        return const SizedBox();
+                      }
+                      final day = DateTime(_year, idx + 1, dayOffset + 1);
+                      if (day.isAfter(todayMidnight)) return const SizedBox();
+                      final v = widget.heatmap[_fmt(day)];
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: _cellColor(v),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-                itemCount: 42,
-                itemBuilder: (_, cellIdx) {
-                  final dayOffset = cellIdx - firstWeekday;
-                  if (dayOffset < 0 || dayOffset >= daysInMonth) {
-                    return const SizedBox();
-                  }
-                  final day = DateTime(
-                    monthStart.year,
-                    monthStart.month,
-                    dayOffset + 1,
-                  );
-                  if (day.isAfter(todayMidnight)) return const SizedBox();
-                  if (day.isBefore(createdMidnight)) return const SizedBox();
-                  final v = heatmap[_fmt(day)];
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: _cellColor(v),
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }

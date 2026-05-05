@@ -490,7 +490,7 @@ const _kCategoryColors = <String, Color>{
   'Other': Color(0xFF636E72),
 };
 
-class _CategoryBreakdown extends StatelessWidget {
+class _CategoryBreakdown extends StatefulWidget {
   final List<Transaction> transactions;
   final String currency;
 
@@ -500,10 +500,17 @@ class _CategoryBreakdown extends StatelessWidget {
   });
 
   @override
+  State<_CategoryBreakdown> createState() => _CategoryBreakdownState();
+}
+
+class _CategoryBreakdownState extends State<_CategoryBreakdown> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     // Aggregate by category
     final Map<String, double> totals = {};
-    for (final tx in transactions) {
+    for (final tx in widget.transactions) {
       totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
     }
     final sorted =
@@ -511,115 +518,208 @@ class _CategoryBreakdown extends StatelessWidget {
     final total = sorted.fold(0.0, (s, e) => s + e.value);
     if (total == 0) return const SizedBox();
 
+    final donutAndLegend = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Donut chart
+        SizedBox(
+          width: 110,
+          height: 110,
+          child: CustomPaint(
+            painter: _DonutPainter(
+              segments:
+                  sorted
+                      .map(
+                        (e) => _DonutSegment(
+                          value: e.value,
+                          color:
+                              _kCategoryColors[e.key] ??
+                              const Color(0xFF636E72),
+                        ),
+                      )
+                      .toList(),
+              total: total,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    total.toStringAsFixed(0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    widget.currency,
+                    style: TextStyle(
+                      color: context.appColors.textMuted,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Legend
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children:
+                sorted.take(5).map((e) {
+                  final color =
+                      _kCategoryColors[e.key] ?? const Color(0xFF636E72);
+                  final pct = (e.value / total * 100).toStringAsFixed(0);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            e.key,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.appColors.textSecondary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '$pct%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+          ),
+        ),
+      ],
+    );
+
+    final expandedDetail = Column(
+      children: [
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 14),
+        ...sorted.map((e) {
+          final color = _kCategoryColors[e.key] ?? const Color(0xFF636E72);
+          final ratio = total > 0 ? e.value / total : 0.0;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        e.key,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${widget.currency} ${e.value.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    minHeight: 5,
+                    backgroundColor: color.withValues(alpha: 0.12),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: context.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'SPENDING BY CATEGORY',
-            style: TextStyle(
-              color: context.appColors.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 14),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Donut chart
-              SizedBox(
-                width: 110,
-                height: 110,
-                child: CustomPaint(
-                  painter: _DonutPainter(
-                    segments:
-                        sorted
-                            .map(
-                              (e) => _DonutSegment(
-                                value: e.value,
-                                color:
-                                    _kCategoryColors[e.key] ??
-                                    const Color(0xFF636E72),
-                              ),
-                            )
-                            .toList(),
-                    total: total,
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          total.toStringAsFixed(0),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          currency,
-                          style: TextStyle(
-                            color: context.appColors.textMuted,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              Text(
+                'SPENDING BY CATEGORY',
+                style: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
                 ),
               ),
-              const SizedBox(width: 16),
-              // Legend
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      sorted.take(5).map((e) {
-                        final color =
-                            _kCategoryColors[e.key] ?? const Color(0xFF636E72);
-                        final pct = (e.value / total * 100).toStringAsFixed(0);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  e.key,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: context.appColors.textSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                '$pct%',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: color,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+              const Spacer(),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _expanded = !_expanded);
+                },
+                child: AnimatedRotation(
+                  duration: const Duration(milliseconds: 250),
+                  turns: _expanded ? 0.5 : 0,
+                  child: Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: context.appColors.textMuted,
+                  ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          donutAndLegend,
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 300),
+            firstCurve: Curves.easeInOut,
+            secondCurve: Curves.easeInOut,
+            crossFadeState:
+                _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: expandedDetail,
           ),
         ],
       ),

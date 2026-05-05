@@ -42,7 +42,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     with SingleTickerProviderStateMixin {
   int _selectedPreset = FocusSessionService.preset25;
   String _selectedCategory = _kCategories.first;
-  FocusMode _selectedMode = FocusMode.pomodoro;
+  final FocusMode _selectedMode = FocusMode.pomodoro;
 
   // Auto-save guard: prevents duplicate saves for the same finished session.
   bool _autoSaved = false;
@@ -120,19 +120,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                     (c) => setState(() {
                       _selectedCategory = c;
                       svc.configure(category: c);
-                    }),
-              ),
-              const SizedBox(height: 20),
-
-              // Mode toggle
-              _SectionLabel(label: 'Mode'),
-              const SizedBox(height: 8),
-              _ModeToggle(
-                selected: _selectedMode,
-                onSelected:
-                    (m) => setState(() {
-                      _selectedMode = m;
-                      svc.configure(mode: m);
                     }),
               ),
               const SizedBox(height: 20),
@@ -630,70 +617,6 @@ class _ControlBtn extends StatelessWidget {
           Text(label, style: TextStyle(color: c, fontSize: 11)),
         ],
       ),
-    );
-  }
-}
-
-// ── Mode toggle ───────────────────────────────────────────
-
-class _ModeToggle extends StatelessWidget {
-  final FocusMode selected;
-  final ValueChanged<FocusMode> onSelected;
-
-  const _ModeToggle({required this.selected, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    const modes = [
-      (FocusMode.pomodoro, Icons.timer_rounded, 'Pomodoro'),
-      (FocusMode.countdown, Icons.hourglass_bottom_rounded, 'Countdown'),
-      (FocusMode.stopwatch, Icons.watch_rounded, 'Stopwatch'),
-    ];
-    final primary = Theme.of(context).colorScheme.primary;
-    return Row(
-      children:
-          modes.map((m) {
-            final sel = selected == m.$1;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onSelected(m.$1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color:
-                        sel
-                            ? primary.withValues(alpha: 0.15)
-                            : context.appColors.bgCard,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: sel ? primary : context.appColors.border,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        m.$2,
-                        size: 20,
-                        color: sel ? primary : context.appColors.textSecondary,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        m.$3,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color:
-                              sel ? primary : context.appColors.textSecondary,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
     );
   }
 }

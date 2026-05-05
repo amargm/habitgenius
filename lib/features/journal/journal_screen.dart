@@ -417,6 +417,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -451,8 +452,9 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
           const SizedBox(width: 8),
         ],
       ),
+      bottomNavigationBar: _JournalToolbar(bodyCtrl: _bodyCtrl),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 60),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         children: [
           // Date display
           Text(
@@ -497,24 +499,32 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
             },
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _bodyCtrl,
-            maxLines: null,
-            minLines: 12,
-            style: const TextStyle(fontSize: 15, height: 1.7),
-            decoration: InputDecoration(
-              hintText: 'Write your thoughts…',
-              alignLabelWithHint: true,
-              hintStyle: TextStyle(
-                color: context.appColors.textMuted,
-                fontSize: 15,
-              ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
+          Container(
+            decoration: BoxDecoration(
+              color: context.appColors.bgCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
             ),
-            textCapitalization: TextCapitalization.sentences,
+            padding: const EdgeInsets.all(14),
+            child: TextField(
+              controller: _bodyCtrl,
+              maxLines: null,
+              minLines: 12,
+              style: const TextStyle(fontSize: 15, height: 1.7),
+              decoration: InputDecoration(
+                hintText: 'Write your thoughts…',
+                alignLabelWithHint: true,
+                hintStyle: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 15,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              textCapitalization: TextCapitalization.sentences,
+            ),
           ),
           const Divider(height: 32),
 
@@ -625,5 +635,129 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       'Sunday',
     ];
     return '${days[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+}
+
+// ── Journal formatting toolbar ────────────────────────────
+
+class _JournalToolbar extends StatelessWidget {
+  final TextEditingController bodyCtrl;
+
+  const _JournalToolbar({required this.bodyCtrl});
+
+  void _insert(String prefix, String suffix) {
+    final text = bodyCtrl.text;
+    final sel = bodyCtrl.selection;
+    final start = sel.start < 0 ? text.length : sel.start;
+    final end = sel.end < 0 ? text.length : sel.end;
+    final selected = text.substring(start, end);
+    final replacement = '$prefix$selected$suffix';
+    final newText =
+        text.substring(0, start) + replacement + text.substring(end);
+    bodyCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + replacement.length),
+    );
+  }
+
+  void _insertLine(String prefix) {
+    final text = bodyCtrl.text;
+    final sel = bodyCtrl.selection;
+    final pos = sel.start < 0 ? text.length : sel.start;
+    // Find start of current line
+    final lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+    final newText =
+        text.substring(0, lineStart) + prefix + text.substring(lineStart);
+    bodyCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: pos + prefix.length),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: context.appColors.bgCard,
+          border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _ToolbarBtn(
+              label: 'B',
+              bold: true,
+              onTap: () => _insert('**', '**'),
+            ),
+            _ToolbarBtn(
+              label: 'I',
+              italic: true,
+              onTap: () => _insert('_', '_'),
+            ),
+            _ToolbarBtn(
+              icon: Icons.format_list_bulleted_rounded,
+              onTap: () => _insertLine('• '),
+            ),
+            _ToolbarBtn(
+              label: 'H',
+              bold: true,
+              onTap: () => _insertLine('## '),
+            ),
+            _ToolbarBtn(
+              icon: Icons.format_quote_rounded,
+              onTap: () => _insertLine('> '),
+            ),
+            _ToolbarBtn(
+              icon: Icons.keyboard_hide_rounded,
+              onTap: () => FocusScope.of(context).unfocus(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolbarBtn extends StatelessWidget {
+  final String? label;
+  final IconData? icon;
+  final bool bold;
+  final bool italic;
+  final VoidCallback onTap;
+
+  const _ToolbarBtn({
+    this.label,
+    this.icon,
+    this.bold = false,
+    this.italic = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child:
+            icon != null
+                ? Icon(icon, size: 20, color: context.appColors.textSecondary)
+                : Text(
+                  label!,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: bold ? FontWeight.w900 : FontWeight.w400,
+                    fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+      ),
+    );
   }
 }

@@ -69,7 +69,20 @@ class MainShell extends ConsumerWidget {
             .toList();
 
     return Scaffold(
-      body: child,
+      body: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          final v = details.primaryVelocity ?? 0;
+          if (v.abs() < 300) return;
+          final idx = visibleTabs.indexWhere((t) => t.route == currentRoute);
+          if (idx < 0) return;
+          if (v < 0 && idx < visibleTabs.length - 1) {
+            context.go(visibleTabs[idx + 1].route);
+          } else if (v > 0 && idx > 0) {
+            context.go(visibleTabs[idx - 1].route);
+          }
+        },
+        child: child,
+      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

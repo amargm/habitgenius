@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,34 +8,14 @@ import '../../core/models/app_data.dart';
 import '../../core/models/habit.dart';
 import '../../core/models/habit_log.dart';
 import '../../core/models/mood.dart';
+import '../../core/models/transaction.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/services/permission_service.dart';
 import '../../shared/widgets/empty_state_widget.dart';
-
-// ── Filter period ─────────────────────────────────────────
-
-enum _HomeFilter { today, week, month }
-
-// ── Stat card data ─────────────────────────────────────────
-
-class _CardData {
-  final String value;
-  final String sub;
-  final double progress; // 0.0–1.0 for mini progress bar
-  final bool isEmoji;
-  final bool isActive;
-
-  const _CardData({
-    required this.value,
-    required this.sub,
-    this.progress = 0.0,
-    this.isEmoji = false,
-    this.isActive = false,
-  });
-}
 
 // ── Screen ────────────────────────────────────────────────
 
@@ -96,8 +75,6 @@ class _Body extends StatefulWidget {
 }
 
 class _BodyState extends State<_Body> {
-  _HomeFilter _filter = _HomeFilter.today;
-
   @override
   Widget build(BuildContext context) {
     final data = widget.data;
@@ -128,17 +105,8 @@ class _BodyState extends State<_Body> {
             ? 'Good afternoon'
             : 'Good evening';
 
-    // ── Period boundaries ─────────────────────────────────
     final activeHabits =
         data.habits.where((h) => h.archivedAt == null).toList();
-    final weekStart = DateTime(
-      today.year,
-      today.month,
-      today.day,
-    ).subtract(Duration(days: today.weekday - 1));
-    final monthStart = DateTime(today.year, today.month, 1);
-
-    // ── Today's habits ────────────────────────────────────
     final todayHabits = HabitHelpers.habitsForDate(activeHabits, today);
     final doneToday =
         todayHabits
@@ -146,173 +114,10 @@ class _BodyState extends State<_Body> {
               (h) => HabitHelpers.isCompletedOn(h, data.habitLogs, todayStr),
             )
             .length;
-
-    // ── Focus minutes helper ──────────────────────────────
-    int focusFrom(DateTime from) => data.focusSessions
-        .where((s) {
-          final d = DateTime.tryParse(s.startedAt)?.toLocal();
-          return d != null && !d.isBefore(from);
-        })
-        .fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
-
-    final todayFocusMin = data.focusSessions
-        .where((s) {
-          final d = DateTime.tryParse(s.startedAt)?.toLocal();
-          return d != null &&
-              d.year == today.year &&
-              d.month == today.month &&
-              d.day == today.day;
-        })
-        .fold<int>(0, (sum, s) => sum + (s.actualDuration ~/ 60));
-    final weekFocusMin = focusFrom(weekStart);
-    final monthFocusMin = focusFrom(monthStart);
-
-    // ── Mood helpers ──────────────────────────────────────
-    final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
-
-    List<Mood> moodsFrom(DateTime from) =>
-        data.moods.where((m) {
-          final d = DateTime.tryParse(m.date);
-          return d != null && !d.isBefore(from);
-        }).toList();
-
-    final weekMoods = moodsFrom(weekStart);
-    final monthMoods = moodsFrom(monthStart);
-
-    // ── Journal helpers ───────────────────────────────────
-    int journalFrom(DateTime from) =>
-        data.journal.where((e) {
-          final d = DateTime.tryParse(e.createdAt)?.toLocal();
-          return d != null && !d.isBefore(from);
-        }).length;
-
-    final journalTotal = data.journal.length;
-    final weekJournalCount = journalFrom(weekStart);
-    final monthJournalCount = journalFrom(monthStart);
-
-    // ── Best streak ───────────────────────────────────────
-    final bestStreak =
-        activeHabits.isEmpty
-            ? 0
-            : activeHabits
-                .map(
-                  (h) => HabitHelpers.currentStreak(h, data.habitLogs, today),
-                )
-                .reduce(math.max);
-
-    // ── Expenses count ────────────────────────────────────
-    final monthStr = '${today.year}-${today.month.toString().padLeft(2, '0')}';
-    final monthTxCount =
-        data.transactions.where((t) => t.date.startsWith(monthStr)).length;
-
-    // ── Per-filter card data ──────────────────────────────
-    late final _CardData habitsCard;
-    late final _CardData focusCard;
-    late final _CardData moodCard;
-    late final _CardData journalCard;
-
-    switch (_filter) {
-      case _HomeFilter.today:
-        habitsCard = _CardData(
-          value:
-              todayHabits.isEmpty ? '--' : '$doneToday / ${todayHabits.length}',
-          sub:
-              todayHabits.isEmpty
-                  ? 'No habits today'
-                  : doneToday == todayHabits.length
-                  ? 'All done! 🎉'
-                  : '${todayHabits.length - doneToday} remaining',
-          progress: todayHabits.isEmpty ? 0.0 : doneToday / todayHabits.length,
-          isActive: doneToday > 0,
-        );
-        focusCard = _CardData(
-          value: todayFocusMin == 0 ? '--' : '${todayFocusMin}m',
-          sub: todayFocusMin == 0 ? 'Not started' : 'focused today',
-          isActive: todayFocusMin > 0,
-        );
-        moodCard = _CardData(
-          value: todayMood?.emoji ?? '--',
-          sub: todayMood != null ? _moodLabel(todayMood.level) : 'Not logged',
-          isEmoji: todayMood != null,
-          isActive: todayMood != null,
-        );
-        journalCard = _CardData(
-          value: '$journalTotal',
-          sub: journalTotal == 0 ? 'No entries yet' : 'total entries',
-          isActive: journalTotal > 0,
-        );
-
-      case _HomeFilter.week:
-        habitsCard = _CardData(
-          value: bestStreak > 0 ? '🔥 $bestStreak' : '--',
-          sub: bestStreak > 0 ? 'day streak' : 'Start a streak!',
-          progress: bestStreak > 0 ? (bestStreak / 7.0).clamp(0.0, 1.0) : 0.0,
-          isEmoji: bestStreak > 0,
-          isActive: bestStreak > 0,
-        );
-        final wFocusLabel =
-            weekFocusMin >= 60
-                ? '${(weekFocusMin / 60).toStringAsFixed(1)}h'
-                : '${weekFocusMin}m';
-        focusCard = _CardData(
-          value: weekFocusMin == 0 ? '--' : wFocusLabel,
-          sub: weekFocusMin == 0 ? 'No sessions' : 'this week',
-          isActive: weekFocusMin > 0,
-        );
-        final avgWkLevel =
-            weekMoods.isEmpty
-                ? null
-                : weekMoods.map((m) => m.level).reduce((a, b) => a + b) /
-                    weekMoods.length;
-        moodCard = _CardData(
-          value: avgWkLevel == null ? '--' : _moodEmoji(avgWkLevel.round()),
-          sub: weekMoods.isEmpty ? 'No logs' : 'avg · ${weekMoods.length} days',
-          isEmoji: avgWkLevel != null,
-          isActive: weekMoods.isNotEmpty,
-        );
-        journalCard = _CardData(
-          value: '$weekJournalCount',
-          sub: weekJournalCount == 0 ? 'No entries' : 'this week',
-          isActive: weekJournalCount > 0,
-        );
-
-      case _HomeFilter.month:
-        habitsCard = _CardData(
-          value: '${activeHabits.length}',
-          sub:
-              activeHabits.isEmpty
-                  ? 'No habits'
-                  : '${activeHabits.length} active',
-          progress: (activeHabits.length / 5.0).clamp(0.0, 1.0),
-          isActive: activeHabits.isNotEmpty,
-        );
-        final mFocusLabel =
-            monthFocusMin >= 60
-                ? '${(monthFocusMin / 60).toStringAsFixed(1)}h'
-                : '${monthFocusMin}m';
-        focusCard = _CardData(
-          value: monthFocusMin == 0 ? '--' : mFocusLabel,
-          sub: monthFocusMin == 0 ? 'No sessions' : 'this month',
-          isActive: monthFocusMin > 0,
-        );
-        final posPct =
-            monthMoods.isEmpty
-                ? null
-                : (monthMoods.where((m) => m.level >= 4).length /
-                        monthMoods.length *
-                        100)
-                    .round();
-        moodCard = _CardData(
-          value: posPct == null ? '--' : '$posPct%',
-          sub: monthMoods.isEmpty ? 'No logs' : 'positive days',
-          isActive: monthMoods.isNotEmpty,
-        );
-        journalCard = _CardData(
-          value: '$monthJournalCount',
-          sub: monthJournalCount == 0 ? 'No entries' : 'this month',
-          isActive: monthJournalCount > 0,
-        );
-    }
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+    final weekStart = todayMidnight.subtract(
+      Duration(days: todayMidnight.weekday - 1),
+    );
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(
@@ -333,19 +138,8 @@ class _BodyState extends State<_Body> {
                   primary: primary,
                   onSettings: () => context.push(AppRoutes.settings),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
-                // ── Filter chips ──────────────────────────
-                _FilterChips(
-                  filter: _filter,
-                  onChanged: (f) {
-                    HapticFeedback.selectionClick();
-                    setState(() => _filter = f);
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // ── Today's habits ────────────────────────
                 if (todayHabits.isNotEmpty) ...[
                   _SectionHeader(
                     label: 'Today',
@@ -370,30 +164,21 @@ class _BodyState extends State<_Body> {
                     allLogs: data.habitLogs,
                     today: today,
                     primary: primary,
+                    todayMood:
+                        data.moods.where((m) => m.date == todayStr).firstOrNull,
                   ),
                   const SizedBox(height: 28),
                 ],
 
-                // ── Pinned section ────────────────────────
-                const _SectionHeader(label: 'Overview'),
+                _SectionHeader(label: 'This Week', trailing: const SizedBox()),
                 const SizedBox(height: 14),
-                _PinnedGrid(
-                  habitsCard: habitsCard,
-                  focusCard: focusCard,
-                  moodCard: moodCard,
-                  journalCard: journalCard,
-                  tier: auth.tier,
+                _WeeklyOverview(
+                  data: data,
+                  activeHabits: activeHabits,
+                  weekStart: weekStart,
+                  today: today,
                   primary: primary,
-                ),
-                const SizedBox(height: 28),
-
-                // ── All features section ──────────────────
-                const _SectionHeader(label: 'All Features'),
-                const SizedBox(height: 14),
-                _FeaturesSection(
                   tier: auth.tier,
-                  monthTxCount: monthTxCount,
-                  accountCount: data.accounts.length,
                 ),
                 const SizedBox(height: 100),
               ],
@@ -402,16 +187,6 @@ class _BodyState extends State<_Body> {
         ),
       ],
     );
-  }
-
-  static String _moodLabel(int level) {
-    const labels = ['Awful', 'Bad', 'Okay', 'Good', 'Great'];
-    return labels[(level - 1).clamp(0, 4)];
-  }
-
-  static String _moodEmoji(int level) {
-    const emojis = ['😣', '😔', '😐', '😊', '🤩'];
-    return emojis[(level - 1).clamp(0, 4)];
   }
 }
 
@@ -513,69 +288,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Filter chips ──────────────────────────────────────────
-
-class _FilterChips extends StatelessWidget {
-  final _HomeFilter filter;
-  final ValueChanged<_HomeFilter> onChanged;
-
-  const _FilterChips({required this.filter, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    const items = [
-      (_HomeFilter.today, 'Today'),
-      (_HomeFilter.week, 'This Week'),
-      (_HomeFilter.month, 'This Month'),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children:
-            items.map((item) {
-              final sel = filter == item.$1;
-              return GestureDetector(
-                onTap: () => onChanged(item.$1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: sel ? primary : context.appColors.bgCard,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow:
-                        sel
-                            ? [
-                              BoxShadow(
-                                color: primary.withValues(alpha: 0.35),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                            : context.appColors.cardShadow,
-                  ),
-                  child: Text(
-                    item.$2,
-                    style: TextStyle(
-                      color:
-                          sel ? Colors.white : context.appColors.textSecondary,
-                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-      ),
-    );
-  }
-}
-
 // ── Section header ────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
@@ -604,254 +316,9 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Pinned 2×2 grid ───────────────────────────────────────
-
-class _PinnedGrid extends StatelessWidget {
-  final _CardData habitsCard;
-  final _CardData focusCard;
-  final _CardData moodCard;
-  final _CardData journalCard;
-  final UserTier tier;
-  final Color primary;
-
-  const _PinnedGrid({
-    required this.habitsCard,
-    required this.focusCard,
-    required this.moodCard,
-    required this.journalCard,
-    required this.tier,
-    required this.primary,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Left column: Habits (highlighted) + Mood
-        Expanded(
-          child: Column(
-            children: [
-              _PinnedCard(
-                title: 'Habits',
-                icon: Icons.check_circle_outline_rounded,
-                iconColor: primary,
-                cardData: habitsCard,
-                isHighlighted: true,
-                route: AppRoutes.habits,
-              ),
-              const SizedBox(height: 14),
-              _PinnedCard(
-                title: 'Mood',
-                icon: Icons.sentiment_satisfied_alt_rounded,
-                iconColor: const Color(0xFFFF7675),
-                cardData: moodCard,
-                isHighlighted: false,
-                route: AppRoutes.mood,
-                locked: tier == UserTier.guest,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 14),
-        // Right column: Focus + Journal
-        Expanded(
-          child: Column(
-            children: [
-              _PinnedCard(
-                title: 'Focus',
-                icon: Icons.timer_rounded,
-                iconColor: const Color(0xFF00B894),
-                cardData: focusCard,
-                isHighlighted: false,
-                route: AppRoutes.focus,
-              ),
-              const SizedBox(height: 14),
-              _PinnedCard(
-                title: 'Journal',
-                icon: Icons.menu_book_rounded,
-                iconColor: const Color(0xFF74B9FF),
-                cardData: journalCard,
-                isHighlighted: false,
-                route: AppRoutes.journal,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Pinned card ───────────────────────────────────────────
-
-class _PinnedCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color iconColor;
-  final _CardData cardData;
-  final bool isHighlighted;
-  final String route;
-  final bool locked;
-
-  const _PinnedCard({
-    required this.title,
-    required this.icon,
-    required this.iconColor,
-    required this.cardData,
-    required this.isHighlighted,
-    required this.route,
-    this.locked = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final effectiveColor = isHighlighted ? primary : iconColor;
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        if (locked) {
-          // Guest: take them to sign-in rather than showing a "Upgrade to Pro"
-          // sheet — guests need an account before they can upgrade.
-          context.go(AppRoutes.welcome);
-          return;
-        }
-        context.go(route);
-      },
-      child: Container(
-        height: 168,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient:
-              isHighlighted
-                  ? LinearGradient(
-                    colors: [
-                      primary.withValues(alpha: 0.28),
-                      primary.withValues(alpha: 0.10),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                  : null,
-          color: isHighlighted ? null : context.appColors.bgCard,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color:
-                isHighlighted
-                    ? primary.withValues(alpha: 0.40)
-                    : Colors.white.withValues(alpha: 0.05),
-            width: 1.5,
-          ),
-          boxShadow:
-              isHighlighted
-                  ? [
-                    BoxShadow(
-                      color: primary.withValues(alpha: 0.22),
-                      blurRadius: 28,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                  : context.appColors.cardShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top row: icon
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color:
-                    isHighlighted
-                        ? Colors.white.withValues(alpha: 0.16)
-                        : effectiveColor.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  locked
-                      ? const Icon(
-                        Icons.lock_rounded,
-                        size: 16,
-                        color: AppColors.textMuted,
-                      )
-                      : Icon(
-                        icon,
-                        size: 18,
-                        color: isHighlighted ? Colors.white : effectiveColor,
-                      ),
-            ),
-            const Spacer(),
-            // Stat value
-            Text(
-              locked ? '--' : cardData.value,
-              style: TextStyle(
-                fontSize: cardData.isEmoji ? 26 : 22,
-                fontWeight: FontWeight.w800,
-                color:
-                    isHighlighted
-                        ? Colors.white
-                        : locked
-                        ? AppColors.textMuted
-                        : null,
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 5),
-            // Title
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color:
-                    isHighlighted ? Colors.white.withValues(alpha: 0.9) : null,
-              ),
-            ),
-            const SizedBox(height: 2),
-            // Sub label
-            Text(
-              locked ? 'Sign in to unlock' : cardData.sub,
-              style: TextStyle(
-                fontSize: 11,
-                color:
-                    isHighlighted
-                        ? Colors.white.withValues(alpha: 0.55)
-                        : context.appColors.textMuted,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            // Mini progress bar
-            if (!locked && cardData.progress > 0) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: cardData.progress,
-                  minHeight: 3,
-                  backgroundColor:
-                      isHighlighted
-                          ? Colors.white.withValues(alpha: 0.18)
-                          : effectiveColor.withValues(alpha: 0.15),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isHighlighted ? Colors.white : effectiveColor,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Today's habits horizontal row ────────────────────────
 
-class _TodayHabitsRow extends StatelessWidget {
+class _TodayHabitsRow extends ConsumerWidget {
   final List<Habit> habits;
   final List<HabitLog> logs;
   final String todayStr;
@@ -859,6 +326,7 @@ class _TodayHabitsRow extends StatelessWidget {
   final List<HabitLog> allLogs;
   final DateTime today;
   final Color primary;
+  final Mood? todayMood;
 
   const _TodayHabitsRow({
     required this.habits,
@@ -868,37 +336,112 @@ class _TodayHabitsRow extends StatelessWidget {
     required this.allLogs,
     required this.today,
     required this.primary,
+    this.todayMood,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       height: 90,
-      child: ListView.separated(
+      child: ListView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: habits.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, i) {
-          final habit = habits[i];
-          final done = HabitHelpers.isCompletedOn(habit, logs, todayStr);
-          Color habitColor;
-          try {
-            habitColor = Color(
-              int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
-            );
-          } catch (_) {
-            habitColor = primary;
-          }
+        children: [
+          ...habits.asMap().entries.map((entry) {
+            final i = entry.key;
+            final habit = habits[i];
+            final done = HabitHelpers.isCompletedOn(habit, logs, todayStr);
+            Color habitColor;
+            try {
+              habitColor = Color(
+                int.parse(
+                  'FF${habit.colorHex.replaceFirst('#', '')}',
+                  radix: 16,
+                ),
+              );
+            } catch (_) {
+              habitColor = primary;
+            }
 
-          return GestureDetector(
+            return Padding(
+              padding: EdgeInsets.only(right: 12, left: i == 0 ? 0 : 0),
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref
+                      .read(dataNotifierProvider.notifier)
+                      .toggleHabit(habitId: habit.id, dateStr: todayStr);
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  _showYearHeatmap(context, habit, allLogs, today, habitColor);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color:
+                            done
+                                ? habitColor
+                                : habitColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border:
+                            done
+                                ? null
+                                : Border.all(
+                                  color: habitColor.withValues(alpha: 0.5),
+                                  width: 1.5,
+                                ),
+                        boxShadow:
+                            done
+                                ? [
+                                  BoxShadow(
+                                    color: habitColor.withValues(alpha: 0.4),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                                : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          habit.icon,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        habit.name,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              done
+                                  ? habitColor
+                                  : context.appColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          // Mood quick-entry button
+          GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
-              context.go(AppRoutes.habits);
-            },
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              _showYearHeatmap(context, habit, allLogs, today, habitColor);
+              _showMoodPicker(context, ref, todayStr, todayMood);
             },
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -909,29 +452,21 @@ class _TodayHabitsRow extends StatelessWidget {
                   height: 56,
                   decoration: BoxDecoration(
                     color:
-                        done ? habitColor : habitColor.withValues(alpha: 0.15),
+                        todayMood != null
+                            ? AppColors.featureMood.withValues(alpha: 0.25)
+                            : context.appColors.bgElevated,
                     shape: BoxShape.circle,
-                    border:
-                        done
-                            ? null
-                            : Border.all(
-                              color: habitColor.withValues(alpha: 0.5),
-                              width: 1.5,
-                            ),
-                    boxShadow:
-                        done
-                            ? [
-                              BoxShadow(
-                                color: habitColor.withValues(alpha: 0.4),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                            : null,
+                    border: Border.all(
+                      color:
+                          todayMood != null
+                              ? AppColors.featureMood.withValues(alpha: 0.6)
+                              : context.appColors.border,
+                      width: 1.5,
+                    ),
                   ),
                   child: Center(
                     child: Text(
-                      habit.icon,
+                      todayMood?.emoji ?? '😶',
                       style: const TextStyle(fontSize: 24),
                     ),
                   ),
@@ -940,23 +475,37 @@ class _TodayHabitsRow extends StatelessWidget {
                 SizedBox(
                   width: 60,
                   child: Text(
-                    habit.name,
+                    'Mood',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                       color:
-                          done ? habitColor : context.appColors.textSecondary,
+                          todayMood != null
+                              ? AppColors.featureMood
+                              : context.appColors.textSecondary,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+
+  void _showMoodPicker(
+    BuildContext context,
+    WidgetRef ref,
+    String todayStr,
+    Mood? existing,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MoodQuickPicker(todayStr: todayStr, existing: existing),
     );
   }
 
@@ -1280,122 +829,519 @@ class _MonthBlock extends StatelessWidget {
   }
 }
 
-// ── All Features section ──────────────────────────────────
+// ── Mood quick-entry picker ───────────────────────────────
 
-class _FeaturesSection extends StatelessWidget {
-  final UserTier tier;
-  final int monthTxCount;
-  final int accountCount;
+class _MoodQuickPicker extends ConsumerWidget {
+  final String todayStr;
+  final Mood? existing;
 
-  const _FeaturesSection({
-    required this.tier,
-    required this.monthTxCount,
-    required this.accountCount,
-  });
+  static const _levels = [
+    (1, '😣', 'Awful'),
+    (2, '😔', 'Bad'),
+    (3, '😐', 'Okay'),
+    (4, '😊', 'Good'),
+    (5, '🤩', 'Great'),
+  ];
+
+  const _MoodQuickPicker({required this.todayStr, required this.existing});
 
   @override
-  Widget build(BuildContext context) {
-    final items = <_FeatureItem>[];
-
-    if (tier != UserTier.guest) {
-      items.add(
-        _FeatureItem(
-          icon: Icons.account_balance_wallet_rounded,
-          color: const Color(0xFF0984E3),
-          title: 'Expenses',
-          subtitle:
-              monthTxCount == 0
-                  ? 'No transactions this month'
-                  : '$monthTxCount transaction${monthTxCount == 1 ? '' : 's'} this month',
-          badge:
-              accountCount > 0
-                  ? '$accountCount acct${accountCount == 1 ? '' : 's'}'
-                  : null,
-          onTap: (ctx) => ctx.go(AppRoutes.expenses),
-        ),
-      );
-    } else {
-      items.add(
-        _FeatureItem(
-          icon: Icons.login_rounded,
-          color: const Color(0xFFF47820),
-          title: 'Sign in to unlock more',
-          subtitle: 'Expenses, Mood & unlimited habits',
-          onTap: (ctx) => ctx.go(AppRoutes.welcome),
-        ),
-      );
-    }
-
-    items.add(
-      _FeatureItem(
-        icon: Icons.settings_rounded,
-        color: AppColors.textSecondary,
-        title: 'Settings',
-        subtitle: 'Theme, notifications & account',
-        onTap: (ctx) => ctx.push(AppRoutes.settings),
-        isLast: true,
-      ),
-    );
-
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      decoration: context.cardDecoration,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      decoration: BoxDecoration(
+        color: context.appColors.bgCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       child: Column(
-        children:
-            items
-                .map(
-                  (item) => _FeatureRow(
-                    icon: item.icon,
-                    iconColor: item.color,
-                    title: item.title,
-                    subtitle: item.subtitle,
-                    badge: item.badge,
-                    onTap: item.onTap,
-                    isLast: item.isLast,
-                  ),
-                )
-                .toList(),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: context.appColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'How are you feeling?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: context.appColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children:
+                _levels.map((lvl) {
+                  final isSelected = existing?.level == lvl.$1;
+                  return GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      final mood = Mood(
+                        id: existing?.id ?? const Uuid().v4(),
+                        date: todayStr,
+                        level: lvl.$1,
+                        emoji: lvl.$2,
+                        tags: existing?.tags ?? [],
+                        note: existing?.note,
+                        loggedAt: DateTime.now().toUtc().toIso8601String(),
+                      );
+                      await ref
+                          .read(dataNotifierProvider.notifier)
+                          .upsertMood(mood);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected
+                                ? AppColors.featureMood.withValues(alpha: 0.18)
+                                : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        border:
+                            isSelected
+                                ? Border.all(
+                                  color: AppColors.featureMood.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                )
+                                : null,
+                      ),
+                      child: Column(
+                        children: [
+                          Text(lvl.$2, style: const TextStyle(fontSize: 32)),
+                          const SizedBox(height: 6),
+                          Text(
+                            lvl.$3,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  isSelected
+                                      ? AppColors.featureMood
+                                      : context.appColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _FeatureItem {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final String? badge;
-  final void Function(BuildContext) onTap;
-  final bool isLast;
+// ── Weekly overview ───────────────────────────────────────
 
-  const _FeatureItem({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.badge,
-    this.isLast = false,
+class _WeeklyOverview extends StatelessWidget {
+  final AppData data;
+  final List<Habit> activeHabits;
+  final DateTime weekStart;
+  final DateTime today;
+  final Color primary;
+  final UserTier tier;
+
+  static const _dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _moodEmojis = ['😣', '😔', '😐', '😊', '🤩'];
+  static const _moodColors = [
+    Color(0xFFE17055),
+    Color(0xFFFDAA6E),
+    Color(0xFF8E8EA0),
+    Color(0xFF00B894),
+    Color(0xFF6C5CE7),
+  ];
+
+  const _WeeklyOverview({
+    required this.data,
+    required this.activeHabits,
+    required this.weekStart,
+    required this.today,
+    required this.primary,
+    required this.tier,
   });
+
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _fmtMins(int m) =>
+      m == 0
+          ? '--'
+          : m >= 60
+          ? '${m ~/ 60}h${m % 60 > 0 ? '${m % 60}m' : ''}'
+          : '${m}m';
+
+  String _smartMoney(double v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return v.toStringAsFixed(0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final todayMid = DateTime(today.year, today.month, today.day);
+    final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+
+    // ── Habits ───────────────────────────────────────
+    final habitsRatios =
+        days.map<double?>((day) {
+          if (day.isAfter(todayMid)) return null;
+          final sched = HabitHelpers.habitsForDate(activeHabits, day);
+          if (sched.isEmpty) return -1;
+          final ds = _fmt(day);
+          final done =
+              sched
+                  .where(
+                    (h) => HabitHelpers.isCompletedOn(h, data.habitLogs, ds),
+                  )
+                  .length;
+          return done / sched.length;
+        }).toList();
+    final validR = habitsRatios
+        .where((r) => r != null && r >= 0)
+        .map((r) => r!);
+    final weekHabitsAvg =
+        validR.isEmpty ? null : validR.reduce((a, b) => a + b) / validR.length;
+
+    // ── Mood ─────────────────────────────────────────
+    final moodMap = {for (final m in data.moods) m.date: m};
+    final dayMoods =
+        days.map((day) {
+          if (day.isAfter(todayMid)) return null;
+          return moodMap[_fmt(day)];
+        }).toList();
+    final loggedMoods =
+        dayMoods.where((m) => m != null).map((m) => m!).toList();
+    final avgMoodLevel =
+        loggedMoods.isEmpty
+            ? null
+            : (loggedMoods.map((m) => m.level).reduce((a, b) => a + b) /
+                    loggedMoods.length)
+                .round()
+                .clamp(1, 5);
+
+    // ── Focus ─────────────────────────────────────────
+    final dayFocusMins =
+        days.map<int?>((day) {
+          if (day.isAfter(todayMid)) return null;
+          return data.focusSessions
+              .where((s) {
+                final d = DateTime.tryParse(s.startedAt)?.toLocal();
+                return d != null &&
+                    d.year == day.year &&
+                    d.month == day.month &&
+                    d.day == day.day;
+              })
+              .fold<int>(0, (sum, s) => sum + (s.actualDuration ~/ 60));
+        }).toList();
+    final totalFocusMins = dayFocusMins
+        .where((m) => m != null)
+        .fold<int>(0, (s, m) => s + (m ?? 0));
+    final maxFocusMins =
+        dayFocusMins.where((m) => m != null && m > 0).isEmpty
+            ? 1
+            : dayFocusMins
+                .where((m) => m != null)
+                .map((m) => m as int)
+                .reduce((a, b) => a > b ? a : b);
+
+    // ── Journal ───────────────────────────────────────
+    final dayJournal =
+        days.map<int?>((day) {
+          if (day.isAfter(todayMid)) return null;
+          final ds = _fmt(day);
+          return data.journal.where((e) {
+            final d = DateTime.tryParse(e.createdAt)?.toLocal();
+            return d != null && _fmt(d) == ds;
+          }).length;
+        }).toList();
+    final totalJournal = dayJournal
+        .where((c) => c != null)
+        .fold<int>(0, (s, c) => s + c!);
+
+    // ── Expenses ─────────────────────────────────────
+    List<double?> daySpend = [];
+    double totalSpend = 0;
+    if (tier != UserTier.guest) {
+      daySpend =
+          days.map<double?>((day) {
+            if (day.isAfter(todayMid)) return null;
+            final ds = _fmt(day);
+            return data.transactions
+                .where((t) => t.date == ds && t.type == TransactionType.expense)
+                .fold<double>(0, (s, t) => s + t.amount);
+          }).toList();
+      totalSpend = daySpend
+          .where((s) => s != null)
+          .fold<double>(0, (s, v) => s + v!);
+    }
+
+    return Column(
+      children: [
+        _WeekRowCard(
+          icon: Icons.check_circle_outline_rounded,
+          title: 'Habits',
+          color: primary,
+          dayNames: _dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final r = habitsRatios[e.key];
+                if (r == null || r < 0) {
+                  return _DayCellBox(fill: 0, color: primary, empty: true);
+                }
+                return _DayCellBox(fill: r, color: primary, empty: false);
+              }).toList(),
+          aggregate:
+              weekHabitsAvg == null
+                  ? '--'
+                  : '${(weekHabitsAvg * 100).round()}%',
+          aggregateColor: primary,
+        ),
+        const SizedBox(height: 10),
+        _WeekRowCard(
+          icon: Icons.sentiment_satisfied_alt_rounded,
+          title: 'Mood',
+          color: const Color(0xFF9B59B6),
+          dayNames: _dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final mood = dayMoods[e.key];
+                if (mood == null) return const _DayCellText(text: '—');
+                return _DayCellText(text: mood.emoji);
+              }).toList(),
+          aggregate:
+              avgMoodLevel == null ? '--' : _moodEmojis[avgMoodLevel - 1],
+          aggregateColor:
+              avgMoodLevel == null
+                  ? AppColors.textMuted
+                  : _moodColors[avgMoodLevel - 1],
+        ),
+        const SizedBox(height: 10),
+        _WeekRowCard(
+          icon: Icons.timer_rounded,
+          title: 'Focus',
+          color: const Color(0xFFF39C12),
+          dayNames: _dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final mins = dayFocusMins[e.key];
+                if (mins == null || mins == 0) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFFF39C12),
+                    empty: true,
+                  );
+                }
+                return _DayCellBar(
+                  ratio: mins / maxFocusMins,
+                  color: const Color(0xFFF39C12),
+                  label: _fmtMins(mins),
+                );
+              }).toList(),
+          aggregate: _fmtMins(totalFocusMins),
+          aggregateColor: const Color(0xFFF39C12),
+        ),
+        const SizedBox(height: 10),
+        _WeekRowCard(
+          icon: Icons.menu_book_rounded,
+          title: 'Journal',
+          color: const Color(0xFF3498DB),
+          dayNames: _dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final count = dayJournal[e.key];
+                if (count == null || count == 0) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFF3498DB),
+                    empty: true,
+                  );
+                }
+                return _DayCellBox(
+                  fill: 1.0,
+                  color: const Color(0xFF3498DB),
+                  empty: false,
+                );
+              }).toList(),
+          aggregate: totalJournal == 0 ? '--' : '$totalJournal',
+          aggregateColor: const Color(0xFF3498DB),
+        ),
+        if (tier != UserTier.guest) ...[
+          const SizedBox(height: 10),
+          _WeekRowCard(
+            icon: Icons.account_balance_wallet_rounded,
+            title: 'Spend',
+            color: const Color(0xFF2ECC71),
+            dayNames: _dayNames,
+            dayCells:
+                days.asMap().entries.map((e) {
+                  final spend = daySpend.isNotEmpty ? daySpend[e.key] : null;
+                  if (spend == null || spend == 0) {
+                    return _DayCellBox(
+                      fill: 0,
+                      color: const Color(0xFF2ECC71),
+                      empty: true,
+                    );
+                  }
+                  return _DayCellText(
+                    text: _smartMoney(spend),
+                    color: const Color(0xFF2ECC71),
+                    small: true,
+                  );
+                }).toList(),
+            aggregate: totalSpend == 0 ? '--' : _smartMoney(totalSpend),
+            aggregateColor: const Color(0xFF2ECC71),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
-class _FeatureRow extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final String? badge;
-  final void Function(BuildContext) onTap;
-  final bool isLast;
+// ── Week row card ─────────────────────────────────────────
 
-  const _FeatureRow({
+class _WeekRowCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final List<String> dayNames;
+  final List<Widget> dayCells;
+  final String aggregate;
+  final Color aggregateColor;
+
+  const _WeekRowCard({
     required this.icon,
-    required this.iconColor,
     required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.badge,
-    this.isLast = false,
+    required this.color,
+    required this.dayNames,
+    required this.dayCells,
+    required this.aggregate,
+    required this.aggregateColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: context.cardDecoration,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 1,
+                height: 14,
+                color: context.appColors.border,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              Text(
+                aggregate,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: aggregateColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: List.generate(
+              7,
+              (i) => Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      dayNames[i],
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: context.appColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 5),
+                    Center(child: dayCells[i]),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Day cell: box (habits, journal) ──────────────────────
+
+class _DayCellBox extends StatelessWidget {
+  final double fill;
+  final Color color;
+  final bool empty;
+
+  const _DayCellBox({
+    required this.fill,
+    required this.color,
+    required this.empty,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c =
+        empty
+            ? context.appColors.bgElevated
+            : fill >= 1.0
+            ? color
+            : fill > 0
+            ? color.withValues(alpha: 0.35 + fill * 0.55)
+            : context.appColors.bgElevated;
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: c,
+        borderRadius: BorderRadius.circular(4),
+        border:
+            !empty && fill > 0 && fill < 1.0
+                ? Border.all(color: color.withValues(alpha: 0.5), width: 1)
+                : null,
+      ),
+    );
+  }
+}
+
+// ── Day cell: bar (focus) ─────────────────────────────────
+
+class _DayCellBar extends StatelessWidget {
+  final double ratio;
+  final Color color;
+  final String label;
+
+  const _DayCellBar({
+    required this.ratio,
+    required this.color,
+    required this.label,
   });
 
   @override
@@ -1403,88 +1349,48 @@ class _FeatureRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap(context);
-          },
-          child: Container(
-            color: Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 21),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.appColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (badge != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      badge!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: iconColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: context.appColors.textMuted,
-                  size: 18,
-                ),
-              ],
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 7,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 2),
+        Container(
+          width: 10,
+          height: (16 * ratio.clamp(0.15, 1.0)).roundToDouble(),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        if (!isLast)
-          Divider(
-            height: 1,
-            indent: 74,
-            endIndent: 16,
-            color: Colors.white.withValues(alpha: 0.06),
-          ),
       ],
     );
   }
+}
+
+// ── Day cell: text (mood emoji, spend) ───────────────────
+
+class _DayCellText extends StatelessWidget {
+  final String text;
+  final Color? color;
+  final bool small;
+
+  const _DayCellText({required this.text, this.color, this.small = false});
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: TextStyle(
+      fontSize: small ? 9 : 14,
+      color: color,
+      fontWeight: small ? FontWeight.w600 : FontWeight.normal,
+    ),
+    textAlign: TextAlign.center,
+  );
 }
 
 // ── Skeleton loader ───────────────────────────────────────
