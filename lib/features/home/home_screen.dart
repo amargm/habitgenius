@@ -851,7 +851,7 @@ class _PinnedCard extends StatelessWidget {
 
 // ── Today's habits horizontal row ────────────────────────
 
-class _TodayHabitsRow extends ConsumerWidget {
+class _TodayHabitsRow extends StatelessWidget {
   final List<Habit> habits;
   final List<HabitLog> logs;
   final String todayStr;
@@ -871,7 +871,7 @@ class _TodayHabitsRow extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return SizedBox(
       height: 90,
       child: ListView.separated(
@@ -1146,7 +1146,7 @@ class _YearMonthGrid extends StatelessWidget {
         crossAxisCount: 3,
         crossAxisSpacing: 16,
         mainAxisSpacing: 20,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.75,
       ),
       itemCount: 12,
       itemBuilder: (_, idx) {

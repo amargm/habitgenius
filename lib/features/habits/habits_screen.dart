@@ -786,34 +786,10 @@ class _YearHeatmapCard extends StatefulWidget {
   State<_YearHeatmapCard> createState() => _YearHeatmapCardState();
 }
 
-class _YearHeatmapCardState extends State<_YearHeatmapCard>
-    with SingleTickerProviderStateMixin {
+class _YearHeatmapCardState extends State<_YearHeatmapCard> {
   bool _expanded = false;
-  late final AnimationController _animCtrl;
 
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (_expanded) {
-      _animCtrl.forward();
-    } else {
-      _animCtrl.reverse();
-    }
-  }
+  void _toggle() => setState(() => _expanded = !_expanded);
 
   @override
   Widget build(BuildContext context) {
@@ -905,15 +881,12 @@ class _YearHeatmapCardState extends State<_YearHeatmapCard>
               habitColor: habitColor,
               startDate: createdAt,
             ),
-            secondChild:
-                _expanded
-                    ? _ExpandedMonthGrid(
-                      today: today,
-                      heatmap: heatmap,
-                      habitColor: habitColor,
-                      createdAt: createdAt,
-                    )
-                    : const SizedBox(),
+            secondChild: _ExpandedMonthGrid(
+              today: today,
+              heatmap: heatmap,
+              habitColor: habitColor,
+              createdAt: createdAt,
+            ),
           ),
         ],
       ),
