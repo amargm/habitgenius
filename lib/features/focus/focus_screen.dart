@@ -322,7 +322,7 @@ class _TimerRing extends StatelessWidget {
             painter: _RingPainter(
               progress: isStopwatch ? 0 : progress,
               color: primary,
-              inactive: AppColors.border,
+              inactive: primary.withValues(alpha: 0.12),
             ),
           ),
           Column(
@@ -547,10 +547,8 @@ class _ControlBtn extends StatelessWidget {
               color:
                   large ? c.withValues(alpha: 0.15) : context.appColors.bgCard,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: large ? c : context.appColors.border,
-                width: large ? 2 : 1,
-              ),
+              border: large ? Border.all(color: c, width: 2) : null,
+              boxShadow: large ? null : context.appColors.cardShadow,
             ),
             child: Icon(icon, color: c, size: large ? 32 : 24),
           ),

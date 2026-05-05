@@ -413,10 +413,7 @@ class _TodayRingCard extends StatelessWidget {
         color: allDone ? null : context.appColors.bgCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color:
-              allDone
-                  ? primary.withValues(alpha: 0.35)
-                  : Colors.transparent,
+          color: allDone ? primary.withValues(alpha: 0.35) : Colors.transparent,
           width: 1.5,
         ),
         boxShadow:

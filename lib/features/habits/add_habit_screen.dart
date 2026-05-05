@@ -421,24 +421,37 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
-              border: Border(top: BorderSide(color: context.appColors.border)),
             ),
-            padding: const EdgeInsets.all(20),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children:
-                  _kEmojis
-                      .map(
-                        (e) => GestureDetector(
-                          onTap: () {
-                            setState(() => _emoji = e);
-                            Navigator.pop(context);
-                          },
-                          child: Text(e, style: const TextStyle(fontSize: 32)),
-                        ),
-                      )
-                      .toList(),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children:
+                      _kEmojis
+                          .map(
+                            (e) => GestureDetector(
+                              onTap: () {
+                                setState(() => _emoji = e);
+                                Navigator.pop(context);
+                              },
+                              child: Text(e, style: const TextStyle(fontSize: 32)),
+                            ),
+                          )
+                          .toList(),
+                ),
+              ],
             ),
           ),
     );

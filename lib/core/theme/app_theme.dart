@@ -99,9 +99,7 @@ class AppTheme {
         color: isDark ? AppColors.bgCard : Colors.white,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.only(bottom: 12),
       ),
 
@@ -160,7 +158,8 @@ class AppTheme {
 
       // Chip
       chipTheme: ChipThemeData(
-        backgroundColor: isDark ? AppColors.bgElevated : const Color(0xFFF0F0F5),
+        backgroundColor:
+            isDark ? AppColors.bgElevated : const Color(0xFFF0F0F5),
         selectedColor: themeColor.primary,
         labelStyle: const TextStyle(
           fontSize: 13,
@@ -177,9 +176,7 @@ class AppTheme {
         backgroundColor: isDark ? AppColors.bgElevated : Colors.white,
         elevation: 24,
         shadowColor: const Color(0x50000000),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
@@ -189,8 +186,7 @@ class AppTheme {
         contentTextStyle: TextStyle(
           fontSize: 14,
           height: 1.55,
-          color:
-              isDark ? AppColors.textSecondary : const Color(0xFF5C5C6E),
+          color: isDark ? AppColors.textSecondary : const Color(0xFF5C5C6E),
           fontFamily: 'Inter',
         ),
       ),

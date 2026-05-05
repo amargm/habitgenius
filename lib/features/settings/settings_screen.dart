@@ -439,9 +439,11 @@ class _ThemeModeRow extends ConsumerWidget {
                     color:
                         sel
                             ? primary.withValues(alpha: 0.15)
-                            : AppColors.bgCard,
+                            : context.appColors.bgCard,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? primary : AppColors.border),
+                    border: Border.all(
+                      color: sel ? primary : context.appColors.border,
+                    ),
                   ),
                   child: Column(
                     children: [

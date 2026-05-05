@@ -25,7 +25,8 @@ class AppColors {
   static const Color accent = Color(0xFF00CEC9);
 
   // ── Border ────────────────────────────────────────────────
-  static const Color border = Colors.transparent; // shadow-based depth in dark mode
+  static const Color border =
+      Colors.transparent; // shadow-based depth in dark mode
 
   // ── Theme palette ─────────────────────────────────────────
   static const List<ThemeColor> themeColors = [

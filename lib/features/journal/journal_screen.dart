@@ -400,7 +400,6 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
-              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [
@@ -410,7 +409,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

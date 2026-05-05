@@ -108,7 +108,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.bgCard,
+                  color: context.appColors.bgCard,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TabBar(
@@ -892,7 +892,6 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
-              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [
@@ -901,7 +900,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -987,10 +986,10 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                       color:
                                           sel
                                               ? c.withValues(alpha: 0.15)
-                                              : AppColors.bgElevated,
+                                              : context.appColors.bgCard,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: sel ? c : AppColors.border,
+                                        color: sel ? c : context.appColors.border,
                                       ),
                                     ),
                                     child: Center(
@@ -1096,10 +1095,10 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                                     color:
                                         sel
                                             ? primary.withValues(alpha: 0.15)
-                                            : AppColors.bgElevated,
+                                            : context.appColors.bgCard,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: sel ? primary : AppColors.border,
+                                      color: sel ? primary : context.appColors.border,
                                     ),
                                   ),
                                   child: Text(
@@ -1250,7 +1249,6 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
-              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               children: [
@@ -1259,7 +1257,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

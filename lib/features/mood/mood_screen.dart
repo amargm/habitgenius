@@ -118,7 +118,7 @@ class _MoodScreenState extends ConsumerState<MoodScreen>
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.bgCard,
+                  color: context.appColors.bgCard,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TabBar(

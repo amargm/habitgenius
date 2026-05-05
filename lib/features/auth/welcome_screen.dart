@@ -167,7 +167,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Track habits, focus, mood, journal\nand expenses â€” all in one place.',
+                'Track habits, focus, mood, journal\nand expenses — all in one place.',
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
@@ -185,15 +185,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 onPressed: _signingIn ? null : _onContinueAsGuest,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: AppColors.border),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Continue as Guest',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
