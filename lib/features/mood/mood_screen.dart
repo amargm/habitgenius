@@ -6,9 +6,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/constants/app_limits.dart';
 import '../../core/models/mood.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
-import '../../shared/widgets/upgrade_prompt_sheet.dart';
+import '../../core/router/app_router.dart';
 
 // ── Mood level data ───────────────────────────────────────
 
@@ -838,11 +839,7 @@ class _LockedMoodScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 ElevatedButton(
-                  onPressed:
-                      () => UpgradePromptSheet.show(
-                        context,
-                        feature: 'Mood Tracking',
-                      ),
+                  onPressed: () => context.go(AppRoutes.welcome),
                   child: const Text('Sign in to unlock'),
                 ),
               ],

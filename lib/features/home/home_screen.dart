@@ -13,7 +13,6 @@ import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
 import '../../core/services/permission_service.dart';
 import '../../shared/widgets/empty_state_widget.dart';
-import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
 // ── Filter period ─────────────────────────────────────────
 
@@ -73,8 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           error:
               (e, _) => DataErrorWidget(
                 error: e,
-                onRetry:
-                    () => ref.read(dataNotifierProvider.notifier).reload(),
+                onRetry: () => ref.read(dataNotifierProvider.notifier).reload(),
               ),
           data: (data) => _Body(data: data, auth: auth),
         ),
@@ -131,8 +129,11 @@ class _BodyState extends State<_Body> {
     // ── Period boundaries ─────────────────────────────────
     final activeHabits =
         data.habits.where((h) => h.archivedAt == null).toList();
-    final weekStart = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - 1));
+    final weekStart = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: today.weekday - 1));
     final monthStart = DateTime(today.year, today.month, 1);
 
     // ── Today's habits ────────────────────────────────────
@@ -145,13 +146,12 @@ class _BodyState extends State<_Body> {
             .length;
 
     // ── Focus minutes helper ──────────────────────────────
-    int focusFrom(DateTime from) =>
-        data.focusSessions
-            .where((s) {
-              final d = DateTime.tryParse(s.startedAt)?.toLocal();
-              return d != null && !d.isBefore(from);
-            })
-            .fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
+    int focusFrom(DateTime from) => data.focusSessions
+        .where((s) {
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
+          return d != null && !d.isBefore(from);
+        })
+        .fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
 
     final todayFocusMin = data.focusSessions
         .where((s) {
@@ -169,24 +169,20 @@ class _BodyState extends State<_Body> {
     final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
 
     List<Mood> moodsFrom(DateTime from) =>
-        data.moods
-            .where((m) {
-              final d = DateTime.tryParse(m.date);
-              return d != null && !d.isBefore(from);
-            })
-            .toList();
+        data.moods.where((m) {
+          final d = DateTime.tryParse(m.date);
+          return d != null && !d.isBefore(from);
+        }).toList();
 
     final weekMoods = moodsFrom(weekStart);
     final monthMoods = moodsFrom(monthStart);
 
     // ── Journal helpers ───────────────────────────────────
     int journalFrom(DateTime from) =>
-        data.journal
-            .where((e) {
-              final d = DateTime.tryParse(e.createdAt)?.toLocal();
-              return d != null && !d.isBefore(from);
-            })
-            .length;
+        data.journal.where((e) {
+          final d = DateTime.tryParse(e.createdAt)?.toLocal();
+          return d != null && !d.isBefore(from);
+        }).length;
 
     final journalTotal = data.journal.length;
     final weekJournalCount = journalFrom(weekStart);
@@ -198,14 +194,12 @@ class _BodyState extends State<_Body> {
             ? 0
             : activeHabits
                 .map(
-                  (h) =>
-                      HabitHelpers.currentStreak(h, data.habitLogs, today),
+                  (h) => HabitHelpers.currentStreak(h, data.habitLogs, today),
                 )
                 .reduce(math.max);
 
     // ── Expenses count ────────────────────────────────────
-    final monthStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}';
+    final monthStr = '${today.year}-${today.month.toString().padLeft(2, '0')}';
     final monthTxCount =
         data.transactions.where((t) => t.date.startsWith(monthStr)).length;
 
@@ -219,17 +213,14 @@ class _BodyState extends State<_Body> {
       case _HomeFilter.today:
         habitsCard = _CardData(
           value:
-              todayHabits.isEmpty
-                  ? '--'
-                  : '$doneToday / ${todayHabits.length}',
+              todayHabits.isEmpty ? '--' : '$doneToday / ${todayHabits.length}',
           sub:
               todayHabits.isEmpty
                   ? 'No habits today'
                   : doneToday == todayHabits.length
                   ? 'All done! 🎉'
                   : '${todayHabits.length - doneToday} remaining',
-          progress:
-              todayHabits.isEmpty ? 0.0 : doneToday / todayHabits.length,
+          progress: todayHabits.isEmpty ? 0.0 : doneToday / todayHabits.length,
           isActive: doneToday > 0,
         );
         focusCard = _CardData(
@@ -239,8 +230,7 @@ class _BodyState extends State<_Body> {
         );
         moodCard = _CardData(
           value: todayMood?.emoji ?? '--',
-          sub:
-              todayMood != null ? _moodLabel(todayMood.level) : 'Not logged',
+          sub: todayMood != null ? _moodLabel(todayMood.level) : 'Not logged',
           isEmoji: todayMood != null,
           isActive: todayMood != null,
         );
@@ -254,8 +244,7 @@ class _BodyState extends State<_Body> {
         habitsCard = _CardData(
           value: bestStreak > 0 ? '🔥 $bestStreak' : '--',
           sub: bestStreak > 0 ? 'day streak' : 'Start a streak!',
-          progress:
-              bestStreak > 0 ? (bestStreak / 7.0).clamp(0.0, 1.0) : 0.0,
+          progress: bestStreak > 0 ? (bestStreak / 7.0).clamp(0.0, 1.0) : 0.0,
           isEmoji: bestStreak > 0,
           isActive: bestStreak > 0,
         );
@@ -274,12 +263,8 @@ class _BodyState extends State<_Body> {
                 : weekMoods.map((m) => m.level).reduce((a, b) => a + b) /
                     weekMoods.length;
         moodCard = _CardData(
-          value:
-              avgWkLevel == null ? '--' : _moodEmoji(avgWkLevel.round()),
-          sub:
-              weekMoods.isEmpty
-                  ? 'No logs'
-                  : 'avg · ${weekMoods.length} days',
+          value: avgWkLevel == null ? '--' : _moodEmoji(avgWkLevel.round()),
+          sub: weekMoods.isEmpty ? 'No logs' : 'avg · ${weekMoods.length} days',
           isEmoji: avgWkLevel != null,
           isActive: weekMoods.isNotEmpty,
         );
@@ -580,9 +565,7 @@ class _FilterChips extends StatelessWidget {
                     item.$2,
                     style: TextStyle(
                       color:
-                          sel
-                              ? Colors.white
-                              : context.appColors.textSecondary,
+                          sel ? Colors.white : context.appColors.textSecondary,
                       fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                       fontSize: 13,
                     ),
@@ -695,8 +678,7 @@ class _ProgressBanner extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color:
-                      allDone ? primary : context.appColors.textSecondary,
+                  color: allDone ? primary : context.appColors.textSecondary,
                 ),
               ),
             ),
@@ -842,7 +824,9 @@ class _PinnedCard extends StatelessWidget {
       onTap: () {
         HapticFeedback.selectionClick();
         if (locked) {
-          UpgradePromptSheet.show(context, feature: title);
+          // Guest: take them to sign-in rather than showing a "Upgrade to Pro"
+          // sheet — guests need an account before they can upgrade.
+          context.go(AppRoutes.welcome);
           return;
         }
         context.go(route);
@@ -910,9 +894,7 @@ class _PinnedCard extends StatelessWidget {
                             icon,
                             size: 18,
                             color:
-                                isHighlighted
-                                    ? Colors.white
-                                    : effectiveColor,
+                                isHighlighted ? Colors.white : effectiveColor,
                           ),
                 ),
                 const Spacer(),
@@ -947,9 +929,7 @@ class _PinnedCard extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color:
-                    isHighlighted
-                        ? Colors.white.withValues(alpha: 0.9)
-                        : null,
+                    isHighlighted ? Colors.white.withValues(alpha: 0.9) : null,
               ),
             ),
             const SizedBox(height: 2),
@@ -1344,13 +1324,12 @@ class _SkeletonState extends State<_Skeleton>
     required double op,
     double r = 12,
     double? w,
-  }) =>
-      Container(
-        height: h,
-        width: w,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: op),
-          borderRadius: BorderRadius.circular(r),
-        ),
-      );
+  }) => Container(
+    height: h,
+    width: w,
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: op),
+      borderRadius: BorderRadius.circular(r),
+    ),
+  );
 }
