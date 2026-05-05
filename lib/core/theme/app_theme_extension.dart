@@ -115,10 +115,11 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 extension AppThemeX on BuildContext {
   AppColorsExtension get appColors => AppColorsExtension.of(this);
 
-  /// Standard card [BoxDecoration]: card background + shadow, radius 16.
+  /// Standard card [BoxDecoration]: card background + border + shadow, radius 16.
   BoxDecoration get cardDecoration => BoxDecoration(
     color: appColors.bgCard,
     borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: appColors.border),
     boxShadow: appColors.cardShadow,
   );
 
@@ -126,6 +127,7 @@ extension AppThemeX on BuildContext {
   BoxDecoration cardDecorationR(double radius) => BoxDecoration(
     color: appColors.bgCard,
     borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: appColors.border),
     boxShadow: appColors.cardShadow,
   );
 }

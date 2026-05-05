@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -479,8 +480,122 @@ class _ThemeColorGrid extends ConsumerWidget {
 
   const _ThemeColorGrid({required this.themeState, required this.tier});
 
+  void _showColorPicker(BuildContext context, WidgetRef ref) {
+    Color picked = themeState.customAccentColor ??
+        themeState.themeColor.primary;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.bgElevated,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24, 20, 24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Pick accent color',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Choose any color as your accent. This overrides the preset selection.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Color picker
+              ColorPicker(
+                pickerColor: picked,
+                onColorChanged: (c) => setSheetState(() => picked = c),
+                enableAlpha: false,
+                labelTypes: const [],
+                pickerAreaHeightPercent: 0.55,
+                hexInputBar: true,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: AppColors.borderLight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(themeProvider.notifier)
+                            .setCustomAccentColor(picked);
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: picked,
+                        foregroundColor:
+                            ThemeData.estimateBrightnessForColor(picked) ==
+                                    Brightness.light
+                                ? Colors.black
+                                : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isCustomActive = themeState.themeColor.id == 'custom';
+    final customColor = themeState.customAccentColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: context.cardDecoration,
@@ -495,80 +610,159 @@ class _ThemeColorGrid extends ConsumerWidget {
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children:
-                AppColors.themeColors.map((tc) {
-                  final locked =
-                      tc.requiredTier == UserTier.pro && tier != UserTier.pro;
-                  final sel = themeState.themeColor.id == tc.id;
+            children: [
+              // ── Preset swatches ─────────────────────────
+              ...AppColors.themeColors.map((tc) {
+                final locked =
+                    tc.requiredTier == UserTier.pro && tier != UserTier.pro;
+                final sel =
+                    themeState.themeColor.id == tc.id && !isCustomActive;
 
-                  return GestureDetector(
-                    onTap: () {
-                      if (locked) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Upgrade to Pro to unlock this color',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      ref.read(themeProvider.notifier).setThemeColor(tc);
-                    },
-                    child: Stack(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color:
-                                locked
-                                    ? tc.primary.withValues(alpha: 0.3)
-                                    : tc.primary,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: sel ? Colors.white : Colors.transparent,
-                              width: 3,
-                            ),
-                            boxShadow:
-                                sel
-                                    ? [
-                                      BoxShadow(
-                                        color: tc.primary.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                    ]
-                                    : null,
+                return GestureDetector(
+                  onTap: () {
+                    if (locked) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Upgrade to Pro to unlock this color',
                           ),
                         ),
-                        if (locked)
-                          const Positioned.fill(
-                            child: Center(
-                              child: Icon(
-                                Icons.lock_rounded,
-                                size: 14,
-                                color: Colors.white60,
-                              ),
+                      );
+                      return;
+                    }
+                    ref.read(themeProvider.notifier).setThemeColor(tc);
+                  },
+                  child: Stack(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color:
+                              locked
+                                  ? tc.primary.withValues(alpha: 0.3)
+                                  : tc.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: sel ? Colors.white : Colors.transparent,
+                            width: 3,
+                          ),
+                          boxShadow:
+                              sel
+                                  ? [
+                                    BoxShadow(
+                                      color: tc.primary.withValues(alpha: 0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                  : null,
+                        ),
+                      ),
+                      if (locked)
+                        const Positioned.fill(
+                          child: Center(
+                            child: Icon(
+                              Icons.lock_rounded,
+                              size: 14,
+                              color: Colors.white60,
                             ),
                           ),
-                        if (sel && !locked)
-                          const Positioned.fill(
-                            child: Center(
-                              child: Icon(
-                                Icons.check_rounded,
-                                size: 18,
-                                color: Colors.white,
-                              ),
+                        ),
+                      if (sel && !locked)
+                        const Positioned.fill(
+                          child: Center(
+                            child: Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: Colors.white,
                             ),
                           ),
-                      ],
+                        ),
+                    ],
+                  ),
+                );
+              }),
+
+              // ── Custom (free-pick) swatch ─────────────
+              GestureDetector(
+                onTap: () => _showColorPicker(context, ref),
+                child: Stack(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color:
+                              isCustomActive ? Colors.white : AppColors.border,
+                          width: isCustomActive ? 3 : 1.5,
+                        ),
+                        boxShadow:
+                            isCustomActive && customColor != null
+                                ? [
+                                  BoxShadow(
+                                    color: customColor.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                                : null,
+                      ),
+                      child: ClipOval(
+                        child:
+                            isCustomActive && customColor != null
+                                ? ColoredBox(color: customColor)
+                                : DecoratedBox(
+                                  decoration: const BoxDecoration(
+                                    gradient: SweepGradient(
+                                      colors: [
+                                        Color(0xFFFF0000),
+                                        Color(0xFFFFFF00),
+                                        Color(0xFF00FF00),
+                                        Color(0xFF00FFFF),
+                                        Color(0xFF0000FF),
+                                        Color(0xFFFF00FF),
+                                        Color(0xFFFF0000),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                      ),
                     ),
-                  );
-                }).toList(),
+                    if (isCustomActive)
+                      const Positioned.fill(
+                        child: Center(
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      const Positioned.fill(
+                        child: Center(
+                          child: Icon(
+                            Icons.colorize_rounded,
+                            size: 18,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

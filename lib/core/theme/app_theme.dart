@@ -13,18 +13,18 @@ class AppTheme {
   }) {
     final isDark = brightness == Brightness.dark;
 
-    // Border: transparent in dark (depth via shadow); subtle black in light.
-    final borderColor = isDark ? Colors.transparent : const Color(0x1A000000);
+    // Border: #2E2E33 in dark (per design guidelines); subtle black in light.
+    final borderColor = isDark ? AppColors.border : const Color(0x1A000000);
     // Input fields need a visible edge even in dark mode.
     final inputBorderColor =
-        isDark ? const Color(0x18FFFFFF) : const Color(0x1A000000);
+        isDark ? AppColors.borderLight : const Color(0x1A000000);
 
     // Compute onPrimary: use dark text for light primary colours (e.g. amber)
     // so text placed on primary-coloured buttons always has adequate contrast.
     final Color onPrimary =
         ThemeData.estimateBrightnessForColor(themeColor.primary) ==
                 Brightness.light
-            ? const Color(0xFF15151A)
+            ? const Color(0xFF0D0D0F) // text-inverse per design guidelines
             : Colors.white;
 
     final colorScheme = ColorScheme.fromSeed(

@@ -7,18 +7,32 @@ import 'app_theme.dart';
 // ── Keys used in SharedPreferences ────────────────────────
 const _kThemeColorId = 'theme_color_id';
 const _kThemeMode = 'theme_mode'; // 'dark' | 'light' | 'system'
+const _kCustomAccentColor = 'custom_accent_color'; // int (Color.value)
 
 // ── State class ───────────────────────────────────────────
 class ThemeState {
   final ThemeColor themeColor;
   final ThemeMode themeMode;
+  /// Non-null when the user has chosen a custom (free-pick) accent color.
+  final Color? customAccentColor;
 
-  const ThemeState({required this.themeColor, required this.themeMode});
+  const ThemeState({
+    required this.themeColor,
+    required this.themeMode,
+    this.customAccentColor,
+  });
 
-  ThemeState copyWith({ThemeColor? themeColor, ThemeMode? themeMode}) {
+  ThemeState copyWith({
+    ThemeColor? themeColor,
+    ThemeMode? themeMode,
+    Color? customAccentColor,
+    bool clearCustom = false,
+  }) {
     return ThemeState(
       themeColor: themeColor ?? this.themeColor,
       themeMode: themeMode ?? this.themeMode,
+      customAccentColor:
+          clearCustom ? null : (customAccentColor ?? this.customAccentColor),
     );
   }
 }
@@ -37,19 +51,45 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    final colorId = prefs.getString(_kThemeColorId) ?? 'violet';
+    final colorId = prefs.getString(_kThemeColorId) ?? 'ember';
     final modeStr = prefs.getString(_kThemeMode) ?? 'dark';
+    final customValue = prefs.getInt(_kCustomAccentColor);
 
-    final color = AppColors.findById(colorId) ?? AppColors.defaultTheme;
     final mode = _modeFromString(modeStr);
 
-    state = ThemeState(themeColor: color, themeMode: mode);
+    if (colorId == 'custom' && customValue != null) {
+      final customColor = Color(customValue);
+      state = ThemeState(
+        themeColor: AppColors.makeCustom(customColor),
+        themeMode: mode,
+        customAccentColor: customColor,
+      );
+    } else {
+      final color = AppColors.findById(colorId) ?? AppColors.defaultTheme;
+      state = ThemeState(themeColor: color, themeMode: mode);
+    }
   }
 
   Future<void> setThemeColor(ThemeColor color) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kThemeColorId, color.id);
-    state = state.copyWith(themeColor: color);
+    await prefs.remove(_kCustomAccentColor);
+    state = state.copyWith(
+      themeColor: color,
+      clearCustom: true,
+    );
+  }
+
+  /// Set a free-pick accent [color] chosen via the color picker.
+  Future<void> setCustomAccentColor(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kThemeColorId, 'custom');
+    await prefs.setInt(_kCustomAccentColor, color.toARGB32());
+    state = ThemeState(
+      themeColor: AppColors.makeCustom(color),
+      themeMode: state.themeMode,
+      customAccentColor: color,
+    );
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

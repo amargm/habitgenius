@@ -1,40 +1,51 @@
 import 'package:flutter/material.dart';
 
 /// The 10 selectable primary theme colors for HabitGenius.
-/// Index 0 is the default (Violet), available to all tiers.
+/// Index 0 is the default (Ember Orange #FF6B00 — per design guidelines).
 /// Indices 1–5 available to Registered users.
 /// Indices 6–9 are Pro-only.
 class AppColors {
   AppColors._();
 
-  // ── Background & surface ──────────────────────────────────
-  static const Color bg = Color(0xFF0D0D12);
-  static const Color bgCard = Color(0xFF15151A);
-  static const Color bgCardHover = Color(0xFF1C1C22);
-  static const Color bgElevated = Color(0xFF1C1C22);
+  // ── Background & surface (design guidelines §02) ──────────
+  static const Color bg = Color(0xFF0D0D0F);        // bg-base
+  static const Color bgSurface = Color(0xFF161618); // bg-surface
+  static const Color bgCard = Color(0xFF1E1E21);    // bg-card
+  static const Color bgCardHover = Color(0xFF252528);
+  static const Color bgElevated = Color(0xFF2A2A2E); // modals, sheets
 
-  // ── Text ──────────────────────────────────────────────────
-  static const Color text = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF8B8BA0);
-  static const Color textMuted = Color(0xFF56566A);
+  // ── Text hierarchy (design guidelines §02) ────────────────
+  static const Color text = Color(0xFFF0F0F2);           // text-primary
+  static const Color textSecondary = Color(0xFFA0A0A8);  // text-secondary
+  static const Color textMuted = Color(0xFF606068);      // text-muted
 
   // ── Semantic ──────────────────────────────────────────────
-  static const Color success = Color(0xFF00B894);
+  static const Color success = Color(0xFF2ECC71);
   static const Color warning = Color(0xFFFDCB6E);
   static const Color danger = Color(0xFFE17055);
-  static const Color accent = Color(0xFF00CEC9);
+  static const Color accent = Color(0xFF00CEC9); // secondary accent (charts)
 
-  // ── Border ────────────────────────────────────────────────
-  static const Color border =
-      Colors.transparent; // shadow-based depth in dark mode
+  // ── Border (design guidelines §02) ───────────────────────
+  static const Color border = Color(0xFF2E2E33);
+  static const Color borderLight = Color(0xFF3A3A40);
+
+  // ── Feature module accents (design guidelines §02) ────────
+  static const Color featureHabit = Color(0xFFFF6B00);
+  static const Color featureMood = Color(0xFF9B59B6);
+  static const Color featureJournal = Color(0xFF3498DB);
+  static const Color featureExpense = Color(0xFF2ECC71);
+  static const Color featureFocus = Color(0xFFF39C12);
+  static const Color featureWater = Color(0xFF1ABC9C);
+  static const Color featurePeriod = Color(0xFFE91E8C);
+  static const Color featureAffirmation = Color(0xFF8B6BE8);
 
   // ── Theme palette ─────────────────────────────────────────
   static const List<ThemeColor> themeColors = [
     ThemeColor(
       id: 'ember',
       name: 'Ember',
-      primary: Color(0xFFF47820),
-      primaryLight: Color(0xFFFF9A4A),
+      primary: Color(0xFFFF6B00),      // #FF6B00 — design guideline accent
+      primaryLight: Color(0xFFFF8C3A), // accent-warm
       primaryDark: Color(0xFFC65C0E),
       requiredTier: UserTier.guest, // default — available to everyone
     ),
@@ -121,7 +132,8 @@ class AppColors {
     ),
   ];
 
-  static ThemeColor defaultTheme = themeColors.first; // Ember Orange
+  /// Default accent: Ember Orange (#FF6B00) per design guidelines.
+  static ThemeColor defaultTheme = themeColors.first;
 
   static ThemeColor? findById(String id) {
     try {
@@ -129,6 +141,24 @@ class AppColors {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Build a [ThemeColor] from any arbitrary [color] chosen by the user.
+  /// Computes lighter and darker variants via HSL adjustment.
+  static ThemeColor makeCustom(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    final light =
+        hsl.withLightness((hsl.lightness + 0.15).clamp(0.0, 1.0)).toColor();
+    final dark =
+        hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+    return ThemeColor(
+      id: 'custom',
+      name: 'Custom',
+      primary: color,
+      primaryLight: light,
+      primaryDark: dark,
+      requiredTier: UserTier.guest,
+    );
   }
 }
 
