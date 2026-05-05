@@ -289,6 +289,14 @@ class _TransactionsTab extends StatelessWidget {
               currency: summaryCurrency,
             ),
           ),
+        if (monthExpenseTxs.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: _CategoryBreakdown(
+              transactions: monthExpenseTxs.toList(),
+              currency: summaryCurrency,
+            ),
+          ),
         Expanded(
           child:
               transactions.isEmpty
@@ -464,6 +472,203 @@ class _AccountsTab extends ConsumerWidget {
       await ref.read(dataNotifierProvider.notifier).deleteAccount(a.id);
     }
   }
+}
+
+// ── Summary card ──────────────────────────────────────────
+
+// ── Category breakdown donut ──────────────────────────────
+
+const _kCategoryColors = <String, Color>{
+  'Food & Drink': Color(0xFFFF6B00),
+  'Transport': Color(0xFF3498DB),
+  'Housing': Color(0xFF9B59B6),
+  'Shopping': Color(0xFFE74C3C),
+  'Health': Color(0xFF2ECC71),
+  'Entertainment': Color(0xFFF39C12),
+  'Education': Color(0xFF1ABC9C),
+  'Travel': Color(0xFF0984E3),
+  'Other': Color(0xFF636E72),
+};
+
+class _CategoryBreakdown extends StatelessWidget {
+  final List<Transaction> transactions;
+  final String currency;
+
+  const _CategoryBreakdown({
+    required this.transactions,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Aggregate by category
+    final Map<String, double> totals = {};
+    for (final tx in transactions) {
+      totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
+    }
+    final sorted =
+        totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final total = sorted.fold(0.0, (s, e) => s + e.value);
+    if (total == 0) return const SizedBox();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: context.cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SPENDING BY CATEGORY',
+            style: TextStyle(
+              color: context.appColors.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Donut chart
+              SizedBox(
+                width: 110,
+                height: 110,
+                child: CustomPaint(
+                  painter: _DonutPainter(
+                    segments:
+                        sorted
+                            .map(
+                              (e) => _DonutSegment(
+                                value: e.value,
+                                color:
+                                    _kCategoryColors[e.key] ??
+                                    const Color(0xFF636E72),
+                              ),
+                            )
+                            .toList(),
+                    total: total,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          total.toStringAsFixed(0),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          currency,
+                          style: TextStyle(
+                            color: context.appColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Legend
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                      sorted.take(5).map((e) {
+                        final color =
+                            _kCategoryColors[e.key] ?? const Color(0xFF636E72);
+                        final pct = (e.value / total * 100).toStringAsFixed(0);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  e.key,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.appColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '$pct%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DonutSegment {
+  final double value;
+  final Color color;
+  const _DonutSegment({required this.value, required this.color});
+}
+
+class _DonutPainter extends CustomPainter {
+  final List<_DonutSegment> segments;
+  final double total;
+
+  const _DonutPainter({required this.segments, required this.total});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeWidth = 18.0;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+    const gapAngle = 0.03; // radians gap between segments
+    final paint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.butt;
+
+    double startAngle = -3.14159 / 2; // start at top
+
+    for (final seg in segments) {
+      final sweep = (seg.value / total) * 2 * 3.14159 - gapAngle;
+      paint.color = seg.color;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweep,
+        false,
+        paint,
+      );
+      startAngle += sweep + gapAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) => old.total != total;
 }
 
 // ── Summary card ──────────────────────────────────────────

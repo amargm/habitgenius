@@ -8,16 +8,16 @@ class AppColors {
   AppColors._();
 
   // ── Background & surface (design guidelines §02) ──────────
-  static const Color bg = Color(0xFF0D0D0F);        // bg-base
+  static const Color bg = Color(0xFF0D0D0F); // bg-base
   static const Color bgSurface = Color(0xFF161618); // bg-surface
-  static const Color bgCard = Color(0xFF1E1E21);    // bg-card
+  static const Color bgCard = Color(0xFF1E1E21); // bg-card
   static const Color bgCardHover = Color(0xFF252528);
   static const Color bgElevated = Color(0xFF2A2A2E); // modals, sheets
 
   // ── Text hierarchy (design guidelines §02) ────────────────
-  static const Color text = Color(0xFFF0F0F2);           // text-primary
-  static const Color textSecondary = Color(0xFFA0A0A8);  // text-secondary
-  static const Color textMuted = Color(0xFF606068);      // text-muted
+  static const Color text = Color(0xFFF0F0F2); // text-primary
+  static const Color textSecondary = Color(0xFFA0A0A8); // text-secondary
+  static const Color textMuted = Color(0xFF606068); // text-muted
 
   // ── Semantic ──────────────────────────────────────────────
   static const Color success = Color(0xFF2ECC71);
@@ -44,7 +44,7 @@ class AppColors {
     ThemeColor(
       id: 'ember',
       name: 'Ember',
-      primary: Color(0xFFFF6B00),      // #FF6B00 — design guideline accent
+      primary: Color(0xFFFF6B00), // #FF6B00 — design guideline accent
       primaryLight: Color(0xFFFF8C3A), // accent-warm
       primaryDark: Color(0xFFC65C0E),
       requiredTier: UserTier.guest, // default — available to everyone

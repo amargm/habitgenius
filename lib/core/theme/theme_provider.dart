@@ -13,6 +13,7 @@ const _kCustomAccentColor = 'custom_accent_color'; // int (Color.value)
 class ThemeState {
   final ThemeColor themeColor;
   final ThemeMode themeMode;
+
   /// Non-null when the user has chosen a custom (free-pick) accent color.
   final Color? customAccentColor;
 
@@ -74,10 +75,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kThemeColorId, color.id);
     await prefs.remove(_kCustomAccentColor);
-    state = state.copyWith(
-      themeColor: color,
-      clearCustom: true,
-    );
+    state = state.copyWith(themeColor: color, clearCustom: true);
   }
 
   /// Set a free-pick accent [color] chosen via the color picker.

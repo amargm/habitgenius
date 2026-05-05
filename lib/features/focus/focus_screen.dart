@@ -401,15 +401,27 @@ class _TimerRing extends StatelessWidget {
               ),
               if (state == TimerState.finished)
                 Text(
-                  'Done! 🎉',
-                  style: TextStyle(color: primary, fontSize: 14),
+                  'Session Complete',
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               if (mode == FocusMode.pomodoro && cycles > 0)
-                Text(
-                  '$cycles 🍅',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    cycles,
+                    (_) => Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -633,9 +645,9 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const modes = [
-      (FocusMode.pomodoro, '🍅', 'Pomodoro'),
-      (FocusMode.countdown, '⏱', 'Countdown'),
-      (FocusMode.stopwatch, '⏲', 'Stopwatch'),
+      (FocusMode.pomodoro, Icons.timer_rounded, 'Pomodoro'),
+      (FocusMode.countdown, Icons.hourglass_bottom_rounded, 'Countdown'),
+      (FocusMode.stopwatch, Icons.watch_rounded, 'Stopwatch'),
     ];
     final primary = Theme.of(context).colorScheme.primary;
     return Row(
@@ -661,7 +673,11 @@ class _ModeToggle extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Text(m.$2, style: const TextStyle(fontSize: 20)),
+                      Icon(
+                        m.$2,
+                        size: 20,
+                        color: sel ? primary : context.appColors.textSecondary,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         m.$3,
@@ -837,9 +853,9 @@ class _SessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final dur = _fmtDuration(session.actualDuration);
     final modeIcon = switch (session.mode) {
-      FocusMode.pomodoro => '🍅',
-      FocusMode.countdown => '⏱',
-      FocusMode.stopwatch => '⏲',
+      FocusMode.pomodoro => Icons.timer_rounded,
+      FocusMode.countdown => Icons.hourglass_bottom_rounded,
+      FocusMode.stopwatch => Icons.watch_rounded,
     };
     final when = _relativeTime(session.startedAt);
 
@@ -849,7 +865,7 @@ class _SessionTile extends StatelessWidget {
       decoration: context.cardDecorationR(14),
       child: Row(
         children: [
-          Text(modeIcon, style: const TextStyle(fontSize: 24)),
+          Icon(modeIcon, size: 24, color: context.appColors.textSecondary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -884,7 +900,7 @@ class _SessionTile extends StatelessWidget {
               ),
               if (session.completedCycles > 0)
                 Text(
-                  '${session.completedCycles} 🍅',
+                  '${session.completedCycles} cycles',
                   style: TextStyle(
                     fontSize: 11,
                     color: context.appColors.textMuted,

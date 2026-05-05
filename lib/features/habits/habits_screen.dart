@@ -769,7 +769,7 @@ class _MiniRing extends StatelessWidget {
 
 // ── Year heatmap card ─────────────────────────────────────
 
-class _YearHeatmapCard extends StatelessWidget {
+class _YearHeatmapCard extends StatefulWidget {
   final Habit habit;
   final List<HabitLog> logs;
   final DateTime today;
@@ -783,7 +783,45 @@ class _YearHeatmapCard extends StatelessWidget {
   });
 
   @override
+  State<_YearHeatmapCard> createState() => _YearHeatmapCardState();
+}
+
+class _YearHeatmapCardState extends State<_YearHeatmapCard>
+    with SingleTickerProviderStateMixin {
+  bool _expanded = false;
+  late final AnimationController _animCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    if (_expanded) {
+      _animCtrl.forward();
+    } else {
+      _animCtrl.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final habit = widget.habit;
+    final logs = widget.logs;
+    final today = widget.today;
+    final primary = widget.primary;
+
     Color habitColor;
     try {
       habitColor = Color(
@@ -796,8 +834,13 @@ class _YearHeatmapCard extends StatelessWidget {
     // Map of dateStr → intensity (0=missed, 1–4=partial/full completion)
     final heatmap = HabitHelpers.yearlyHeatmap(habit, logs, today);
     final totalDone = heatmap.values.where((v) => v > 0).length;
+    final createdAt =
+        DateTime.tryParse(habit.createdAt)?.toLocal() ??
+        today.subtract(const Duration(days: 365));
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
       padding: const EdgeInsets.all(16),
       decoration: context.cardDecoration,
       child: Column(
@@ -823,12 +866,206 @@ class _YearHeatmapCard extends StatelessWidget {
                   fontSize: 12,
                 ),
               ),
+              const SizedBox(width: 8),
+              // Expand / collapse button
+              GestureDetector(
+                onTap: _toggle,
+                child: AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: habitColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      size: 18,
+                      color: habitColor,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          _HeatmapGrid(today: today, heatmap: heatmap, habitColor: habitColor),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 350),
+            firstCurve: Curves.easeInOut,
+            secondCurve: Curves.easeInOut,
+            crossFadeState:
+                _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+            firstChild: _HeatmapGrid(
+              today: today,
+              heatmap: heatmap,
+              habitColor: habitColor,
+              startDate: createdAt,
+            ),
+            secondChild:
+                _expanded
+                    ? _ExpandedMonthGrid(
+                      today: today,
+                      heatmap: heatmap,
+                      habitColor: habitColor,
+                      createdAt: createdAt,
+                    )
+                    : const SizedBox(),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// ── Expanded 12-month grid (habits screen) ─────────────────
+
+class _ExpandedMonthGrid extends StatelessWidget {
+  final DateTime today;
+  final Map<String, int> heatmap;
+  final Color habitColor;
+  final DateTime createdAt;
+
+  static const _monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  const _ExpandedMonthGrid({
+    required this.today,
+    required this.heatmap,
+    required this.habitColor,
+    required this.createdAt,
+  });
+
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Color _cellColor(int? v) {
+    if (v == null) return habitColor.withValues(alpha: 0.06);
+    switch (v) {
+      case 0:
+        return habitColor.withValues(alpha: 0.12);
+      case 1:
+        return habitColor.withValues(alpha: 0.30);
+      case 2:
+        return habitColor.withValues(alpha: 0.55);
+      case 3:
+        return habitColor.withValues(alpha: 0.75);
+      default:
+        return habitColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentMonth = DateTime(today.year, today.month, 1);
+    final months = List.generate(12, (i) {
+      return DateTime(currentMonth.year, currentMonth.month - (11 - i), 1);
+    });
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+    final createdMidnight = DateTime(
+      createdAt.year,
+      createdAt.month,
+      createdAt.day,
+    );
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.82,
+      ),
+      itemCount: 12,
+      itemBuilder: (_, idx) {
+        final monthStart = months[idx];
+        final firstWeekday = (monthStart.weekday - 1) % 7;
+        final daysInMonth = DateUtils.getDaysInMonth(
+          monthStart.year,
+          monthStart.month,
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_monthNames[monthStart.month - 1]} ${monthStart.year}',
+              style: TextStyle(
+                color: context.appColors.textMuted,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: List.generate(
+                7,
+                (d) => Expanded(
+                  child: Text(
+                    _dayLabels[d],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: context.appColors.textMuted,
+                      fontSize: 6,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Expanded(
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                  childAspectRatio: 1,
+                ),
+                itemCount: 42,
+                itemBuilder: (_, cellIdx) {
+                  final dayOffset = cellIdx - firstWeekday;
+                  if (dayOffset < 0 || dayOffset >= daysInMonth) {
+                    return const SizedBox();
+                  }
+                  final day = DateTime(
+                    monthStart.year,
+                    monthStart.month,
+                    dayOffset + 1,
+                  );
+                  if (day.isAfter(todayMidnight)) return const SizedBox();
+                  if (day.isBefore(createdMidnight)) return const SizedBox();
+                  final v = heatmap[_fmt(day)];
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: _cellColor(v),
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -839,16 +1076,17 @@ class _HeatmapGrid extends StatelessWidget {
   final DateTime today;
   final Map<String, int> heatmap; // dateStr → 0–4
   final Color habitColor;
+  final DateTime? startDate; // if provided, grid starts from here
 
   static const _cellSize = 13.0;
   static const _cellGap = 3.0;
   static const _dayLabelWidth = 22.0;
-  static const _weeks = 53;
 
   const _HeatmapGrid({
     required this.today,
     required this.heatmap,
     required this.habitColor,
+    this.startDate,
   });
 
   DateTime _weekStart(DateTime date) {
@@ -879,12 +1117,19 @@ class _HeatmapGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final todayMidnight = DateTime(today.year, today.month, today.day);
     final currentWeekStart = _weekStart(todayMidnight);
-    final firstWeekStart = currentWeekStart.subtract(
-      Duration(days: (_weeks - 1) * 7),
-    );
+
+    // Start from habit creation date if provided, else fall back to 53 weeks
+    final effectiveStart =
+        startDate != null
+            ? DateTime(startDate!.year, startDate!.month, startDate!.day)
+            : todayMidnight.subtract(const Duration(days: 52 * 7));
+    final firstWeekStart = _weekStart(effectiveStart);
+
+    final numWeeks =
+        (currentWeekStart.difference(firstWeekStart).inDays ~/ 7) + 1;
 
     final weeks = List.generate(
-      _weeks,
+      numWeeks,
       (w) => firstWeekStart.add(Duration(days: w * 7)),
     );
 
@@ -913,7 +1158,7 @@ class _HeatmapGrid extends StatelessWidget {
     }
 
     final colWidth = _cellSize + _cellGap;
-    final gridWidth = _dayLabelWidth + _weeks * colWidth;
+    final gridWidth = _dayLabelWidth + numWeeks * colWidth;
     final gridHeight = 20.0 + 7 * (_cellSize + _cellGap);
     final todayKey = _dateKey(todayMidnight);
 
@@ -953,7 +1198,7 @@ class _HeatmapGrid extends StatelessWidget {
     }
 
     // Cells
-    for (int w = 0; w < _weeks; w++) {
+    for (int w = 0; w < numWeeks; w++) {
       for (int row = 0; row < 7; row++) {
         final cellDate = weeks[w].add(Duration(days: row));
         if (cellDate.isAfter(todayMidnight)) continue;

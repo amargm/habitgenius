@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/app_data.dart';
+import '../../core/models/habit.dart';
+import '../../core/models/habit_log.dart';
 import '../../core/models/mood.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
@@ -312,14 +314,6 @@ class _BodyState extends State<_Body> {
         );
     }
 
-    final insight = _buildInsight(
-      doneToday,
-      todayHabits.length,
-      todayMood,
-      weekFocusMin,
-      bestStreak,
-    );
-
     return CustomScrollView(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -351,18 +345,37 @@ class _BodyState extends State<_Body> {
                 ),
                 const SizedBox(height: 24),
 
-                // ── Progress banner ───────────────────────
-                _ProgressBanner(
-                  done: doneToday,
-                  total: todayHabits.length,
-                  insight: insight,
-                  primary: primary,
-                  onTap: () => context.go(AppRoutes.habits),
-                ),
-                const SizedBox(height: 28),
+                // ── Today's habits ────────────────────────
+                if (todayHabits.isNotEmpty) ...[
+                  _SectionHeader(
+                    label: 'Today',
+                    trailing: Text(
+                      '$doneToday / ${todayHabits.length} done',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            doneToday == todayHabits.length
+                                ? primary
+                                : context.appColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _TodayHabitsRow(
+                    habits: todayHabits,
+                    logs: data.habitLogs,
+                    todayStr: todayStr,
+                    allHabits: activeHabits,
+                    allLogs: data.habitLogs,
+                    today: today,
+                    primary: primary,
+                  ),
+                  const SizedBox(height: 28),
+                ],
 
                 // ── Pinned section ────────────────────────
-                const _SectionHeader(label: 'Pinned'),
+                const _SectionHeader(label: 'Overview'),
                 const SizedBox(height: 14),
                 _PinnedGrid(
                   habitsCard: habitsCard,
@@ -399,21 +412,6 @@ class _BodyState extends State<_Body> {
   static String _moodEmoji(int level) {
     const emojis = ['😣', '😔', '😐', '😊', '🤩'];
     return emojis[(level - 1).clamp(0, 4)];
-  }
-
-  static String _buildInsight(
-    int done,
-    int total,
-    Mood? mood,
-    int focusMin,
-    int streak,
-  ) {
-    if (total > 0 && done == total) return 'All habits done today!';
-    if (streak > 7) return '$streak-day streak — keep the momentum.';
-    if (focusMin >= 60) return '${focusMin}m of focus this week.';
-    if (mood != null) return 'Mood logged — keep tracking.';
-    if (total > 0) return '$done of $total habits done today.';
-    return 'Add your first habit to start building routines.';
   }
 }
 
@@ -578,123 +576,13 @@ class _FilterChips extends StatelessWidget {
   }
 }
 
-// ── Progress banner ───────────────────────────────────────
-
-class _ProgressBanner extends StatelessWidget {
-  final int done;
-  final int total;
-  final String insight;
-  final Color primary;
-  final VoidCallback onTap;
-
-  const _ProgressBanner({
-    required this.done,
-    required this.total,
-    required this.insight,
-    required this.primary,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final allDone = total > 0 && done == total;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: context.appColors.bgCard,
-          borderRadius: BorderRadius.circular(18),
-          border:
-              allDone
-                  ? Border.all(color: primary.withValues(alpha: 0.3))
-                  : null,
-          boxShadow: context.appColors.cardShadow,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                    allDone
-                        ? primary.withValues(alpha: 0.18)
-                        : context.appColors.bgElevated,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                allDone
-                    ? Icons.check_circle_rounded
-                    : total == 0
-                    ? Icons.add_circle_outline_rounded
-                    : Icons.pending_actions_rounded,
-                color: allDone ? primary : context.appColors.textSecondary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    total == 0
-                        ? 'No habits scheduled today'
-                        : allDone
-                        ? 'All habits done! 🎉'
-                        : '$done of $total habits done',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    insight,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.appColors.textMuted,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color:
-                    allDone
-                        ? primary.withValues(alpha: 0.15)
-                        : context.appColors.bgElevated,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                total == 0 ? '--' : '$done/$total',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: allDone ? primary : context.appColors.textSecondary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Section header ────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String label;
+  final Widget? trailing;
 
-  const _SectionHeader({required this.label});
+  const _SectionHeader({required this.label, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -705,11 +593,12 @@ class _SectionHeader extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         const Spacer(),
-        Icon(
-          Icons.more_horiz_rounded,
-          color: context.appColors.textMuted,
-          size: 22,
-        ),
+        trailing ??
+            Icon(
+              Icons.more_horiz_rounded,
+              color: context.appColors.textMuted,
+              size: 22,
+            ),
       ],
     );
   }
@@ -870,40 +759,29 @@ class _PinnedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: icon + toggle
-            Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color:
-                        isHighlighted
-                            ? Colors.white.withValues(alpha: 0.16)
-                            : effectiveColor.withValues(alpha: 0.14),
-                    shape: BoxShape.circle,
-                  ),
-                  child:
-                      locked
-                          ? const Icon(
-                            Icons.lock_rounded,
-                            size: 16,
-                            color: AppColors.textMuted,
-                          )
-                          : Icon(
-                            icon,
-                            size: 18,
-                            color:
-                                isHighlighted ? Colors.white : effectiveColor,
-                          ),
-                ),
-                const Spacer(),
-                _StatusToggle(
-                  isOn: !locked && cardData.isActive,
-                  onColor: effectiveColor,
-                  isHighlighted: isHighlighted,
-                ),
-              ],
+            // Top row: icon
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color:
+                    isHighlighted
+                        ? Colors.white.withValues(alpha: 0.16)
+                        : effectiveColor.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  locked
+                      ? const Icon(
+                        Icons.lock_rounded,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      )
+                      : Icon(
+                        icon,
+                        size: 18,
+                        color: isHighlighted ? Colors.white : effectiveColor,
+                      ),
             ),
             const Spacer(),
             // Stat value
@@ -971,56 +849,433 @@ class _PinnedCard extends StatelessWidget {
   }
 }
 
-// ── Status toggle (visual indicator, Smart Home style) ────
+// ── Today's habits horizontal row ────────────────────────
 
-class _StatusToggle extends StatelessWidget {
-  final bool isOn;
-  final Color onColor;
-  final bool isHighlighted;
+class _TodayHabitsRow extends ConsumerWidget {
+  final List<Habit> habits;
+  final List<HabitLog> logs;
+  final String todayStr;
+  final List<Habit> allHabits;
+  final List<HabitLog> allLogs;
+  final DateTime today;
+  final Color primary;
 
-  const _StatusToggle({
-    required this.isOn,
-    required this.onColor,
-    required this.isHighlighted,
+  const _TodayHabitsRow({
+    required this.habits,
+    required this.logs,
+    required this.todayStr,
+    required this.allHabits,
+    required this.allLogs,
+    required this.today,
+    required this.primary,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: habits.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, i) {
+          final habit = habits[i];
+          final done = HabitHelpers.isCompletedOn(habit, logs, todayStr);
+          Color habitColor;
+          try {
+            habitColor = Color(
+              int.parse('FF${habit.colorHex.replaceFirst('#', '')}', radix: 16),
+            );
+          } catch (_) {
+            habitColor = primary;
+          }
+
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              context.go(AppRoutes.habits);
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              _showYearHeatmap(context, habit, allLogs, today, habitColor);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color:
+                        done ? habitColor : habitColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border:
+                        done
+                            ? null
+                            : Border.all(
+                              color: habitColor.withValues(alpha: 0.5),
+                              width: 1.5,
+                            ),
+                    boxShadow:
+                        done
+                            ? [
+                              BoxShadow(
+                                color: habitColor.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                            : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      habit.icon,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    habit.name,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color:
+                          done ? habitColor : context.appColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showYearHeatmap(
+    BuildContext context,
+    Habit habit,
+    List<HabitLog> logs,
+    DateTime today,
+    Color habitColor,
+  ) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black.withValues(alpha: 0.85),
+        barrierDismissible: true,
+        transitionDuration: const Duration(milliseconds: 350),
+        reverseTransitionDuration: const Duration(milliseconds: 250),
+        pageBuilder: (ctx, anim, _) {
+          return FadeTransition(
+            opacity: anim,
+            child: _HabitYearHeatmapPage(
+              habit: habit,
+              logs: logs,
+              today: today,
+              habitColor: habitColor,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Full-year heatmap page (shown on long press) ─────────
+
+class _HabitYearHeatmapPage extends StatelessWidget {
+  final Habit habit;
+  final List<HabitLog> logs;
+  final DateTime today;
+  final Color habitColor;
+
+  const _HabitYearHeatmapPage({
+    required this.habit,
+    required this.logs,
+    required this.today,
+    required this.habitColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final trackOn =
-        isHighlighted
-            ? Colors.white.withValues(alpha: 0.28)
-            : onColor.withValues(alpha: 0.28);
-    final borderOn =
-        isHighlighted
-            ? Colors.white.withValues(alpha: 0.4)
-            : onColor.withValues(alpha: 0.4);
-    final thumbOn = isHighlighted ? Colors.white : onColor;
+    final heatmap = HabitHelpers.yearlyHeatmap(habit, logs, today);
+    final totalDone = heatmap.values.where((v) => v > 0).length;
+    final streak = HabitHelpers.currentStreak(habit, logs, today);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      width: 36,
-      height: 19,
-      decoration: BoxDecoration(
-        color: isOn ? trackOn : Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isOn ? borderOn : Colors.white.withValues(alpha: 0.08),
-          width: 1,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Spacer(),
+                ],
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    habit.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$totalDone of 365 days  •  ${(totalDone / 3.65).toStringAsFixed(0)}%'
+                    '  •  $streak day streak',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 12-month grid
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                child: _YearMonthGrid(
+                  today: today,
+                  heatmap: heatmap,
+                  habitColor: habitColor,
+                  createdAt:
+                      DateTime.tryParse(habit.createdAt) ??
+                      today.subtract(const Duration(days: 365)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      child: AnimatedAlign(
-        duration: const Duration(milliseconds: 220),
-        alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          width: 13,
-          height: 13,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          decoration: BoxDecoration(
-            color: isOn ? thumbOn : AppColors.textMuted,
-            shape: BoxShape.circle,
+    );
+  }
+}
+
+// ── Year month grid (12 months, image style) ──────────────
+
+class _YearMonthGrid extends StatelessWidget {
+  final DateTime today;
+  final Map<String, int> heatmap;
+  final Color habitColor;
+  final DateTime createdAt;
+
+  static const _monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  const _YearMonthGrid({
+    required this.today,
+    required this.heatmap,
+    required this.habitColor,
+    required this.createdAt,
+  });
+
+  Color _cell(int? v) {
+    if (v == null) return Colors.transparent;
+    switch (v) {
+      case 0:
+        return habitColor.withValues(alpha: 0.12);
+      case 1:
+        return habitColor.withValues(alpha: 0.30);
+      case 2:
+        return habitColor.withValues(alpha: 0.55);
+      case 3:
+        return habitColor.withValues(alpha: 0.75);
+      default:
+        return habitColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show the last 12 months up to today's month
+    final currentMonth = DateTime(today.year, today.month, 1);
+    final months = List.generate(12, (i) {
+      final m = DateTime(currentMonth.year, currentMonth.month - (11 - i), 1);
+      return m;
+    });
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: 12,
+      itemBuilder: (_, idx) {
+        final monthStart = months[idx];
+        return _MonthBlock(
+          monthStart: monthStart,
+          today: today,
+          heatmap: heatmap,
+          habitColor: habitColor,
+          createdAt: createdAt,
+          cellColor: _cell,
+          dayLabels: _dayLabels,
+          monthNames: _monthNames,
+        );
+      },
+    );
+  }
+}
+
+class _MonthBlock extends StatelessWidget {
+  final DateTime monthStart;
+  final DateTime today;
+  final Map<String, int> heatmap;
+  final Color habitColor;
+  final DateTime createdAt;
+  final Color Function(int?) cellColor;
+  final List<String> dayLabels;
+  final List<String> monthNames;
+
+  const _MonthBlock({
+    required this.monthStart,
+    required this.today,
+    required this.heatmap,
+    required this.habitColor,
+    required this.createdAt,
+    required this.cellColor,
+    required this.dayLabels,
+    required this.monthNames,
+  });
+
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    // Weekday of first day (Mon=0)
+    final firstWeekday = (monthStart.weekday - 1) % 7;
+    final daysInMonth = DateUtils.getDaysInMonth(
+      monthStart.year,
+      monthStart.month,
+    );
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${monthNames[monthStart.month - 1]} ${monthStart.year}',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
-      ),
+        const SizedBox(height: 6),
+        // Day-of-week headers
+        Row(
+          children: List.generate(7, (d) {
+            return Expanded(
+              child: Text(
+                dayLabels[d],
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  fontSize: 7,
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 3),
+        // Calendar grid
+        Expanded(
+          child: LayoutBuilder(
+            builder: (ctx, _) {
+              return GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                  childAspectRatio: 1,
+                ),
+                itemCount: 42,
+                itemBuilder: (_, cellIdx) {
+                  final dayOffset = cellIdx - firstWeekday;
+                  if (dayOffset < 0 || dayOffset >= daysInMonth) {
+                    return const SizedBox();
+                  }
+                  final day = DateTime(
+                    monthStart.year,
+                    monthStart.month,
+                    dayOffset + 1,
+                  );
+                  if (day.isAfter(todayMidnight)) return const SizedBox();
+                  if (day.isBefore(
+                    DateTime(createdAt.year, createdAt.month, createdAt.day),
+                  )) {
+                    return const SizedBox();
+                  }
+                  final key = _fmt(day);
+                  final v = heatmap[key];
+                  return Container(
+                    decoration: BoxDecoration(
+                      color:
+                          v == null
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : cellColor(v),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

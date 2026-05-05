@@ -133,20 +133,20 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
       UpgradePromptSheet.show(context, feature: 'More Journal Entries');
       return;
     }
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _JournalEntrySheet(),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const _JournalEntrySheet(),
+      ),
     );
   }
 
   void _openEntry(BuildContext context, JournalEntry entry) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _JournalEntrySheet(entry: entry),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _JournalEntrySheet(entry: entry),
+      ),
     );
   }
 
@@ -191,13 +191,34 @@ class _EntryTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static String _fmtDate(DateTime d) =>
+      '${_months[d.month - 1]} ${d.day}, ${d.year}';
+
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final dt = DateTime.tryParse(entry.createdAt)?.toLocal();
     final dateStr = dt != null ? _fmtDate(dt) : '';
-    // Plain-text preview: strip newlines
     final preview = entry.body.replaceAll(RegExp(r'\n+'), ' ').trim();
+    final wordCount =
+        entry.body.trim().isEmpty
+            ? 0
+            : entry.body.trim().split(RegExp(r'\s+')).length;
 
     return GestureDetector(
       onTap: onTap,
@@ -208,97 +229,97 @@ class _EntryTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    entry.title?.isNotEmpty == true ? entry.title! : 'Untitled',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.title?.isNotEmpty == true
+                            ? entry.title!
+                            : 'Untitled',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dateStr,
+                        style: TextStyle(
+                          color: context.appColors.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  dateStr,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: onDelete,
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: AppColors.textMuted,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: context.appColors.textMuted,
+                    ),
                   ),
                 ),
               ],
             ),
             if (preview.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 preview,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: context.appColors.textSecondary,
                   fontSize: 13,
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
             ],
-            if (entry.tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                children:
-                    entry.tags
-                        .take(4)
-                        .map(
-                          (t) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              t,
-                              style: TextStyle(fontSize: 11, color: primary),
-                            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (entry.tags.isNotEmpty)
+                  ...entry.tags
+                      .take(3)
+                      .map(
+                        (t) => Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                        )
-                        .toList(),
-              ),
-            ],
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            t,
+                            style: TextStyle(fontSize: 11, color: primary),
+                          ),
+                        ),
+                      ),
+                const Spacer(),
+                Text(
+                  '$wordCount words',
+                  style: TextStyle(
+                    color: context.appColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
-  }
-
-  static String _fmtDate(DateTime d) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[d.month - 1]} ${d.day}';
   }
 }
 
@@ -393,181 +414,216 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.entry != null;
+    final primary = Theme.of(context).colorScheme.primary;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.92,
-      minChildSize: 0.6,
-      maxChildSize: 0.97,
-      builder:
-          (_, scrollCtrl) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-            ),
-            child: Column(
-              children: [
-                // Handle
-                const SizedBox(height: 12),
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Title bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Text(
-                        isEdit ? 'Edit Entry' : 'New Entry',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          isEdit ? 'Edit Entry' : 'New Entry',
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child:
+                _saving
+                    ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : Text(
+                      'Save',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: primary,
                       ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _saving ? null : _save,
-                        child:
-                            _saving
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                                : const Text('Save'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Expanded(
-                  child: ListView(
-                    controller: scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                    children: [
-                      // Title field
-                      TextField(
-                        controller: _titleCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Title (optional)',
-                        ),
-                        textCapitalization: TextCapitalization.sentences,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Body field
-                      TextField(
-                        controller: _bodyCtrl,
-                        maxLines: 12,
-                        decoration: const InputDecoration(
-                          labelText: 'Write your thoughts…',
-                          alignLabelWithHint: true,
-                        ),
-                        textCapitalization: TextCapitalization.sentences,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Tags
-                      const Text(
-                        'TAGS',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_tags.isNotEmpty)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children:
-                              _tags
-                                  .map(
-                                    (t) => GestureDetector(
-                                      onTap:
-                                          () => setState(() => _tags.remove(t)),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              t,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color:
-                                                    Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            const Icon(Icons.close, size: 12),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _tagCtrl,
-                              decoration: const InputDecoration(
-                                hintText: 'Add tag…',
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                              ),
-                              onSubmitted: (_) => _addTag(),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: _addTag,
-                            icon: const Icon(Icons.add_rounded),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 60),
+        children: [
+          // Date display
+          Text(
+            _fmtFullDate(DateTime.now()),
+            style: TextStyle(
+              color: context.appColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Title field
+          TextField(
+            controller: _titleCtrl,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            decoration: const InputDecoration(
+              hintText: 'Title',
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            textCapitalization: TextCapitalization.sentences,
+          ),
+
+          // Body field
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _bodyCtrl,
+            builder: (_, val, __) {
+              final words =
+                  val.text.trim().isEmpty
+                      ? 0
+                      : val.text.trim().split(RegExp(r'\s+')).length;
+              return Text(
+                '$words words  •  ${val.text.length} chars',
+                style: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 11,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _bodyCtrl,
+            maxLines: null,
+            minLines: 12,
+            style: const TextStyle(fontSize: 15, height: 1.7),
+            decoration: InputDecoration(
+              hintText: 'Write your thoughts…',
+              alignLabelWithHint: true,
+              hintStyle: TextStyle(
+                color: context.appColors.textMuted,
+                fontSize: 15,
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            textCapitalization: TextCapitalization.sentences,
+          ),
+          const Divider(height: 32),
+
+          // Tags
+          Text(
+            'TAGS',
+            style: TextStyle(
+              color: context.appColors.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              ..._tags.map(
+                (t) => GestureDetector(
+                  onTap: () => setState(() => _tags.remove(t)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          t,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.close, size: 12, color: primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _tagCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Add tag…',
+                    hintStyle: TextStyle(
+                      color: context.appColors.textMuted,
+                      fontSize: 13,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                  onSubmitted: (_) => _addTag(),
+                ),
+              ),
+              IconButton(
+                onPressed: _addTag,
+                icon: Icon(Icons.add_rounded, color: primary),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  static String _fmtFullDate(DateTime d) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return '${days[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 }

@@ -481,8 +481,8 @@ class _ThemeColorGrid extends ConsumerWidget {
   const _ThemeColorGrid({required this.themeState, required this.tier});
 
   void _showColorPicker(BuildContext context, WidgetRef ref) {
-    Color picked = themeState.customAccentColor ??
-        themeState.themeColor.primary;
+    Color picked =
+        themeState.customAccentColor ?? themeState.themeColor.primary;
 
     showModalBottomSheet<void>(
       context: context,
@@ -491,103 +491,118 @@ class _ThemeColorGrid extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            24, 20, 24,
-            MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.borderLight,
-                    borderRadius: BorderRadius.circular(2),
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setSheetState) => Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    20,
+                    24,
+                    MediaQuery.of(ctx).viewInsets.bottom + 24,
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Pick accent color',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Choose any color as your accent. This overrides the preset selection.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Color picker
-              ColorPicker(
-                pickerColor: picked,
-                onColorChanged: (c) => setSheetState(() => picked = c),
-                enableAlpha: false,
-                labelTypes: const [],
-                pickerAreaHeightPercent: 0.55,
-                hexInputBar: true,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: AppColors.borderLight),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Handle
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.borderLight,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ref
-                            .read(themeProvider.notifier)
-                            .setCustomAccentColor(picked);
-                        Navigator.pop(ctx);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: picked,
-                        foregroundColor:
-                            ThemeData.estimateBrightnessForColor(picked) ==
-                                    Brightness.light
-                                ? Colors.black
-                                : Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Pick accent color',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
                         ),
                       ),
-                      child: const Text(
-                        'Apply',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Choose any color as your accent. This overrides the preset selection.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      // Color picker
+                      ColorPicker(
+                        pickerColor: picked,
+                        onColorChanged: (c) => setSheetState(() => picked = c),
+                        enableAlpha: false,
+                        labelTypes: const [],
+                        pickerAreaHeightPercent: 0.55,
+                        hexInputBar: true,
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(color: AppColors.borderLight),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                ref
+                                    .read(themeProvider.notifier)
+                                    .setCustomAccentColor(picked);
+                                Navigator.pop(ctx);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: picked,
+                                foregroundColor:
+                                    ThemeData.estimateBrightnessForColor(
+                                              picked,
+                                            ) ==
+                                            Brightness.light
+                                        ? Colors.black
+                                        : Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Apply',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
+                ),
           ),
-        ),
-      ),
     );
   }
 
@@ -623,9 +638,7 @@ class _ThemeColorGrid extends ConsumerWidget {
                     if (locked) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text(
-                            'Upgrade to Pro to unlock this color',
-                          ),
+                          content: Text('Upgrade to Pro to unlock this color'),
                         ),
                       );
                       return;
@@ -751,10 +764,7 @@ class _ThemeColorGrid extends ConsumerWidget {
                             size: 18,
                             color: Colors.white,
                             shadows: [
-                              Shadow(
-                                color: Colors.black54,
-                                blurRadius: 4,
-                              ),
+                              Shadow(color: Colors.black54, blurRadius: 4),
                             ],
                           ),
                         ),
