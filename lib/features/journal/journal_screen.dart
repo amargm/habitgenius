@@ -452,9 +452,11 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
           const SizedBox(width: 8),
         ],
       ),
-      bottomNavigationBar: _JournalToolbar(bodyCtrl: _bodyCtrl),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         children: [
           // Date display
           Text(
@@ -503,7 +505,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
             decoration: BoxDecoration(
               color: context.appColors.bgCard,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              border: Border.all(color: context.appColors.border),
             ),
             padding: const EdgeInsets.all(14),
             child: TextField(
@@ -518,6 +520,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                   color: context.appColors.textMuted,
                   fontSize: 15,
                 ),
+                filled: false,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -605,6 +608,10 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
               ),
             ],
           ),
+        ],
+      ),
+      ),
+          _JournalToolbar(bodyCtrl: _bodyCtrl),
         ],
       ),
     );

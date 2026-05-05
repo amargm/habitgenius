@@ -7,20 +7,20 @@
 
 ## Home Screen
 
-- [ ] **1** Focus weekly status visual: number above day label pushes "W" (Wednesday) up; also gray (unmarked) boxes appear above colored (marked) boxes on the horizontal row — fix layout/alignment.
-- [ ] **2** Mood weekly status visual: unmarked entries show dashes while all other rows show gray boxes — unify to boxes everywhere.
+- [x] **1** Focus weekly status visual: number above day label pushes "W" (Wednesday) up; also gray (unmarked) boxes appear above colored (marked) boxes on the horizontal row — fixed by rendering bar first, label below.
+- [x] **2** Mood weekly status visual: unmarked entries show dashes — fixed to use gray boxes (same as other rows).
 - [ ] **3** Habits weekly status calculation — review for correctness and edge cases (e.g. habit created mid-week, timezone rollover, archived habits).
-- [ ] **4** "X/N done" counter in Today section: mood entry is not counted as an activity — include it in the denominator and check it off when today's mood is logged.
-- [ ] **15** Remove "HabitGenius" text below the greeting; replace it with the signed-in user's display name at the same text size.
-- [ ] **10** Remove the notification bell icon next to the settings icon.
-- [ ] **11** Remove gradient color from the settings icon; use default accent color or a contrasting solid color.
+- [x] **4** "X/N done" counter in Today section: mood entry is now counted as +1 activity (total = habits + 1; done increments when today's mood is logged).
+- [x] **15** Home username: "HabitGenius" title replaced with the signed-in user's first name.
+- [x] **10** Notification bell icon removed from home header.
+- [x] **11** Settings avatar: gradient removed, now uses solid primary color.
 - [ ] **16** Light mode: the "+" FAB/button has low-contrast symbol — fix so the icon is clearly visible.
 
 ---
 
 ## Habits Screen
 
-- [ ] **13** Default selected filter should be **"All"** (currently "Today"). Reorder filters to: `All · Today · This week · Yearly · Archive`.
+- [x] **13** Default selected filter is now **"All"**. Filter order: `All · Today · This week · Yearly · Archive`.
 - [ ] **14** Haptic + sound feedback (celebration) on completion of each today habit. Sound configurable in Settings (default: enabled).
 
 ---
@@ -60,15 +60,15 @@
 
 ## Settings / Splash
 
-- [ ] **12** Splash screen: change logo color to be consistent with updated accent/branding.
+- [x] **12** Splash screen logo: gradient removed, now uses solid primary color.
 
 ---
 
 ## Heatmap Overlay (Press & Hold on habit card)
 
-- [ ] **17.1** Heading in the press-and-hold yearly heatmap overlay sits too low, pushing months below the visible area — fit all months on screen without scrolling.
-- [ ] **17.2** Horizontal swipe gesture inside the overlay changes the bottom nav tab — disable horizontal swipe while the overlay is open; only back arrow or bottom nav taps should dismiss/navigate.
-- [ ] **17.3** The overlay yearly heatmap should always show Jan–Dec (same logic as the expanded habit screen), not a rolling 365-day window.
+- [x] **17.1** Heading in overlay was too low — overlay now uses `LayoutBuilder` to compute aspect ratio so all 12 months fit on screen without scrolling.
+- [x] **17.2** Horizontal swipe inside overlay no longer changes the bottom nav tab — overlay wrapped in `GestureDetector` that absorbs drag gestures.
+- [x] **17.3** Overlay heatmap now shows Jan–Dec of the current year (not a rolling 365-day window).
 
 ---
 

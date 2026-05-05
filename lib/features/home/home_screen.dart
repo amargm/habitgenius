@@ -246,10 +246,7 @@ class _Header extends StatelessWidget {
           child: Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: primary,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
             child: Center(
               child: Text(
                 initials,
@@ -547,71 +544,71 @@ class _HabitYearHeatmapPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: Column(
-          children: [
-            // Top bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white,
+            children: [
+              // Top bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const Spacer(),
-                ],
-              ),
-            ),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    habit.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$totalDone of 365 days  •  ${(totalDone / 3.65).toStringAsFixed(0)}%'
-                    '  •  $streak day streak',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 12-month grid (Jan–Dec, fits screen without scrolling)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: _YearMonthGrid(
-                  today: today,
-                  heatmap: heatmap,
-                  habitColor: habitColor,
-                  createdAt:
-                      DateTime.tryParse(habit.createdAt) ??
-                      today.subtract(const Duration(days: 365)),
+                    const Spacer(),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      habit.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$totalDone of 365 days  •  ${(totalDone / 3.65).toStringAsFixed(0)}%'
+                      '  •  $streak day streak',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 12-month grid (Jan–Dec, fits screen without scrolling)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  child: _YearMonthGrid(
+                    today: today,
+                    heatmap: heatmap,
+                    habitColor: habitColor,
+                    createdAt:
+                        DateTime.tryParse(habit.createdAt) ??
+                        today.subtract(const Duration(days: 365)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }
@@ -988,7 +985,17 @@ class _WeeklyOverview extends StatelessWidget {
     final habitsRatios =
         days.map<double?>((day) {
           if (day.isAfter(todayMid)) return null;
-          final sched = HabitHelpers.habitsForDate(activeHabits, day);
+          // Only include habits that existed on [day] (creation date ≤ day).
+          final sched =
+              HabitHelpers.habitsForDate(activeHabits, day).where((h) {
+                final created = DateTime.tryParse(h.createdAt)?.toLocal();
+                if (created == null) return true;
+                return !DateTime(
+                  created.year,
+                  created.month,
+                  created.day,
+                ).isAfter(day);
+              }).toList();
           if (sched.isEmpty) return -1;
           final ds = _fmt(day);
           final done =

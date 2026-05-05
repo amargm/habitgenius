@@ -493,23 +493,13 @@ class _Controls extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
 
     if (state == TimerState.finished) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _ControlBtn(
-            icon: Icons.refresh_rounded,
-            onTap: onReset,
-            label: 'Reset',
-          ),
-          const SizedBox(width: 24),
-          _ControlBtn(
-            icon: Icons.save_alt_rounded,
-            onTap: onSave,
-            label: 'Save',
-            color: primary,
-            large: true,
-          ),
-        ],
+      return Center(
+        child: _ControlBtn(
+          icon: Icons.refresh_rounded,
+          onTap: onReset,
+          label: 'New Session',
+          large: true,
+        ),
       );
     }
 

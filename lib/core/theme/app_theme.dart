@@ -138,6 +138,14 @@ class AppTheme {
         ),
       ),
 
+      // FloatingActionButton — always readable icon regardless of primary hue
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: themeColor.primary,
+        foregroundColor: onPrimary,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+
       // ElevatedButton
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

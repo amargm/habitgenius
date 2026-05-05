@@ -59,7 +59,7 @@ class _MoodScreenState extends ConsumerState<MoodScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -136,7 +136,11 @@ class _MoodScreenState extends ConsumerState<MoodScreen>
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
-                  tabs: const [Tab(text: 'Today'), Tab(text: 'Calendar')],
+                  tabs: const [
+                    Tab(text: 'Today'),
+                    Tab(text: 'Calendar'),
+                    Tab(text: 'Year'),
+                  ],
                 ),
               ),
             ),
@@ -152,6 +156,7 @@ class _MoodScreenState extends ConsumerState<MoodScreen>
                     allMoods: moods,
                   ),
                   _CalendarTab(moods: moods),
+                  _YearTab(moods: moods),
                 ],
               ),
             ),
@@ -792,6 +797,164 @@ class _CalendarTabState extends State<_CalendarTab> {
       'December',
     ];
     return '${months[d.month - 1]} ${d.year}';
+  }
+}
+
+// ── Year tab ──────────────────────────────────────────────
+
+class _YearTab extends StatefulWidget {
+  final List<Mood> moods;
+  const _YearTab({required this.moods});
+
+  @override
+  State<_YearTab> createState() => _YearTabState();
+}
+
+class _YearTabState extends State<_YearTab> {
+  int _year = DateTime.now().year;
+
+  Map<String, Mood> get _moodByDate => {
+    for (final m in widget.moods) m.date: m,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final moodMap = _moodByDate;
+
+    return Column(
+      children: [
+        // Year navigation
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                onPressed: () => setState(() => _year--),
+                icon: const Icon(Icons.chevron_left_rounded),
+              ),
+              Text(
+                '$_year',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              IconButton(
+                onPressed:
+                    _year >= now.year
+                        ? null
+                        : () => setState(() => _year++),
+                icon: const Icon(Icons.chevron_right_rounded),
+              ),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.82,
+            ),
+            itemCount: 12,
+            itemBuilder: (_, i) {
+              return _MiniMonthMood(
+                month: DateTime(_year, i + 1, 1),
+                moodByDate: moodMap,
+                today: now,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniMonthMood extends StatelessWidget {
+  final DateTime month;
+  final Map<String, Mood> moodByDate;
+  final DateTime today;
+
+  static const _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  const _MiniMonthMood({
+    required this.month,
+    required this.moodByDate,
+    required this.today,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
+    // weekday: 1=Mon … 7=Sun → offset 0–6 for Mon-start grid
+    final firstWeekday = (DateTime(month.year, month.month, 1).weekday - 1) % 7;
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _monthNames[month.month - 1],
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: context.appColors.textSecondary,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Expanded(
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+              childAspectRatio: 1,
+            ),
+            itemCount: firstWeekday + daysInMonth,
+            itemBuilder: (_, idx) {
+              if (idx < firstWeekday) return const SizedBox.shrink();
+              final day = idx - firstWeekday + 1;
+              final dayDate = DateTime(month.year, month.month, day);
+              if (dayDate.isAfter(todayMidnight)) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: context.appColors.bgElevated.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              }
+              final dateStr =
+                  '${month.year}-${month.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+              final mood = moodByDate[dateStr];
+              final color =
+                  mood != null
+                      ? _kMoodLevels[mood.level.clamp(1, 5) - 1].color
+                      : null;
+              return Container(
+                decoration: BoxDecoration(
+                  color:
+                      color != null
+                          ? color.withValues(alpha: 0.75)
+                          : context.appColors.bgElevated,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 

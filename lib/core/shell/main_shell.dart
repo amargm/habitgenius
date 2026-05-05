@@ -110,7 +110,16 @@ class MainShell extends ConsumerWidget {
                   visibleTabs.map((tab) {
                     final isActive = currentRoute == tab.route;
                     return GestureDetector(
-                      onTap: () => context.go(tab.route),
+                      onTap: () {
+                        // Pop any fullscreen pages pushed on the shell's
+                        // navigator (e.g. journal entry sheet) before
+                        // switching tabs.
+                        final nav = Navigator.of(context);
+                        if (nav.canPop()) {
+                          nav.popUntil((route) => route.isFirst);
+                        }
+                        context.go(tab.route);
+                      },
                       behavior: HitTestBehavior.opaque,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 280),
