@@ -16,7 +16,7 @@ import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
 // ── View enum ─────────────────────────────────────────────
 
-enum _HabitView { today, week, all, year, archived }
+enum _HabitView { all, today, week, year, archived }
 
 // ── Screen ────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ class HabitsScreen extends ConsumerStatefulWidget {
 }
 
 class _HabitsScreenState extends ConsumerState<HabitsScreen> {
-  _HabitView _view = _HabitView.today;
+  _HabitView _view = _HabitView.all;
 
   @override
   Widget build(BuildContext context) {

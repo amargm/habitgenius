@@ -108,12 +108,15 @@ class _BodyState extends State<_Body> {
     final activeHabits =
         data.habits.where((h) => h.archivedAt == null).toList();
     final todayHabits = HabitHelpers.habitsForDate(activeHabits, today);
-    final doneToday =
+    final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
+    final habitsDoneToday =
         todayHabits
             .where(
               (h) => HabitHelpers.isCompletedOn(h, data.habitLogs, todayStr),
             )
             .length;
+    final doneToday = habitsDoneToday + (todayMood != null ? 1 : 0);
+    final totalTodayActivities = todayHabits.length + 1; // habits + mood
     final todayMidnight = DateTime(today.year, today.month, today.day);
     final weekStart = todayMidnight.subtract(
       Duration(days: todayMidnight.weekday - 1),
@@ -144,11 +147,11 @@ class _BodyState extends State<_Body> {
                   _SectionHeader(
                     label: 'Today',
                     trailing: Text(
-                      '$doneToday / ${todayHabits.length} done',
+                      '$doneToday / $totalTodayActivities done',
                       style: TextStyle(
                         fontSize: 12,
                         color:
-                            doneToday == todayHabits.length
+                            doneToday == totalTodayActivities
                                 ? primary
                                 : context.appColors.textMuted,
                         fontWeight: FontWeight.w600,
@@ -164,8 +167,7 @@ class _BodyState extends State<_Body> {
                     allLogs: data.habitLogs,
                     today: today,
                     primary: primary,
-                    todayMood:
-                        data.moods.where((m) => m.date == todayStr).firstOrNull,
+                    todayMood: todayMood,
                   ),
                   const SizedBox(height: 28),
                 ],
@@ -225,9 +227,9 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'HabitGenius',
-                style: TextStyle(
+              Text(
+                firstName,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -238,25 +240,6 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Notification bell
-        GestureDetector(
-          onTap: onSettings,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: context.appColors.bgCard,
-              shape: BoxShape.circle,
-              boxShadow: context.appColors.cardShadow,
-            ),
-            child: Icon(
-              Icons.notifications_outlined,
-              size: 20,
-              color: context.appColors.textSecondary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
         // Avatar / settings
         GestureDetector(
           onTap: onSettings,
@@ -264,11 +247,7 @@ class _Header extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primary, AppColors.accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: primary,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -560,10 +539,14 @@ class _HabitYearHeatmapPage extends StatelessWidget {
     final totalDone = heatmap.values.where((v) => v > 0).length;
     final streak = HabitHelpers.currentStreak(habit, logs, today);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Column(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (_) {},
+      onHorizontalDragEnd: (_) {},
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
           children: [
             // Top bar
             Padding(
@@ -609,12 +592,12 @@ class _HabitYearHeatmapPage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-            // 12-month grid
+            // 12-month grid (Jan–Dec, fits screen without scrolling)
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: _YearMonthGrid(
                   today: today,
                   heatmap: heatmap,
@@ -628,6 +611,7 @@ class _HabitYearHeatmapPage extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -681,34 +665,43 @@ class _YearMonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Show the last 12 months up to today's month
-    final currentMonth = DateTime(today.year, today.month, 1);
-    final months = List.generate(12, (i) {
-      final m = DateTime(currentMonth.year, currentMonth.month - (11 - i), 1);
-      return m;
-    });
+    // Show Jan–Dec of the current year
+    final months = List.generate(12, (i) => DateTime(today.year, i + 1, 1));
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 20,
-        childAspectRatio: 0.75,
-      ),
-      itemCount: 12,
-      itemBuilder: (_, idx) {
-        final monthStart = months[idx];
-        return _MonthBlock(
-          monthStart: monthStart,
-          today: today,
-          heatmap: heatmap,
-          habitColor: habitColor,
-          createdAt: createdAt,
-          cellColor: _cell,
-          dayLabels: _dayLabels,
-          monthNames: _monthNames,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const cols = 3;
+        const rows = 4;
+        const hGap = 14.0;
+        const vGap = 12.0;
+        final cellW = (constraints.maxWidth - hGap * (cols - 1)) / cols;
+        final cellH =
+            constraints.maxHeight.isFinite
+                ? (constraints.maxHeight - vGap * (rows - 1)) / rows
+                : cellW / 0.75;
+        final ratio = (cellW / cellH).clamp(0.4, 1.5);
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            crossAxisSpacing: hGap,
+            mainAxisSpacing: vGap,
+            childAspectRatio: ratio,
+          ),
+          itemCount: 12,
+          itemBuilder: (_, idx) {
+            final monthStart = months[idx];
+            return _MonthBlock(
+              monthStart: monthStart,
+              today: today,
+              heatmap: heatmap,
+              habitColor: habitColor,
+              createdAt: createdAt,
+              cellColor: _cell,
+              dayLabels: _dayLabels,
+              monthNames: _monthNames,
+            );
+          },
         );
       },
     );
@@ -1115,7 +1108,13 @@ class _WeeklyOverview extends StatelessWidget {
           dayCells:
               days.asMap().entries.map((e) {
                 final mood = dayMoods[e.key];
-                if (mood == null) return const _DayCellText(text: '—');
+                if (mood == null) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFF9B59B6),
+                    empty: true,
+                  );
+                }
                 return _DayCellText(text: mood.emoji);
               }).toList(),
           aggregate:
@@ -1349,6 +1348,15 @@ class _DayCellBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        Container(
+          width: 10,
+          height: (16 * ratio.clamp(0.15, 1.0)).roundToDouble(),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(
@@ -1357,15 +1365,6 @@ class _DayCellBar extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 2),
-        Container(
-          width: 10,
-          height: (16 * ratio.clamp(0.15, 1.0)).roundToDouble(),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
         ),
       ],
     );
