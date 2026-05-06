@@ -351,7 +351,8 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
     _tagCtrl = TextEditingController();
     if (e != null) _tags.addAll(e.tags);
     // Open existing entries (with content) in preview mode.
-    if (e != null && (e.body.trim().isNotEmpty || e.title?.trim().isNotEmpty == true)) {
+    if (e != null &&
+        (e.body.trim().isNotEmpty || e.title?.trim().isNotEmpty == true)) {
       _preview = true;
     }
   }

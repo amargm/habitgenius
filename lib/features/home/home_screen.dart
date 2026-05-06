@@ -762,12 +762,10 @@ class _TodayHabitsRow extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        onPressed:
-                            val > 0 ? () => setState(() => val--) : null,
+                        onPressed: val > 0 ? () => setState(() => val--) : null,
                         icon: const Icon(Icons.remove_rounded),
                         style: IconButton.styleFrom(
-                          backgroundColor:
-                              primary.withValues(alpha: 0.1),
+                          backgroundColor: primary.withValues(alpha: 0.1),
                           foregroundColor: primary,
                         ),
                       ),
@@ -788,8 +786,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                             ),
                         icon: const Icon(Icons.add_rounded),
                         style: IconButton.styleFrom(
-                          backgroundColor:
-                              primary.withValues(alpha: 0.1),
+                          backgroundColor: primary.withValues(alpha: 0.1),
                           foregroundColor: primary,
                         ),
                       ),
@@ -805,12 +802,12 @@ class _TodayHabitsRow extends ConsumerWidget {
                         max: maxMins.toDouble(),
                         divisions: maxMins,
                         value: val.toDouble(),
-                        onChanged:
-                            (v) => setState(() => val = v.round()),
+                        onChanged: (v) => setState(() => val = v.round()),
                       ),
                       if (target <= maxMins)
                         Positioned(
-                          left: (target / maxMins) *
+                          left:
+                              (target / maxMins) *
                               (MediaQuery.of(ctx).size.width - 72),
                           top: -4,
                           child: IgnorePointer(
@@ -822,8 +819,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                                   height: 28,
                                   decoration: BoxDecoration(
                                     color: primary.withValues(alpha: 0.5),
-                                    borderRadius:
-                                        BorderRadius.circular(1),
+                                    borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
                                 const SizedBox(height: 2),

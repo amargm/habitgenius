@@ -38,6 +38,9 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     // Global focus auto-save: fires regardless of which screen is active.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(focusSvcProvider).addListener(_onFocusSvcChange);
+      // Schedule habit reminders once on startup so they are registered
+      // even before the user backgrounds and re-opens the app.
+      _rescheduleHabitReminders();
     });
   }
 

@@ -215,7 +215,8 @@ class HabitCheckWidget extends ConsumerWidget {
                             // Target time marker
                             if (target > 0 && target <= maxMins)
                               Positioned(
-                                left: (target / maxMins) *
+                                left:
+                                    (target / maxMins) *
                                     (MediaQuery.of(ctx).size.width - 48 - 24),
                                 top: -4,
                                 child: Column(
@@ -225,9 +226,7 @@ class HabitCheckWidget extends ConsumerWidget {
                                       width: 2,
                                       height: 28,
                                       decoration: BoxDecoration(
-                                        color: Theme.of(ctx)
-                                            .colorScheme
-                                            .primary
+                                        color: Theme.of(ctx).colorScheme.primary
                                             .withValues(alpha: 0.55),
                                         borderRadius: BorderRadius.circular(1),
                                       ),
@@ -238,9 +237,7 @@ class HabitCheckWidget extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 8,
                                         fontWeight: FontWeight.w700,
-                                        color: Theme.of(ctx)
-                                            .colorScheme
-                                            .primary
+                                        color: Theme.of(ctx).colorScheme.primary
                                             .withValues(alpha: 0.7),
                                       ),
                                     ),

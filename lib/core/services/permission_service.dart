@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../constants/app_colors.dart';
@@ -74,10 +75,19 @@ class PermissionService {
   /// no permission at all. Only Android 12 (API 31-32) needs a user grant.
   Future<bool> get exactAlarmGranted async {
     if (!Platform.isAndroid) return true;
-    // On API 33+ USE_EXACT_ALARM is granted implicitly via manifest.
-    // On API < 31 no permission is needed.
-    // Only API 31-32 (Android 12) requires checking SCHEDULE_EXACT_ALARM.
-    return (await Permission.scheduleExactAlarm.status).isGranted;
+    try {
+      final sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+      // API 33+ (Android 13+): USE_EXACT_ALARM is auto-granted via manifest.
+      if (sdk >= 33) return true;
+      // API < 31: no exact-alarm permission needed at all.
+      if (sdk < 31) return true;
+      // API 31-32 (Android 12): SCHEDULE_EXACT_ALARM requires a user grant.
+      return (await Permission.scheduleExactAlarm.status).isGranted;
+    } catch (_) {
+      // If we can't determine SDK, optimistically return true so the app
+      // doesn't block notification scheduling on unknown devices.
+      return true;
+    }
   }
 
   /// Requests SCHEDULE_EXACT_ALARM on Android 12 devices.
