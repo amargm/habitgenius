@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -302,10 +303,22 @@ class _ProCardState extends ConsumerState<_ProCard> {
     if (mounted) setState(() => _loading = false);
   }
 
+  static Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        AppToast.show(context, 'Could not open link.', type: ToastType.error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     const gold = Color(0xFFFDCB6E);
+    final svc = ref.watch(purchaseServiceProvider);
+    final price = svc.formattedPrice;
+    final priceLabel = price.isNotEmpty ? price : null;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -328,10 +341,29 @@ class _ProCardState extends ConsumerState<_ProCard> {
             children: [
               const Text('⭐', style: TextStyle(fontSize: 24)),
               const SizedBox(width: 8),
-              const Text(
-                'Upgrade to Pro',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              const Expanded(
+                child: Text(
+                  'Upgrade to Pro',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                ),
               ),
+              if (priceLabel != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: gold.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: gold.withValues(alpha: 0.5)),
+                  ),
+                  child: Text(
+                    priceLabel,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFFDCB6E),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -341,7 +373,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
             '✓ Unlimited transactions & accounts',
             '✓ 4 exclusive Pro theme colors',
             '✓ Custom focus durations',
-            '✓ One-time payment, forever',
+            '✓ One-time payment, no subscription',
           ].map(
             (b) => Padding(
               padding: const EdgeInsets.only(bottom: 4),
@@ -385,9 +417,11 @@ class _ProCardState extends ConsumerState<_ProCard> {
                               color: Colors.black,
                             ),
                           )
-                          : const Text(
-                            'Upgrade to Pro',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                          : Text(
+                            priceLabel != null
+                                ? 'Buy Pro · $priceLabel'
+                                : 'Upgrade to Pro',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                 ),
               ),
@@ -397,6 +431,61 @@ class _ProCardState extends ConsumerState<_ProCard> {
                 child: const Text(
                   'Restore',
                   style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          // ── Billing disclosure (required by Google Play billing policy) ─────
+          const SizedBox(height: 12),
+          Wrap(
+            children: [
+              Text(
+                'One-time purchase. Payment charged to your Google Play account on confirmation. '
+                'By purchasing you agree to our ',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                  height: 1.5,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _openUrl(context, 'https://habitgenius.app/terms'),
+                child: const Text(
+                  'Terms of Service',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    decoration: TextDecoration.underline,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              Text(
+                ' and ',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                  height: 1.5,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _openUrl(context, 'https://habitgenius.app/privacy'),
+                child: const Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    decoration: TextDecoration.underline,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              Text(
+                '.',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                  height: 1.5,
                 ),
               ),
             ],
@@ -876,6 +965,12 @@ class _AccountSection extends ConsumerWidget {
               color: AppColors.danger,
               onTap: () => _confirmSignOut(context, ref),
             ),
+            _ActionRow(
+              icon: Icons.person_remove_rounded,
+              label: 'Delete account',
+              color: AppColors.danger,
+              onTap: () => _confirmDeleteAccount(context, ref),
+            ),
           ],
         ],
       ),
@@ -946,6 +1041,70 @@ class _AccountSection extends ConsumerWidget {
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) context.go(AppRoutes.welcome);
     }
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete your account?'),
+            content: const Text(
+              'This will permanently delete your account and ALL your data — '
+              'habits, journal entries, mood logs, focus sessions, and transactions.\n\n'
+              'This action cannot be undone. Your Google account itself will not be deleted.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete account'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    // Cancel all scheduled notifications first.
+    await NotificationService.cancelAll();
+    // Wipe local data.
+    await ref.read(dataNotifierProvider.notifier).clearAllData();
+    ref.read(dataNotifierProvider.notifier).reset();
+    try {
+      await ref.read(authNotifierProvider.notifier).deleteAccount();
+    } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
+      if (e.code == 'requires-recent-login') {
+        AppToast.show(
+          context,
+          'Please sign out and sign in again, then try deleting your account.',
+          type: ToastType.error,
+        );
+        return;
+      }
+      AppToast.show(
+        context,
+        'Could not delete account: ${e.message}',
+        type: ToastType.error,
+      );
+      return;
+    } catch (e) {
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        'Could not delete account. Please try again.',
+        type: ToastType.error,
+      );
+      return;
+    }
+    if (context.mounted) context.go(AppRoutes.welcome);
   }
 }
 

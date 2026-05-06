@@ -29,7 +29,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       icon: Icons.lock_outlined,
       title: 'Your data stays on device',
       body:
-          'All data is stored locally inside the app. Nothing is sent to any server — you own it completely.',
+          'All habits, journal entries, mood logs and expenses are stored in a local file on your device.\n\n'
+          'Sign-in uses Google to keep your account secure. Your app data is never analysed or sold.',
     ),
     _Slide(
       icon: Icons.workspace_premium_rounded,

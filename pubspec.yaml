@@ -45,8 +45,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # assets:  # Uncomment and add real asset paths when needed
-  #   - assets/images/
+  assets:
+    - assets/images/
 
 flutter_launcher_icons:
   android: true

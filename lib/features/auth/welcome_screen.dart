@@ -238,10 +238,15 @@ class _GoogleSignInButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        // Google branding requires a neutral/white background so the logo
+        // colours are visible and the brand is clearly recognised.
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF3C4043),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFFDADCE0), width: 1),
+        ),
         elevation: 0,
       ),
       child:
@@ -251,30 +256,103 @@ class _GoogleSignInButton extends StatelessWidget {
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)),
                 ),
               )
               : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/images/google_logo.png',
-                    width: 20,
-                    height: 20,
-                    errorBuilder:
-                        (_, __, ___) => const Icon(
-                          Icons.login,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                  ),
+                  // Google "G" logo drawn in code — four-colour quadrant design
+                  _GoogleGLogo(),
                   const SizedBox(width: 12),
                   const Text(
                     'Sign in with Google',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3C4043),
+                    ),
                   ),
                 ],
               ),
     );
   }
+}
+
+/// Draws the Google "G" logo using four brand colours, matching the official
+/// Google Sign-In button specification.
+class _GoogleGLogo extends StatelessWidget {
+  const _GoogleGLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: CustomPaint(painter: _GoogleGPainter()),
+    );
+  }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+    final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+
+    // Blue (top-right arc)
+    canvas.drawArc(
+      rect,
+      -1.047, // -60°
+      2.094,  // 120°
+      true,
+      Paint()..color = const Color(0xFF4285F4),
+    );
+    // Red (top-left arc)
+    canvas.drawArc(
+      rect,
+      -3.665, // -210°
+      2.094,  // 120°
+      true,
+      Paint()..color = const Color(0xFFDB4437),
+    );
+    // Yellow (bottom-left arc)
+    canvas.drawArc(
+      rect,
+      2.618, // 150°
+      1.047, // 60°
+      true,
+      Paint()..color = const Color(0xFFF4B400),
+    );
+    // Green (bottom-right arc)
+    canvas.drawArc(
+      rect,
+      1.047, // 60°
+      1.571, // 90°
+      true,
+      Paint()..color = const Color(0xFF0F9D58),
+    );
+
+    // White centre circle to create the "G" ring effect
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r * 0.56,
+      Paint()..color = Colors.white,
+    );
+
+    // White bar for the horizontal stem of the "G"
+    final barLeft = cx;
+    final barRight = cx + r * 0.95;
+    final barTop = cy - r * 0.14;
+    final barBottom = cy + r * 0.14;
+    canvas.drawRect(
+      Rect.fromLTRB(barLeft, barTop, barRight, barBottom),
+      Paint()..color = const Color(0xFF4285F4),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

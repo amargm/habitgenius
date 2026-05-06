@@ -29,11 +29,18 @@ class PurchaseService extends ChangeNotifier {
   bool _isPro = false;
   bool _loading = false;
   String? _error;
+  // Cached product details so the price can be shown in the UI before purchase.
+  ProductDetails? _productDetails;
 
   bool get available => _available;
   bool get isPro => _isPro;
   bool get loading => _loading;
   String? get error => _error;
+
+  /// Formatted price string from the store (e.g. "$4.99"). Empty until loaded.
+  String get formattedPrice => _productDetails?.price ?? '';
+  String get productTitle => _productDetails?.title ?? 'Pro';
+  String get productDescription => _productDetails?.description ?? '';
 
   // ── Init ──────────────────────────────────────────────────
 
@@ -64,7 +71,16 @@ class PurchaseService extends ChangeNotifier {
         notifyListeners();
       },
     );
-
+    // Pre-load product details so price can be shown before purchase.
+    try {
+      final response = await _iap.queryProductDetails({kProProductId});
+      if (response.productDetails.isNotEmpty) {
+        _productDetails = response.productDetails.first;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Non-fatal — price label will just remain empty.
+    }
     // Restore any past purchases (handles reinstalls). Fire-and-forget:
     // if the store is unreachable the stream simply won't emit anything.
     try {

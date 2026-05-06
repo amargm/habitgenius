@@ -113,6 +113,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
   void upgradeToPro() {
     state = AuthState(user: state.user, isPro: true);
   }
+
+  /// Permanently deletes the account:
+  ///   1. Deletes Firestore user document
+  ///   2. Resets local Pro purchase state
+  ///   3. Deletes Firebase Auth account & revokes Google access
+  ///
+  /// Throws [FirebaseAuthException] with code `requires-recent-login` if
+  /// the credential is too old; the caller must handle this.
+  Future<void> deleteAccount() async {
+    // 1. Delete server data first (best-effort).
+    await EntitlementService.instance.deleteUserData();
+    // 2. Reset local Pro flag.
+    await PurchaseService.instance.syncProFromServer(isPro: false);
+    // 3. Delete the Firebase Auth account (throws if credential is stale).
+    await _service.deleteAccount();
+    state = const AuthState();
+  }
 }
 
 // ── Provider ──────────────────────────────────────────────

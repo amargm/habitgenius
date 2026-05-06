@@ -493,6 +493,11 @@ class _TodayHabitsRow extends ConsumerWidget {
               child: GestureDetector(
                 onTap: () async {
                   if (isCounter) {
+                    // Don't allow incrementing beyond the target.
+                    if (habit.targetValue > 0 &&
+                        currentVal >= habit.targetValue) {
+                      return;
+                    }
                     HapticFeedback.selectionClick();
                     final wasDone = done;
                     await ref
@@ -807,7 +812,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                       ),
                       const SizedBox(width: 20),
                       Text(
-                        '+$val min',
+                        '$val min',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
@@ -879,13 +884,14 @@ class _TodayHabitsRow extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
-                        if (val == 0) return;
+                        final delta = val - currentVal;
+                        if (delta == 0) return;
                         await ref
                             .read(dataNotifierProvider.notifier)
                             .toggleHabit(
                               habitId: habit.id,
                               dateStr: dateStr,
-                              delta: val,
+                              delta: delta,
                             );
                       },
                       child: const Text('Save'),
@@ -1785,7 +1791,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
             ? null
             : fw4HabitsRatios.reduce((a, b) => a + b) / fw4HabitsRatios.length;
     final fw4HabitsLabel =
-        fw4HabitsAvg == null ? '--' : '${(fw4HabitsAvg * 100).round()}% avg';
+        fw4HabitsAvg == null ? '--' : '${(fw4HabitsAvg * 100).round()}%';
 
     // Mood 4w: average mood level
     final fw4Moods =
@@ -2080,7 +2086,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
 
 // ── Week row card ─────────────────────────────────────────
 
-class _WeekRowCard extends StatelessWidget {
+class _WeekRowCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final Color color;
@@ -2122,137 +2128,205 @@ class _WeekRowCard extends StatelessWidget {
   });
 
   @override
+  State<_WeekRowCard> createState() => _WeekRowCardState();
+}
+
+class _WeekRowCardState extends State<_WeekRowCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _sizeFactor;
+  late final Animation<double> _fadeAnim;
+
+  // Cached so the widget survives the closing fade-out animation.
+  Widget? _cachedContent;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      value: widget.expanded ? 1.0 : 0.0,
+    );
+    _sizeFactor = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    if (widget.expansionContent != null) {
+      _cachedContent = widget.expansionContent;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_WeekRowCard old) {
+    super.didUpdateWidget(old);
+    // Cache the content while it's still non-null so fade-out has something to render.
+    if (widget.expansionContent != null) {
+      _cachedContent = widget.expansionContent;
+    }
+    if (widget.expanded != old.expanded) {
+      if (widget.expanded) {
+        _ctrl.forward();
+      } else {
+        _ctrl.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeInOut,
-        alignment: Alignment.topCenter,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          decoration: context.cardDecoration,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header ────────────────────────────────
-              Row(
-                children: [
-                  Icon(icon, size: 14, color: color),
-                  const SizedBox(width: 6),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: context.appColors.textSecondary,
-                    ),
+      onTap: widget.onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: context.cardDecoration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ────────────────────────────────
+            Row(
+              children: [
+                Icon(widget.icon, size: 14, color: widget.color),
+                const SizedBox(width: 6),
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.appColors.textSecondary,
                   ),
-                  const Spacer(),
-                  Container(
-                    width: 1,
-                    height: 14,
-                    color: context.appColors.border,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 220),
-                    firstCurve: Curves.easeIn,
-                    secondCurve: Curves.easeIn,
-                    sizeCurve: Curves.easeInOut,
-                    crossFadeState:
-                        (expanded && expandedAggregate != null)
-                            ? CrossFadeState.showSecond
-                            : CrossFadeState.showFirst,
-                    firstChild:
-                        countUpTo != null && countFormatter != null
-                            ? _CountUpText(
-                              end: countUpTo!,
-                              formatter: countFormatter!,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: aggregateColor,
-                              ),
-                            )
-                            : Text(
-                              aggregate,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: aggregateColor,
-                              ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 1,
+                  height: 14,
+                  color: context.appColors.border,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 220),
+                  firstCurve: Curves.easeIn,
+                  secondCurve: Curves.easeIn,
+                  sizeCurve: Curves.easeInOut,
+                  crossFadeState:
+                      (widget.expanded && widget.expandedAggregate != null)
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                  firstChild:
+                      widget.countUpTo != null && widget.countFormatter != null
+                          ? _CountUpText(
+                            end: widget.countUpTo!,
+                            formatter: widget.countFormatter!,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: widget.aggregateColor,
                             ),
-                    secondChild: Text(
-                      expandedAggregate ?? aggregate,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: expandedAggregateColor ?? aggregateColor,
-                      ),
+                          )
+                          : Text(
+                            widget.aggregate,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: widget.aggregateColor,
+                            ),
+                          ),
+                  secondChild: Text(
+                    widget.expandedAggregate ?? widget.aggregate,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color:
+                          widget.expandedAggregateColor ??
+                          widget.aggregateColor,
                     ),
                   ),
-                  if (onTap != null) ...[
-                    const SizedBox(width: 6),
-                    AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 16,
-                        color: context.appColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-              // ── Day names header ─────────────────────
-              Row(
-                children: [
-                  if (expanded) const SizedBox(width: 28),
-                  ...List.generate(
-                    7,
-                    (i) => Expanded(
-                      child: Text(
-                        dayNames[i],
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: context.appColors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                ),
+                if (widget.onTap != null) ...[
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: widget.expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 16,
+                      color: context.appColors.textMuted,
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 5),
-              // ── Previous 3 weeks (inside same card, above current) ──
-              if (expanded && expansionContent != null) ...[
-                expansionContent!,
-                const SizedBox(height: 4),
               ],
-              // ── Current week row ─────────────────────
-              Row(
-                children: [
-                  if (expanded)
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        'Now',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
+            ),
+            const SizedBox(height: 8),
+            // ── Day names header ─────────────────────
+            Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _sizeFactor,
+                  builder: (_, __) => SizedBox(width: 28.0 * _sizeFactor.value),
+                ),
+                ...List.generate(
+                  7,
+                  (i) => Expanded(
+                    child: Text(
+                      widget.dayNames[i],
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: context.appColors.textMuted,
+                        fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ...dayCells.map((c) => Expanded(child: Center(child: c))),
-                ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // ── Previous 3 weeks — animated expand/collapse ──
+            SizeTransition(
+              sizeFactor: _sizeFactor,
+              axisAlignment: -1.0,
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_cachedContent != null) _cachedContent!,
+                    const SizedBox(height: 4),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+            // ── Current week row ─────────────────────
+            Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _sizeFactor,
+                  builder:
+                      (_, __) => SizedBox(
+                        width: 28.0 * _sizeFactor.value,
+                        child:
+                            _sizeFactor.value > 0.5
+                                ? Text(
+                                  'Now',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: widget.color,
+                                  ),
+                                )
+                                : null,
+                      ),
+                ),
+                ...widget.dayCells.map(
+                  (c) => Expanded(child: Center(child: c)),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

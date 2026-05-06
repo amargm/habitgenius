@@ -181,14 +181,20 @@ class NotificationService {
   static Future<void> cancelHabitReminder(String habitId) async {
     final base = habitId.hashCode.abs();
     // Daily ID.
-    try { await _plugin.cancel(base % 100000); } catch (_) {}
+    try {
+      await _plugin.cancel(base % 100000);
+    } catch (_) {}
     // Per-weekday IDs: scheduleDays values are 0=Sun..6=Sat.
     for (int d = 0; d <= 6; d++) {
-      try { await _plugin.cancel((base + d * 100001) % 2000000000); } catch (_) {}
+      try {
+        await _plugin.cancel((base + d * 100001) % 2000000000);
+      } catch (_) {}
     }
     // Per-day-of-month IDs: dom values are 1..31.
     for (int d = 1; d <= 31; d++) {
-      try { await _plugin.cancel((base + d * 200002) % 2000000000); } catch (_) {}
+      try {
+        await _plugin.cancel((base + d * 200002) % 2000000000);
+      } catch (_) {}
     }
   }
 

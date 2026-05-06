@@ -69,4 +69,14 @@ class EntitlementService {
       }, SetOptions(merge: true));
     } catch (_) {}
   }
+
+  /// Deletes the Firestore user document on account deletion.
+  /// Non-fatal — the Auth account deletion is the authoritative action.
+  Future<void> deleteUserData() async {
+    try {
+      final doc = _userDoc;
+      if (doc == null) return;
+      await doc.delete();
+    } catch (_) {}
+  }
 }

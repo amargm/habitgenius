@@ -123,6 +123,24 @@ class AuthService {
     await _prefs.remove(_kIsGuest);
   }
 
+  /// Permanently deletes the Firebase Auth account and revokes Google access.
+  ///
+  /// May throw [FirebaseAuthException] with code `requires-recent-login` if
+  /// the credential is older than 5 minutes. The caller should handle this by
+  /// prompting the user to sign in again before retrying.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.delete();
+    }
+    try {
+      await _googleSignIn.disconnect();
+    } catch (_) {
+      // Disconnect may fail if not signed in via Google — non-fatal.
+    }
+    await _prefs.remove(_kIsGuest);
+  }
+
   // ── Helpers ───────────────────────────────────────────────
 
   AppUser _mapUser(User user) => AppUser(
