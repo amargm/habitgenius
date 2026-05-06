@@ -117,7 +117,9 @@ class NotificationService {
           matchDateTimeComponents: DateTimeComponents.time,
         );
       } catch (e) {
-        debugPrint('[NotificationService] scheduleHabitReminder (daily) failed: $e');
+        debugPrint(
+          '[NotificationService] scheduleHabitReminder (daily) failed: $e',
+        );
       }
     } else {
       // Specific weekdays — schedule one repeating notification per day.

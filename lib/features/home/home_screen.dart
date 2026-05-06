@@ -501,24 +501,13 @@ class _TodayHabitsRow extends ConsumerWidget {
                 },
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
-                  if (isCounter && currentVal > 0) {
-                    // Long-press on counter = decrement
-                    ref
-                        .read(dataNotifierProvider.notifier)
-                        .toggleHabit(
-                          habitId: habit.id,
-                          dateStr: todayStr,
-                          delta: -1,
-                        );
-                  } else {
-                    _showYearHeatmap(
-                      context,
-                      habit,
-                      allLogs,
-                      today,
-                      habitColor,
-                    );
-                  }
+                  _showYearHeatmap(
+                    context,
+                    habit,
+                    allLogs,
+                    today,
+                    habitColor,
+                  );
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
