@@ -46,6 +46,20 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   FocusMode _selectedMode = FocusMode.pomodoro;
 
   @override
+  void initState() {
+    super.initState();
+    // Sync the UI mode chip with whatever mode the running service is in.
+    // This matters when the user navigates away and comes back.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final svc = ref.read(focusSvcProvider);
+      if (_selectedMode != svc.mode) {
+        setState(() => _selectedMode = svc.mode);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tier = ref.watch(authNotifierProvider).tier;
     final svc = ref.watch(focusSvcProvider);

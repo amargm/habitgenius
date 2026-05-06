@@ -297,9 +297,11 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
             value: newValue,
             completed: done,
             completedAt:
-                done && !existing.completed
-                    ? DateTime.now().toUtc().toIso8601String()
-                    : existing.completedAt,
+                done
+                    ? (existing.completed
+                        ? existing.completedAt // keep original time if still done
+                        : DateTime.now().toUtc().toIso8601String()) // newly done
+                    : null, // clear when no longer done (undo / decrement)
           );
         }
       }

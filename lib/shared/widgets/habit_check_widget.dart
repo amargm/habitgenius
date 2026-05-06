@@ -92,8 +92,9 @@ class HabitCheckWidget extends ConsumerWidget {
         HabitHelpers.logForDate(logs, habit.id, dateStr)?.value ?? 0;
     final result = await _showMinutePicker(context, current, habit.targetValue);
     if (result == null || !context.mounted) return;
-    // Store as delta from current value
+    // Store as delta from current value; skip if nothing changed.
     final delta = result - current;
+    if (delta == 0) return;
     await ref
         .read(dataNotifierProvider.notifier)
         .toggleHabit(habitId: habit.id, dateStr: dateStr, delta: delta);
@@ -134,9 +135,17 @@ class HabitCheckWidget extends ConsumerWidget {
           ),
     );
     if (confirm == true && context.mounted) {
+      // Pass a large negative delta so the timer value clamps to 0 (cleared).
+      final logs = ref.read(appDataProvider).habitLogs;
+      final currentVal =
+          HabitHelpers.logForDate(logs, habit.id, dateStr)?.value ?? 0;
       await ref
           .read(dataNotifierProvider.notifier)
-          .toggleHabit(habitId: habit.id, dateStr: dateStr);
+          .toggleHabit(
+            habitId: habit.id,
+            dateStr: dateStr,
+            delta: -currentVal,
+          );
     }
   }
 
@@ -146,7 +155,9 @@ class HabitCheckWidget extends ConsumerWidget {
     int current,
     int target,
   ) {
-    int val = current;
+    final maxMins = (target * 1.5).clamp(30, 240).toInt();
+    // Clamp the initial value so it never exceeds the slider max.
+    int val = current.clamp(0, maxMins);
     return showModalBottomSheet<int>(
       context: context,
       builder:
@@ -185,7 +196,9 @@ class HabitCheckWidget extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => setState(() => val++),
+                              onPressed: () => setState(
+                                () => val = (val + 1).clamp(0, maxMins),
+                              ),
                               icon: const Icon(Icons.add_rounded),
                             ),
                           ],
@@ -193,8 +206,8 @@ class HabitCheckWidget extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Slider(
                           min: 0,
-                          max: (target * 1.5).clamp(30, 240).toDouble(),
-                          divisions: (target * 1.5).clamp(30, 240).toInt(),
+                          max: maxMins.toDouble(),
+                          divisions: maxMins,
                           value: val.toDouble(),
                           onChanged: (v) => setState(() => val = v.round()),
                         ),
