@@ -22,6 +22,10 @@ class HabitGeniusApp extends ConsumerStatefulWidget {
 class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     with WidgetsBindingObserver {
   StreamSubscription<String>? _saveErrorSub;
+  // Riverpod subscription used to trigger first-run notification scheduling
+  // once the data provider finishes its initial async load.
+  // ignore: cancel_subscriptions
+  ProviderSubscription? _dataSub;
   // Auto-save guard for the focus timer.
   bool _focusAutoSaved = false;
 
@@ -38,15 +42,25 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     // Global focus auto-save: fires regardless of which screen is active.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(focusSvcProvider).addListener(_onFocusSvcChange);
-      // Schedule habit reminders once on startup so they are registered
-      // even before the user backgrounds and re-opens the app.
-      _rescheduleHabitReminders();
+      // If data is already loaded (e.g. hot restart), reschedule now.
+      if (ref.read(dataNotifierProvider).hasValue) {
+        _rescheduleHabitReminders();
+      }
+    });
+    // Subscribe to the data provider so we reschedule notifications as soon
+    // as habits finish loading on a cold start (avoids the race condition
+    // where valueOrNull is null during the first postFrameCallback).
+    _dataSub = ref.listenManual(dataNotifierProvider, (prev, next) {
+      if (next.hasValue && (prev == null || !prev.hasValue)) {
+        _rescheduleHabitReminders();
+      }
     });
   }
 
   @override
   void dispose() {
     _saveErrorSub?.cancel();
+    _dataSub?.close();
     ref.read(focusSvcProvider).removeListener(_onFocusSvcChange);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -100,6 +114,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         habitName: habit.name,
         timeOfDay: TimeOfDay(hour: h, minute: m),
         scheduleDays: habit.scheduleDays,
+        schedule: habit.schedule,
       );
     }
   }

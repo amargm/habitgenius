@@ -10,6 +10,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/services/permission_service.dart';
 import '../../core/services/purchase_service.dart';
 import '../../core/theme/theme_provider.dart';
@@ -1040,8 +1041,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
     final prefs = ref.read(sharedPreferencesProvider);
 
     if (val) {
-      // Request permission first. requestNotifications() is a no-op if
-      // already granted; shows rationale + OS dialog if not.
+      // 1. Request POST_NOTIFICATIONS (no-op if already granted).
       if (!_permStatus.isGranted) {
         final granted = await PermissionService.instance.requestNotifications(
           context,
@@ -1051,6 +1051,15 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
         setState(() => _permStatus = newStatus);
         if (!granted) return; // stay off if user denied
       }
+      if (!mounted) return;
+      // 2. Request exact alarm permission (needed on Android 12).
+      await PermissionService.instance.requestExactAlarm(context);
+      if (!mounted) return;
+      // 3. Schedule the global daily reminder.
+      await NotificationService.scheduleGlobalReminder(_time);
+    } else {
+      // Cancel the global daily reminder.
+      await NotificationService.cancelGlobalReminder();
     }
 
     await prefs.setBool(PrefKeys.notificationsEnabled, val);
@@ -1064,6 +1073,10 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
     await prefs.setInt(PrefKeys.reminderHour, picked.hour);
     await prefs.setInt(PrefKeys.reminderMinute, picked.minute);
     setState(() => _time = picked);
+    // Reschedule the global reminder at the new time (if the toggle is on).
+    if (_enabled) {
+      await NotificationService.scheduleGlobalReminder(picked);
+    }
   }
 
   @override

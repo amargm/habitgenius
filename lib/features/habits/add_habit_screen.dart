@@ -313,6 +313,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
           habitName: habit.name,
           timeOfDay: _reminderTime!,
           scheduleDays: _scheduleDays,
+          schedule: _schedule,
         );
       }
 
@@ -341,7 +342,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       );
       if (!allow) return; // User declined — don't show time picker.
     }
-
+    if (!mounted) return;
+    // Ensure exact-alarm permission is granted (required on Android 12).
+    await PermissionService.instance.requestExactAlarm(context);
     if (!mounted) return;
     final picked = await showTimePicker(
       context: context,

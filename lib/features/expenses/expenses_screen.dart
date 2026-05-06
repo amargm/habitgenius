@@ -423,10 +423,14 @@ class _AccountsTab extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${a.currency} ${bal.toStringAsFixed(2)}',
+                        '${bal >= 0 ? '+' : ''}${a.currency} ${bal.toStringAsFixed(2)}',
                         style: TextStyle(
                           color:
-                              bal >= 0 ? AppColors.success : AppColors.danger,
+                              bal > 0
+                                  ? AppColors.success
+                                  : bal < 0
+                                  ? AppColors.danger
+                                  : AppColors.textMuted,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -721,17 +725,60 @@ class _TimelineTabState extends State<_TimelineTab> {
         const SizedBox(height: 16),
 
         // ── Bar chart ──────────────────────────────────────
-        Container(
-          height: 180,
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          decoration: context.cardDecoration,
-          child: _SpendBarChart(
-            labels: chart.labels,
-            expValues: chart.exp,
-            incValues: chart.inc,
-            expColor: expenseColor,
-            incColor: incomeColor,
-          ),
+        Builder(
+          builder: (context) {
+            final allZero =
+                chart.exp.every((v) => v == 0) &&
+                chart.inc.every((v) => v == 0);
+            if (allZero) {
+              return Container(
+                height: 180,
+                padding: const EdgeInsets.all(24),
+                decoration: context.cardDecoration,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bar_chart_rounded,
+                        size: 36,
+                        color: context.appColors.textMuted,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'No transactions this period',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: context.appColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add a transaction to see your chart.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Container(
+              height: 180,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              decoration: context.cardDecoration,
+              child: _SpendBarChart(
+                labels: chart.labels,
+                expValues: chart.exp,
+                incValues: chart.inc,
+                expColor: expenseColor,
+                incColor: incomeColor,
+              ),
+            );
+          },
         ),
         const SizedBox(height: 8),
 

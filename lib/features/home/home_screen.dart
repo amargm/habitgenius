@@ -135,12 +135,15 @@ class _BodyState extends State<_Body> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Header ────────────────────────────────
-                _Header(
-                  greeting: greeting,
-                  firstName: firstName,
-                  initials: initials,
-                  primary: primary,
-                  onSettings: () => context.push(AppRoutes.settings),
+                _TimeOfDayCard(
+                  hour: hour,
+                  child: _Header(
+                    greeting: greeting,
+                    firstName: firstName,
+                    initials: initials,
+                    primary: primary,
+                    onSettings: () => context.push(AppRoutes.settings),
+                  ),
                 ),
                 const SizedBox(height: 28),
 
@@ -195,6 +198,51 @@ class _BodyState extends State<_Body> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Time-of-day greeting card ──────────────────────────
+
+/// Wraps [child] in a card with a subtle gradient tint that shifts
+/// warm in the morning, cool midday, and purple in the evening.
+class _TimeOfDayCard extends StatelessWidget {
+  final int hour;
+  final Widget child;
+  const _TimeOfDayCard({required this.hour, required this.child});
+
+  static Color _tint(int hour) {
+    if (hour >= 5 && hour < 12) {
+      return const Color(0xFFFFA726); // morning — amber
+    } else if (hour >= 12 && hour < 17) {
+      return const Color(0xFF29B6F6); // afternoon — sky blue
+    } else if (hour >= 17 && hour < 21) {
+      return const Color(0xFF7E57C2); // evening — purple
+    } else {
+      return const Color(0xFF3949AB); // night — indigo
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = _tint(hour);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tint.withValues(alpha: 0.12),
+            tint.withValues(alpha: 0.04),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+        border: Border.all(color: tint.withValues(alpha: 0.15), width: 1),
+      ),
+      child: child,
     );
   }
 }
@@ -405,6 +453,10 @@ class _TodayHabitsRow extends ConsumerWidget {
                 isTimer && habit.targetValue > 0
                     ? (currentVal / habit.targetValue).clamp(0.0, 1.0)
                     : 0.0;
+            final counterPct =
+                isCounter && habit.targetValue > 0
+                    ? (currentVal / habit.targetValue).clamp(0.0, 1.0)
+                    : 0.0;
 
             Widget circleInner;
             if (done) {
@@ -501,13 +553,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                 },
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
-                  _showYearHeatmap(
-                    context,
-                    habit,
-                    allLogs,
-                    today,
-                    habitColor,
-                  );
+                  _showYearHeatmap(context, habit, allLogs, today, habitColor);
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -547,12 +593,13 @@ class _TodayHabitsRow extends ConsumerWidget {
                           ),
                           child: Center(child: circleInner),
                         ),
-                        if (isTimer && !done)
+                        if ((isTimer || (isCounter && habit.targetValue > 0)) &&
+                            !done)
                           SizedBox(
                             width: 56,
                             height: 56,
                             child: CircularProgressIndicator(
-                              value: timerPct,
+                              value: isTimer ? timerPct : counterPct,
                               strokeWidth: 3,
                               backgroundColor: habitColor.withValues(
                                 alpha: 0.15,
@@ -1818,6 +1865,8 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
                   ? '--'
                   : '${(weekHabitsAvg * 100).round()}%',
           aggregateColor: primary,
+          countUpTo: weekHabitsAvg == null ? null : weekHabitsAvg * 100,
+          countFormatter: (v) => '${v.round()}%',
           expanded: _expandedRow == 'Habits',
           onTap: () => _toggle('Habits'),
           expandedAggregate: fw4HabitsLabel,
@@ -1906,6 +1955,13 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
               }).toList(),
           aggregate: _fmtMins(totalFocusMins),
           aggregateColor: const Color(0xFFF39C12),
+          countUpTo: totalFocusMins.toDouble(),
+          countFormatter: (v) {
+            final m = v.round();
+            if (m == 0) return '--';
+            if (m >= 60) return '${m ~/ 60}h${m % 60 > 0 ? '${m % 60}m' : ''}';
+            return '${m}m';
+          },
           expanded: _expandedRow == 'Focus',
           onTap: () => _toggle('Focus'),
           expandedAggregate: fw4FocusLabel,
@@ -1949,6 +2005,8 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
               }).toList(),
           aggregate: totalJournal == 0 ? '--' : '$totalJournal',
           aggregateColor: const Color(0xFF3498DB),
+          countUpTo: totalJournal.toDouble(),
+          countFormatter: (v) => v < 0.5 ? '--' : '${v.round()}',
           expanded: _expandedRow == 'Journal',
           onTap: () => _toggle('Journal'),
           expandedAggregate: fw4JournalLabel,
@@ -1993,6 +2051,8 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
                 }).toList(),
             aggregate: totalSpend == 0 ? '--' : _smartMoney(totalSpend),
             aggregateColor: const Color(0xFF2ECC71),
+            countUpTo: totalSpend,
+            countFormatter: (v) => v < 0.5 ? '--' : _smartMoney(v),
             expanded: _expandedRow == 'Spend',
             onTap: () => _toggle('Spend'),
             expandedAggregate: fw4SpendLabel,
@@ -2039,6 +2099,11 @@ class _WeekRowCard extends StatelessWidget {
   /// The card itself expands downward — no separate container is introduced.
   final Widget? expansionContent;
 
+  /// When provided, the aggregate value counts up from 0 on first render.
+  /// [countFormatter] converts the interpolated double to a display string.
+  final double? countUpTo;
+  final String Function(double)? countFormatter;
+
   const _WeekRowCard({
     required this.icon,
     required this.title,
@@ -2052,6 +2117,8 @@ class _WeekRowCard extends StatelessWidget {
     this.onTap,
     this.expanded = false,
     this.expansionContent,
+    this.countUpTo,
+    this.countFormatter,
   });
 
   @override
@@ -2088,25 +2155,40 @@ class _WeekRowCard extends StatelessWidget {
                     color: context.appColors.border,
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  AnimatedSwitcher(
+                  AnimatedCrossFade(
                     duration: const Duration(milliseconds: 220),
-                    transitionBuilder:
-                        (child, anim) =>
-                            FadeTransition(opacity: anim, child: child),
-                    child: Text(
-                      expanded && expandedAggregate != null
-                          ? expandedAggregate!
-                          : aggregate,
-                      key: ValueKey(
-                        expanded && expandedAggregate != null ? 'exp' : 'cur',
-                      ),
+                    firstCurve: Curves.easeIn,
+                    secondCurve: Curves.easeIn,
+                    sizeCurve: Curves.easeInOut,
+                    crossFadeState:
+                        (expanded && expandedAggregate != null)
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                    firstChild:
+                        countUpTo != null && countFormatter != null
+                            ? _CountUpText(
+                              end: countUpTo!,
+                              formatter: countFormatter!,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: aggregateColor,
+                              ),
+                            )
+                            : Text(
+                              aggregate,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: aggregateColor,
+                              ),
+                            ),
+                    secondChild: Text(
+                      expandedAggregate ?? aggregate,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color:
-                            expanded && expandedAggregateColor != null
-                                ? expandedAggregateColor!
-                                : aggregateColor,
+                        color: expandedAggregateColor ?? aggregateColor,
                       ),
                     ),
                   ),
@@ -2516,6 +2598,73 @@ class _DayCellText extends StatelessWidget {
 }
 
 // ── Skeleton loader ───────────────────────────────────────
+
+// ── Count-up animated stat text ──────────────────────────
+
+/// Counts from 0 to [end] on first build using an internal animation.
+/// Uses [AnimatedCrossFade] in the parent so state survives expand/collapse.
+class _CountUpText extends StatefulWidget {
+  final double end;
+  final String Function(double) formatter;
+  final TextStyle style;
+
+  const _CountUpText({
+    required this.end,
+    required this.formatter,
+    required this.style,
+  });
+
+  @override
+  State<_CountUpText> createState() => _CountUpTextState();
+}
+
+class _CountUpTextState extends State<_CountUpText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    // Short delay lets the layout settle before the numbers start moving.
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_CountUpText old) {
+    super.didUpdateWidget(old);
+    if (old.end != widget.end) {
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder:
+          (_, __) => Text(
+            widget.formatter(widget.end * _anim.value),
+            style: widget.style,
+          ),
+    );
+  }
+}
 
 class _Skeleton extends StatefulWidget {
   const _Skeleton();

@@ -81,7 +81,14 @@ class MainShell extends ConsumerWidget {
             context.go(visibleTabs[idx - 1].route);
           }
         },
-        child: child,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          transitionBuilder:
+              (child, anim) => FadeTransition(opacity: anim, child: child),
+          child: KeyedSubtree(key: ValueKey(currentRoute), child: child),
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(

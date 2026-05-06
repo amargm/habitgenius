@@ -154,6 +154,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                 cycles: svc.completedCycles,
                 primary: primary,
                 isStopwatch: svc.mode == FocusMode.stopwatch,
+                remaining: svc.remaining,
+                plannedDuration: svc.plannedDuration,
               ),
             ),
             const SizedBox(height: 32),
@@ -182,18 +184,92 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ),
             const SizedBox(height: 32),
 
-            // Recent sessions
+            // Recent sessions — grouped by date
             if (sessions.isNotEmpty) ...[
               _SectionLabel(label: 'Recent sessions'),
               const SizedBox(height: 12),
-              ...sessions.reversed
-                  .take(10)
-                  .map((s) => _SessionTile(session: s)),
+              ..._buildGroupedSessions(sessions),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// Builds session tiles grouped by local calendar day, newest first.
+  /// Shows at most 20 sessions across all groups.
+  List<Widget> _buildGroupedSessions(List<FocusSession> sessions) {
+    final today = DateTime.now();
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    // Take 20 most recent, newest first.
+    final recent = sessions.reversed.take(20).toList();
+
+    // Group by local date string 'yyyy-MM-dd'.
+    final Map<String, List<FocusSession>> byDay = {};
+    for (final s in recent) {
+      final d = DateTime.tryParse(s.startedAt)?.toLocal();
+      if (d == null) continue;
+      final key =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      byDay.putIfAbsent(key, () => []).add(s);
+    }
+
+    String dayLabel(String key) {
+      final parts = key.split('-');
+      final d = DateTime(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
+      if (d.year == today.year &&
+          d.month == today.month &&
+          d.day == today.day) {
+        return 'Today';
+      }
+      if (d.year == yesterday.year &&
+          d.month == yesterday.month &&
+          d.day == yesterday.day) {
+        return 'Yesterday';
+      }
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[d.month - 1]} ${d.day}';
+    }
+
+    final widgets = <Widget>[];
+    for (final key in byDay.keys) {
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, top: 4),
+          child: Text(
+            dayLabel(key),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: context.appColors.textMuted,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+      );
+      for (final s in byDay[key]!) {
+        widgets.add(_SessionTile(session: s));
+      }
+    }
+    return widgets;
   }
 
   // ── Helpers ───────────────────────────────────────────────
@@ -356,6 +432,8 @@ class _TimerRing extends StatelessWidget {
   final int cycles;
   final Color primary;
   final bool isStopwatch;
+  final int remaining;
+  final int plannedDuration;
 
   const _TimerRing({
     required this.progress,
@@ -365,6 +443,8 @@ class _TimerRing extends StatelessWidget {
     required this.cycles,
     required this.primary,
     required this.isStopwatch,
+    this.remaining = 0,
+    this.plannedDuration = 0,
   });
 
   @override
@@ -379,8 +459,11 @@ class _TimerRing extends StatelessWidget {
             size: const Size(220, 220),
             painter: _RingPainter(
               progress: isStopwatch ? 0 : progress,
-              color: primary,
+              remaining: remaining,
+              plannedDuration: plannedDuration,
+              primary: primary,
               inactive: primary.withValues(alpha: 0.12),
+              isRunning: state == TimerState.running,
             ),
           ),
           Column(
@@ -430,20 +513,46 @@ class _TimerRing extends StatelessWidget {
 
 class _RingPainter extends CustomPainter {
   final double progress;
-  final Color color;
+  final int remaining;
+  final int plannedDuration;
+  final Color primary;
   final Color inactive;
+  final bool isRunning;
 
   const _RingPainter({
     required this.progress,
-    required this.color,
+    required this.remaining,
+    required this.plannedDuration,
+    required this.primary,
     required this.inactive,
+    required this.isRunning,
   });
+
+  /// Derives the arc colour based on urgency:
+  /// Normal → Amber (last 5 min) → Red (last 1 min).
+  Color get _arcColor {
+    if (!isRunning || plannedDuration == 0) return primary;
+    const amber = Color(0xFFFAA61A);
+    const red = Color(0xFFE53935);
+    if (remaining <= 60) {
+      // Last minute: interpolate amber → red
+      final t = 1.0 - (remaining / 60).clamp(0.0, 1.0);
+      return Color.lerp(amber, red, t)!;
+    }
+    if (remaining <= 300) {
+      // Last 5 minutes: interpolate primary → amber
+      final t = 1.0 - ((remaining - 60) / 240).clamp(0.0, 1.0);
+      return Color.lerp(primary, amber, t)!;
+    }
+    return primary;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     const stroke = 10.0;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - stroke) / 2;
+    final arcColor = _arcColor;
 
     // Track
     canvas.drawCircle(
@@ -458,13 +567,32 @@ class _RingPainter extends CustomPainter {
     // Arc
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
+      final sweep = 2 * math.pi * progress;
+
+      // Glow pass (only when running)
+      if (isRunning) {
+        canvas.drawArc(
+          rect,
+          -math.pi / 2,
+          sweep,
+          false,
+          Paint()
+            ..color = arcColor.withValues(alpha: 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = stroke + 6
+            ..strokeCap = StrokeCap.round
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+      }
+
+      // Main arc
       canvas.drawArc(
         rect,
         -math.pi / 2,
-        2 * math.pi * progress,
+        sweep,
         false,
         Paint()
-          ..color = color
+          ..color = arcColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = stroke
           ..strokeCap = StrokeCap.round,
@@ -473,7 +601,11 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.progress != progress;
+  bool shouldRepaint(_RingPainter old) =>
+      old.progress != progress ||
+      old.remaining != remaining ||
+      old.isRunning != isRunning ||
+      old.primary != primary;
 }
 
 // ── Controls ──────────────────────────────────────────────

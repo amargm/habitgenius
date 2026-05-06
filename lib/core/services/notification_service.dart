@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../models/habit.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -15,6 +16,8 @@ class NotificationService {
   // Channel IDs
   static const _habitChannelId = 'habit_reminders';
   static const _habitChannelName = 'Habit Reminders';
+  // Fixed notification ID for the global daily reminder (Settings toggle).
+  static const _globalReminderId = 999997;
 
   /// Initialise the plugin and timezone data. Safe to call multiple times.
   /// All failures are non-fatal — the app runs without notifications rather
@@ -78,6 +81,7 @@ class NotificationService {
     required String habitName,
     required TimeOfDay timeOfDay,
     List<int> scheduleDays = const [],
+    HabitSchedule schedule = HabitSchedule.daily,
   }) async {
     if (!_initialised) {
       debugPrint(
@@ -100,8 +104,8 @@ class NotificationService {
 
     final notifDetails = const NotificationDetails(android: androidDetails);
 
-    if (scheduleDays.isEmpty) {
-      // Daily — one notification that repeats every day at the given time.
+    if (scheduleDays.isEmpty || schedule == HabitSchedule.daily) {
+      // ── Daily ──────────────────────────────────────────────────────────
       final id = habitId.hashCode.abs() % 100000;
       final scheduledDate = _nextInstanceOfTime(timeOfDay, null);
       try {
@@ -121,9 +125,34 @@ class NotificationService {
           '[NotificationService] scheduleHabitReminder (daily) failed: $e',
         );
       }
+    } else if (schedule == HabitSchedule.monthly) {
+      // ── Monthly — one notification per selected day-of-month ───────────
+      // scheduleDays contains day-of-month values (1–31).
+      for (final dom in scheduleDays) {
+        // Use a different ID multiplier to avoid collision with weekday IDs.
+        final id = (habitId.hashCode.abs() + dom * 200002) % 2000000000;
+        final scheduledDate = _nextInstanceOfDayOfMonth(timeOfDay, dom);
+        try {
+          await _plugin.zonedSchedule(
+            id,
+            'Time for: $habitName',
+            'Tap to log your progress',
+            scheduledDate,
+            notifDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+          );
+        } catch (e) {
+          debugPrint(
+            '[NotificationService] scheduleHabitReminder (monthly dom=$dom) failed: $e',
+          );
+        }
+      }
     } else {
-      // Specific weekdays — schedule one repeating notification per day.
-      // IDs are derived from habitId + day so they don't collide.
+      // ── Specific weekdays (weekly / weekdays / weekends / custom) ──────
+      // scheduleDays: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat.
       for (final weekday in scheduleDays) {
         final id = (habitId.hashCode.abs() + weekday * 100001) % 2000000000;
         final scheduledDate = _nextInstanceOfTime(timeOfDay, weekday);
@@ -141,26 +170,25 @@ class NotificationService {
           );
         } catch (e) {
           debugPrint(
-            '[NotificationService] scheduleHabitReminder (day=$weekday) failed: $e',
+            '[NotificationService] scheduleHabitReminder (weekday=$weekday) failed: $e',
           );
         }
       }
     }
   }
 
-  /// Cancels the reminder for a specific habit (all per-day IDs included).
+  /// Cancels all reminders for a specific habit (daily + per-weekday + monthly).
   static Future<void> cancelHabitReminder(String habitId) async {
-    // Cancel the daily ID.
-    final dailyId = habitId.hashCode.abs() % 100000;
-    try {
-      await _plugin.cancel(dailyId);
-    } catch (_) {}
-    // Cancel per-weekday IDs (1–7).
-    for (int d = 1; d <= 7; d++) {
-      final id = (habitId.hashCode.abs() + d * 100001) % 2000000000;
-      try {
-        await _plugin.cancel(id);
-      } catch (_) {}
+    final base = habitId.hashCode.abs();
+    // Daily ID.
+    try { await _plugin.cancel(base % 100000); } catch (_) {}
+    // Per-weekday IDs: scheduleDays values are 0=Sun..6=Sat.
+    for (int d = 0; d <= 6; d++) {
+      try { await _plugin.cancel((base + d * 100001) % 2000000000); } catch (_) {}
+    }
+    // Per-day-of-month IDs: dom values are 1..31.
+    for (int d = 1; d <= 31; d++) {
+      try { await _plugin.cancel((base + d * 200002) % 2000000000); } catch (_) {}
     }
   }
 
@@ -174,7 +202,11 @@ class NotificationService {
   /// When [weekday] is given (1=Mon … 7=Sun), the returned datetime is the
   /// next occurrence of that weekday at [tod]. Otherwise it is today or
   /// tomorrow at [tod].
-  static tz.TZDateTime _nextInstanceOfTime(TimeOfDay tod, int? weekday) {
+  /// Returns the next [tz.TZDateTime] for [tod].
+  ///
+  /// [weekdaySun0]: the habit's weekday value in the 0=Sun,1=Mon…6=Sat
+  /// convention stored in [Habit.scheduleDays]. Pass null for daily.
+  static tz.TZDateTime _nextInstanceOfTime(TimeOfDay tod, int? weekdaySun0) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
       tz.local,
@@ -184,17 +216,103 @@ class NotificationService {
       tod.hour,
       tod.minute,
     );
-    if (weekday == null) {
+    if (weekdaySun0 == null) {
       // Daily: if today's slot already passed, move to tomorrow.
       if (scheduled.isBefore(now)) {
         scheduled = scheduled.add(const Duration(days: 1));
       }
     } else {
-      // Specific weekday: advance until the correct day (and time hasn't passed).
-      while (scheduled.weekday != weekday || scheduled.isBefore(now)) {
+      // Convert from app convention (0=Sun…6=Sat) to DateTime.weekday
+      // convention (1=Mon…6=Sat, 7=Sun) used by tz.TZDateTime.
+      final tzWeekday = weekdaySun0 == 0 ? 7 : weekdaySun0;
+      // Advance day by day until we land on the correct weekday.
+      // The loop body is guaranteed to terminate within 7 iterations.
+      int safety = 0;
+      while ((scheduled.weekday != tzWeekday || scheduled.isBefore(now)) &&
+          safety < 8) {
         scheduled = scheduled.add(const Duration(days: 1));
+        safety++;
       }
     }
     return scheduled;
+  }
+
+  /// Returns the next [tz.TZDateTime] for [tod] on the given [dayOfMonth].
+  static tz.TZDateTime _nextInstanceOfDayOfMonth(
+    TimeOfDay tod,
+    int dayOfMonth,
+  ) {
+    final now = tz.TZDateTime.now(tz.local);
+    // Try this calendar month first.
+    final daysThis = DateUtils.getDaysInMonth(now.year, now.month);
+    final clampedThis = dayOfMonth.clamp(1, daysThis);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      clampedThis,
+      tod.hour,
+      tod.minute,
+    );
+    // If that date/time has already passed, move to next month.
+    if (scheduled.isBefore(now)) {
+      int year = now.year;
+      int month = now.month + 1;
+      if (month > 12) {
+        month = 1;
+        year++;
+      }
+      final daysNext = DateUtils.getDaysInMonth(year, month);
+      final clampedNext = dayOfMonth.clamp(1, daysNext);
+      scheduled = tz.TZDateTime(
+        tz.local,
+        year,
+        month,
+        clampedNext,
+        tod.hour,
+        tod.minute,
+      );
+    }
+    return scheduled;
+  }
+
+  // ── Global (settings-level) reminder ─────────────────────
+
+  /// Schedules a single daily notification for users who prefer a global
+  /// reminder rather than per-habit ones. Triggered from Settings.
+  static Future<void> scheduleGlobalReminder(TimeOfDay tod) async {
+    if (!_initialised) return;
+    await cancelGlobalReminder();
+    const androidDetails = AndroidNotificationDetails(
+      _habitChannelId,
+      _habitChannelName,
+      channelDescription: 'Daily reminders for your tracked habits',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+    final scheduledDate = _nextInstanceOfTime(tod, null);
+    try {
+      await _plugin.zonedSchedule(
+        _globalReminderId,
+        'Time to check your habits',
+        'How are your habits going today?',
+        scheduledDate,
+        const NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('[NotificationService] scheduleGlobalReminder failed: $e');
+    }
+  }
+
+  /// Cancels the global daily reminder (from Settings).
+  static Future<void> cancelGlobalReminder() async {
+    try {
+      await _plugin.cancel(_globalReminderId);
+    } catch (_) {}
   }
 }
