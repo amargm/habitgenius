@@ -182,9 +182,8 @@ class CelebrationOverlay {
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder:
-          (_) => Positioned.fill(
-            child: _CelebrationWidget(onDone: entry.remove),
-          ),
+          (_) =>
+              Positioned.fill(child: _CelebrationWidget(onDone: entry.remove)),
     );
     overlay.insert(entry);
   }

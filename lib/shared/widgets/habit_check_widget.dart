@@ -57,7 +57,11 @@ class HabitCheckWidget extends ConsumerWidget {
           unit: habit.unit ?? 'min',
           color: color,
           isCompleted: isCompleted,
-          onTap: () => _toggle(context, ref),
+          onTap:
+              () =>
+                  isCompleted
+                      ? _confirmUndoTimer(context, ref)
+                      : _pickTimer(context, ref),
         );
     }
   }
@@ -78,6 +82,136 @@ class HabitCheckWidget extends ConsumerWidget {
       final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
       if (master) _celebrate(context, prefs);
     }
+  }
+
+  /// Shows a minute-picker sheet so the user can log time for a timer habit.
+  Future<void> _pickTimer(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final logs = ref.read(appDataProvider).habitLogs;
+    final current =
+        HabitHelpers.logForDate(logs, habit.id, dateStr)?.value ?? 0;
+    final result = await _showMinutePicker(context, current, habit.targetValue);
+    if (result == null || !context.mounted) return;
+    // Store as delta from current value
+    final delta = result - current;
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .toggleHabit(habitId: habit.id, dateStr: dateStr, delta: delta);
+    final nowDone = HabitHelpers.isCompletedOn(
+      habit,
+      ref.read(appDataProvider).habitLogs,
+      dateStr,
+    );
+    if (nowDone && context.mounted) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
+      if (master) _celebrate(context, prefs);
+    }
+  }
+
+  /// Confirms with the user before clearing a timer habit log.
+  Future<void> _confirmUndoTimer(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Undo progress?'),
+            content: const Text(
+              'This will clear the time logged for today. Are you sure?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Clear'),
+              ),
+            ],
+          ),
+    );
+    if (confirm == true && context.mounted) {
+      await ref
+          .read(dataNotifierProvider.notifier)
+          .toggleHabit(habitId: habit.id, dateStr: dateStr);
+    }
+  }
+
+  /// Shows a bottom sheet to pick minutes (0–180) for timer habits.
+  Future<int?> _showMinutePicker(
+    BuildContext context,
+    int current,
+    int target,
+  ) {
+    int val = current;
+    return showModalBottomSheet<int>(
+      context: context,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setState) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Log time for ${habit.name}',
+                          style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              onPressed:
+                                  val > 0 ? () => setState(() => val--) : null,
+                              icon: const Icon(Icons.remove_rounded),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                '$val min',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(ctx).textTheme.headlineMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => setState(() => val++),
+                              icon: const Icon(Icons.add_rounded),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Slider(
+                          min: 0,
+                          max: (target * 1.5).clamp(30, 240).toDouble(),
+                          divisions: (target * 1.5).clamp(30, 240).toInt(),
+                          value: val.toDouble(),
+                          onChanged: (v) => setState(() => val = v.round()),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () => Navigator.pop(ctx, val),
+                            child: const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ),
+    );
   }
 
   Future<void> _increment(

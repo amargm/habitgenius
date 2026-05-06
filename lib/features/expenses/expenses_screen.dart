@@ -903,27 +903,19 @@ class _SpendBarChart extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final barAreaW = constraints.maxWidth;
-        final chartH = constraints.maxHeight - 24; // reserve for labels
-        final n = labels.length;
-        final groupW = barAreaW / n;
-        final barW = (groupW * 0.3).clamp(4.0, 16.0);
-        final gap = barW * 0.4;
-
         return Column(
           children: [
             Expanded(
               child: CustomPaint(
-                size: Size(barAreaW, chartH),
-                painter: _BarChartPainter(
+                size: Size(constraints.maxWidth, constraints.maxHeight - 24),
+                painter: _LineChartPainter(
                   labels: labels,
                   expValues: expValues,
                   incValues: incValues,
                   maxVal: maxVal,
                   expColor: expColor,
                   incColor: incColor,
-                  barW: barW,
-                  gap: gap,
+                  textColor: context.appColors.textMuted,
                 ),
               ),
             ),
@@ -953,70 +945,146 @@ class _SpendBarChart extends StatelessWidget {
   }
 }
 
-class _BarChartPainter extends CustomPainter {
+class _LineChartPainter extends CustomPainter {
   final List<String> labels;
   final List<double> expValues;
   final List<double> incValues;
   final double maxVal;
   final Color expColor;
   final Color incColor;
-  final double barW;
-  final double gap;
+  final Color textColor;
 
-  const _BarChartPainter({
+  const _LineChartPainter({
     required this.labels,
     required this.expValues,
     required this.incValues,
     required this.maxVal,
     required this.expColor,
     required this.incColor,
-    required this.barW,
-    required this.gap,
+    required this.textColor,
   });
+
+  String _fmt(double v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return v.toStringAsFixed(0);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final n = labels.length;
     if (n == 0) return;
-    final groupW = size.width / n;
-    final h = size.height;
+    const topPad = 18.0;
+    const bottomPad = 4.0;
+    final drawH = size.height - topPad - bottomPad;
+    final groupW = size.width / (n == 1 ? 2 : n - 1);
 
-    for (int i = 0; i < n; i++) {
-      final centerX = groupW * i + groupW / 2;
-      final expH = maxVal > 0 ? (expValues[i] / maxVal) * (h - 8) : 0.0;
-      final incH = maxVal > 0 ? (incValues[i] / maxVal) * (h - 8) : 0.0;
+    Offset pt(int i, double val) {
+      final x = n == 1 ? size.width / 2 : i * groupW;
+      final y = topPad + drawH - (maxVal > 0 ? (val / maxVal) * drawH : 0.0);
+      return Offset(x, y);
+    }
 
-      // Expense bar (left of center)
-      if (expH > 0) {
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(centerX - gap / 2 - barW, h - expH, barW, expH),
-          const Radius.circular(3),
+    // Grid line at 50%
+    final gridPaint =
+        Paint()
+          ..color = textColor.withAlpha(30)
+          ..strokeWidth = 0.5;
+    canvas.drawLine(
+      Offset(0, topPad + drawH / 2),
+      Offset(size.width, topPad + drawH / 2),
+      gridPaint,
+    );
+    // Baseline
+    canvas.drawLine(
+      Offset(0, topPad + drawH),
+      Offset(size.width, topPad + drawH),
+      gridPaint..color = textColor.withAlpha(50),
+    );
+
+    void drawLine(List<double> values, Color color) {
+      if (values.every((v) => v == 0)) return;
+      final linePaint =
+          Paint()
+            ..color = color.withAlpha(210)
+            ..strokeWidth = 2
+            ..strokeCap = StrokeCap.round
+            ..style = PaintingStyle.stroke;
+      final fillPaint =
+          Paint()
+            ..color = color.withAlpha(25)
+            ..style = PaintingStyle.fill;
+
+      final path = Path();
+      final fillPath = Path();
+      final pts = List.generate(n, (i) => pt(i, values[i]));
+
+      fillPath.moveTo(pts.first.dx, topPad + drawH);
+      fillPath.lineTo(pts.first.dx, pts.first.dy);
+      path.moveTo(pts.first.dx, pts.first.dy);
+
+      for (int i = 1; i < n; i++) {
+        // Smooth cubic curve
+        final cp1x = pts[i - 1].dx + (pts[i].dx - pts[i - 1].dx) * 0.5;
+        path.cubicTo(
+          cp1x,
+          pts[i - 1].dy,
+          cp1x,
+          pts[i].dy,
+          pts[i].dx,
+          pts[i].dy,
         );
-        canvas.drawRRect(rect, Paint()..color = expColor.withAlpha(210));
+        fillPath.cubicTo(
+          cp1x,
+          pts[i - 1].dy,
+          cp1x,
+          pts[i].dy,
+          pts[i].dx,
+          pts[i].dy,
+        );
       }
+      fillPath.lineTo(pts.last.dx, topPad + drawH);
+      fillPath.close();
 
-      // Income bar (right of center)
-      if (incH > 0) {
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(centerX + gap / 2, h - incH, barW, incH),
-          const Radius.circular(3),
+      canvas.drawPath(fillPath, fillPaint);
+      canvas.drawPath(path, linePaint);
+
+      // Data points + labels
+      final dotPaint = Paint()..color = color.withAlpha(230);
+      final bgPaint = Paint()..color = color.withAlpha(40);
+      for (int i = 0; i < n; i++) {
+        if (values[i] == 0) continue;
+        canvas.drawCircle(pts[i], 4, bgPaint);
+        canvas.drawCircle(pts[i], 2.5, dotPaint);
+
+        // Data label above point
+        final label = _fmt(values[i]);
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(
+              color: color.withAlpha(220),
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final lx = (pts[i].dx - tp.width / 2).clamp(0.0, size.width - tp.width);
+        final ly = (pts[i].dy - tp.height - 4).clamp(
+          0.0,
+          size.height.toDouble(),
         );
-        canvas.drawRRect(rect, Paint()..color = incColor.withAlpha(210));
+        tp.paint(canvas, Offset(lx, ly));
       }
     }
 
-    // Baseline
-    canvas.drawLine(
-      Offset(0, h),
-      Offset(size.width, h),
-      Paint()
-        ..color = expColor.withAlpha(30)
-        ..strokeWidth = 1,
-    );
+    drawLine(expValues, expColor);
+    drawLine(incValues, incColor);
   }
 
   @override
-  bool shouldRepaint(_BarChartPainter old) =>
+  bool shouldRepaint(_LineChartPainter old) =>
       old.expValues != expValues ||
       old.incValues != incValues ||
       old.maxVal != maxVal;

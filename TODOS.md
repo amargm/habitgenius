@@ -109,3 +109,24 @@
 - [x] **31.2** Fix any broken behaviour in the existing haptic/celebration feedback.
 - [x] **32** Notifications & Reminders: fix and complete the per-habit reminder scheduling (set in Add/Edit Habit → Reminder) so notifications fire reliably; add a global "reschedule all" on app resume; validate Android exact-alarm permission.
 
+---
+
+## New — May 2026 (Batch 6)
+
+- [ ] **33** Expense Timeline period-filter chips are not visible in light mode — fix chip theme contrast for both selected and unselected states.
+- [ ] **33.1** Same chip visibility issue in New Habit creation screen: progress-type chips and schedule chips invisible in light mode.
+- [ ] **33.2** Add more schedule options: Weekdays (Mon–Fri), Weekends (Sat–Sun), Weekly (one day/week with picker), Monthly (day of month with picker), in addition to Daily and Custom.
+- [ ] **34** Habits screen (All / Today view): habits not scheduled for today should render visually disabled (dimmed, non-interactive checkbox) rather than fully functional.
+- [ ] **35** Counter progress type edge cases: from the Today section on the home screen, add long-press to decrement; show min/max caps clearly; prevent negative values and wrap-around.
+- [ ] **36** Notifications still not firing — root cause: `tz.local` is never set to the device's actual timezone; add `flutter_timezone` dependency and call `tz.setLocalLocation(...)` in `NotificationService.init()`.
+- [ ] **37** Timer progress type: marking done should use a time-picker/input flow rather than a plain toggle; undoing a completed timer habit must show "Are you sure?" confirmation.
+- [ ] **38** Yearly heatmap (habit and mood): all day cells in the grid should show a subtle border/outline even when empty so the calendar grid is always visible; applies in both light and dark mode.
+- [ ] **38.1** Yearly heatmap press-and-hold overlay: day-of-week header labels (M,T,W,T,F,S,S) should use white with higher opacity so they are clearly readable.
+- [ ] **39** Expense Timeline chart: replace the bar chart with a line graph; add data labels on each point with smart number formatting.
+- [ ] **40** Journal new-entry screen (dark mode): title field and tag input field show a double border (inner sharp rectangle + outer rounded one) — fix so only the outer container border is visible.
+- [ ] **40.1** Global UI contrast review: ensure all interactive components (buttons, chips, inputs, cards) have adequate contrast in both light and dark mode.
+- [ ] **41** Home screen "This Week" expand/collapse: on expand, animate the current-week row sliding down while the 3 previous-week rows slide in from above; aggregate label should update to "This Month"; no static fixed row at top.
+- [ ] **41.1** Today section habit names: long names should wrap to a second line instead of being truncated with "…".
+- [ ] **42** Focus screen: add mode-selector chips (Pomodoro / Timer / Stopwatch) so the user can switch between countdown and stopwatch mode; wire selection to `FocusSessionService.configure(mode:)`.
+- [ ] **42.1** Home screen weekly status: Focus day-cells use a tall bar shape instead of the square block used by Habits/Journal — fix to use the same square block style with fill ratio.
+

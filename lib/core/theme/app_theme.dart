@@ -167,14 +167,27 @@ class AppTheme {
       // Chip
       chipTheme: ChipThemeData(
         backgroundColor:
-            isDark ? AppColors.bgElevated : const Color(0xFFF0F0F5),
+            isDark ? AppColors.bgElevated : const Color(0xFFE2E2ED),
         selectedColor: themeColor.primary,
-        labelStyle: const TextStyle(
+        disabledColor: isDark ? AppColors.bgElevated : const Color(0xFFE2E2ED),
+        labelStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
           fontFamily: 'Inter',
+          color: isDark ? AppColors.text : const Color(0xFF15151A),
         ),
-        side: const BorderSide(color: Colors.transparent),
+        // secondaryLabelStyle = text style when chip is selected
+        secondaryLabelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
+          color: onPrimary, // white on primary-coloured background
+        ),
+        checkmarkColor: onPrimary,
+        side: BorderSide(
+          color: isDark ? Colors.transparent : const Color(0xFFCCCCD6),
+          width: 1,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),

@@ -345,105 +345,126 @@ class _HabitTile extends ConsumerWidget {
       habitColor = primary;
     }
     final streak = HabitHelpers.currentStreak(habit, logs, DateTime.now());
+    final today = DateTime.now();
+    final isScheduledToday = HabitHelpers.isScheduledOn(habit, today);
+    // In All view dateStr == today — dim habits not scheduled for today.
+    final todayStr = HabitHelpers.todayStr();
+    final isAllView = dateStr == todayStr;
+    final isDimmed = isAllView && !isScheduledToday;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: context.cardDecoration,
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: habitColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+    return Opacity(
+      opacity: isDimmed ? 0.45 : 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: context.cardDecoration,
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: habitColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(habit.icon, style: const TextStyle(fontSize: 22)),
+              ),
             ),
-            child: Center(
-              child: Text(habit.icon, style: const TextStyle(fontSize: 22)),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  habit.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    habit.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-                if (streak > 0)
-                  Row(
-                    children: [
-                      const Text('🔥', style: TextStyle(fontSize: 12)),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$streak day streak',
-                        style: TextStyle(
-                          color: context.appColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                  if (isDimmed)
+                    Text(
+                      'Not scheduled today',
+                      style: TextStyle(
+                        color: context.appColors.textMuted,
+                        fontSize: 11,
                       ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          HabitCheckWidget(habit: habit, dateStr: dateStr),
-          const SizedBox(width: 4),
-          // Long-press menu: archive or delete the habit.
-          PopupMenuButton<_HabitAction>(
-            icon: Icon(
-              Icons.more_vert_rounded,
-              size: 18,
-              color: context.appColors.textMuted,
-            ),
-            onSelected: (action) => _onAction(context, ref, action),
-            itemBuilder:
-                (_) => [
-                  const PopupMenuItem(
-                    value: _HabitAction.edit,
-                    child: Row(
+                    )
+                  else if (streak > 0)
+                    Row(
                       children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: 10),
-                        Text('Edit'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: _HabitAction.archive,
-                    child: Row(
-                      children: [
-                        Icon(Icons.archive_outlined, size: 18),
-                        SizedBox(width: 10),
-                        Text('Archive'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: _HabitAction.delete,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: AppColors.danger,
-                        ),
-                        SizedBox(width: 10),
+                        const Text('🔥', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 4),
                         Text(
-                          'Delete',
-                          style: TextStyle(color: AppColors.danger),
+                          '$streak day streak',
+                          style: TextStyle(
+                            color: context.appColors.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
-                  ),
                 ],
-          ),
-        ],
-      ),
+              ),
+            ),
+            // Only show interactive check widget when scheduled today
+            IgnorePointer(
+              ignoring: isDimmed,
+              child: HabitCheckWidget(habit: habit, dateStr: dateStr),
+            ),
+            const SizedBox(width: 4),
+            // Long-press menu: archive or delete the habit.
+            PopupMenuButton<_HabitAction>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                size: 18,
+                color: context.appColors.textMuted,
+              ),
+              onSelected: (action) => _onAction(context, ref, action),
+              itemBuilder:
+                  (_) => [
+                    const PopupMenuItem(
+                      value: _HabitAction.edit,
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18),
+                          SizedBox(width: 10),
+                          Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: _HabitAction.archive,
+                      child: Row(
+                        children: [
+                          Icon(Icons.archive_outlined, size: 18),
+                          SizedBox(width: 10),
+                          Text('Archive'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: _HabitAction.delete,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: AppColors.danger,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.danger),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+            ),
+          ],
+        ),
+      ), // Opacity
     );
   }
 

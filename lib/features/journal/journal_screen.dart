@@ -505,6 +505,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                             ),
                             decoration: const InputDecoration(
                               hintText: 'Title',
+                              filled: false,
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -635,6 +636,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                                       color: context.appColors.textMuted,
                                       fontSize: 13,
                                     ),
+                                    filled: false,
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 8,
                                     ),

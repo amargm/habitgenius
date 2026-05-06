@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -23,6 +24,16 @@ class NotificationService {
 
     try {
       tz_data.initializeTimeZones();
+      // Set tz.local to the device's actual IANA timezone so zonedSchedule
+      // fires at the correct local time (default is UTC if not set).
+      try {
+        final tzName = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(tzName));
+      } catch (_) {
+        // Fallback: keep tz.local as UTC — notifications will fire at the
+        // wrong time but the app won't crash.
+        debugPrint('[NotificationService] Could not set local timezone.');
+      }
     } catch (e) {
       debugPrint('[NotificationService] Timezone init failed: $e');
       return;

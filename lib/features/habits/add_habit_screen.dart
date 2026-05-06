@@ -195,7 +195,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   HabitProgressType _progressType = HabitProgressType.checkbox;
   HabitSchedule _schedule = HabitSchedule.daily;
-  List<int> _scheduleDays = [1, 2, 3, 4, 5]; // Mon–Fri default
+  List<int> _scheduleDays = [];
+  // UI-level schedule preset; maps to HabitSchedule + scheduleDays on save.
+  _SchedulePreset _schedulePreset = _SchedulePreset.daily;
   String _emoji = '💪';
   String _colorHex = '#6C5CE7';
   TimeOfDay? _reminderTime;
@@ -217,6 +219,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       _progressType = h.progressType;
       _schedule = h.schedule;
       _scheduleDays = List<int>.from(h.scheduleDays);
+      _schedulePreset = _SchedulePreset.fromHabit(h.schedule, h.scheduleDays);
       _emoji = h.icon;
       _colorHex = h.colorHex;
       if (h.reminderTime != null) {
@@ -236,6 +239,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       _colorHex = t.colorHex;
       _schedule = t.schedule;
       _scheduleDays = [];
+      _schedulePreset = _SchedulePreset.daily;
       // Do NOT pre-select progress type — user must choose.
       _progressTypeChosen = false;
     }
@@ -255,8 +259,14 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       AppToast.show(context, 'Please choose how you will track this habit.');
       return;
     }
-    if (_schedule == HabitSchedule.specific && _scheduleDays.isEmpty) {
+    if ((_schedule == HabitSchedule.specific ||
+            _schedule == HabitSchedule.weekly) &&
+        _scheduleDays.isEmpty) {
       AppToast.show(context, 'Select at least one day.');
+      return;
+    }
+    if (_schedule == HabitSchedule.monthly && _scheduleDays.isEmpty) {
+      AppToast.show(context, 'Select a day of the month.');
       return;
     }
     setState(() => _saving = true);
@@ -519,25 +529,38 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children:
-                  [HabitSchedule.daily, HabitSchedule.specific].map((s) {
-                    final selected = _schedule == s;
+                  _SchedulePreset.values.map((p) {
+                    final selected = _schedulePreset == p;
                     return ChoiceChip(
-                      label: Text(_scheduleLabel(s)),
+                      label: Text(p.label),
                       selected: selected,
-                      onSelected:
-                          (_) => setState(() {
-                            _schedule = s;
-                            if (s == HabitSchedule.daily) _scheduleDays = [];
-                          }),
+                      onSelected: (_) {
+                        setState(() {
+                          _schedulePreset = p;
+                          _schedule = p.habitSchedule;
+                          _scheduleDays = p.defaultDays;
+                        });
+                      },
                     );
                   }).toList(),
             ),
-            if (_schedule == HabitSchedule.specific) ...[
+            // Day-of-week picker (weekly & custom)
+            if (_schedulePreset == _SchedulePreset.weekly ||
+                _schedulePreset == _SchedulePreset.custom) ...[
               const SizedBox(height: 12),
               _DayPicker(
                 selected: _scheduleDays,
                 onChanged: (days) => setState(() => _scheduleDays = days),
+              ),
+            ],
+            // Day-of-month picker (monthly)
+            if (_schedulePreset == _SchedulePreset.monthly) ...[
+              const SizedBox(height: 12),
+              _MonthDayPicker(
+                selected: _scheduleDays.isNotEmpty ? _scheduleDays.first : 1,
+                onChanged: (d) => setState(() => _scheduleDays = [d]),
               ),
             ],
             const SizedBox(height: 24),
@@ -666,17 +689,86 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
         return 'Checklist';
     }
   }
+}
 
-  static String _scheduleLabel(HabitSchedule s) {
+// ── Schedule preset (UI helper) ───────────────────────────
+
+enum _SchedulePreset {
+  daily,
+  weekdays,
+  weekends,
+  weekly,
+  monthly,
+  custom;
+
+  String get label {
+    switch (this) {
+      case _SchedulePreset.daily:
+        return 'Daily';
+      case _SchedulePreset.weekdays:
+        return 'Weekdays';
+      case _SchedulePreset.weekends:
+        return 'Weekends';
+      case _SchedulePreset.weekly:
+        return 'Weekly';
+      case _SchedulePreset.monthly:
+        return 'Monthly';
+      case _SchedulePreset.custom:
+        return 'Custom';
+    }
+  }
+
+  HabitSchedule get habitSchedule {
+    switch (this) {
+      case _SchedulePreset.daily:
+        return HabitSchedule.daily;
+      case _SchedulePreset.weekdays:
+      case _SchedulePreset.weekends:
+      case _SchedulePreset.custom:
+        return HabitSchedule.specific;
+      case _SchedulePreset.weekly:
+        return HabitSchedule.weekly;
+      case _SchedulePreset.monthly:
+        return HabitSchedule.monthly;
+    }
+  }
+
+  List<int> get defaultDays {
+    switch (this) {
+      case _SchedulePreset.daily:
+        return [];
+      case _SchedulePreset.weekdays:
+        return [1, 2, 3, 4, 5]; // Mon–Fri
+      case _SchedulePreset.weekends:
+        return [0, 6]; // Sun, Sat
+      case _SchedulePreset.weekly:
+        return [DateTime.now().weekday % 7]; // today's weekday
+      case _SchedulePreset.monthly:
+        return [DateTime.now().day]; // today's date
+      case _SchedulePreset.custom:
+        return [];
+    }
+  }
+
+  static _SchedulePreset fromHabit(HabitSchedule s, List<int> days) {
     switch (s) {
       case HabitSchedule.daily:
-        return 'Daily';
+        return _SchedulePreset.daily;
       case HabitSchedule.weekly:
-        return 'Weekly';
+        return _SchedulePreset.weekly;
+      case HabitSchedule.monthly:
+        return _SchedulePreset.monthly;
       case HabitSchedule.specific:
-        return 'Specific days';
-      default:
-        return s.name;
+      case HabitSchedule.custom:
+        final sorted = [...days]..sort();
+        if (sorted.length == 5 &&
+            sorted.every((d) => [1, 2, 3, 4, 5].contains(d))) {
+          return _SchedulePreset.weekdays;
+        }
+        if (sorted.length == 2 && sorted.every((d) => [0, 6].contains(d))) {
+          return _SchedulePreset.weekends;
+        }
+        return _SchedulePreset.custom;
     }
   }
 }
@@ -737,6 +829,53 @@ class _DayPicker extends StatelessWidget {
                 style: TextStyle(
                   color: sel ? Colors.white : context.appColors.textSecondary,
                   fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ── Month-day picker (day 1–31 for monthly habits) ────────
+
+class _MonthDayPicker extends StatelessWidget {
+  final int selected; // 1-31
+  final ValueChanged<int> onChanged;
+
+  const _MonthDayPicker({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(31, (i) {
+        final day = i + 1;
+        final sel = selected == day;
+        return GestureDetector(
+          onTap: () => onChanged(day),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: sel ? primary : context.appColors.bgCard,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: sel ? primary : context.appColors.border,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                '$day',
+                style: TextStyle(
+                  color: sel ? Colors.white : context.appColors.textSecondary,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),

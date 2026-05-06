@@ -43,7 +43,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     with SingleTickerProviderStateMixin {
   int _selectedPreset = FocusSessionService.preset25;
   String _selectedCategory = _kCategories.first;
-  final FocusMode _selectedMode = FocusMode.pomodoro;
+  FocusMode _selectedMode = FocusMode.pomodoro;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +78,29 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ],
             const SizedBox(height: 24),
 
-            // Category chips
+            // Mode selector + category/duration (only when not running)
             if (!svc.isRunning && !svc.isPaused) ...[
+              _SectionLabel(label: 'Mode'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children:
+                    FocusMode.values.map((m) {
+                      return ChoiceChip(
+                        label: Text(_modeLabel(m)),
+                        selected: _selectedMode == m,
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedMode = m;
+                            svc.configure(mode: m);
+                          });
+                        },
+                      );
+                    }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // Category chips
               _SectionLabel(label: 'Category'),
               const SizedBox(height: 8),
               _CategoryChips(
@@ -163,6 +184,17 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
 
   // ── Helpers ───────────────────────────────────────────────
 
+  static String _modeLabel(FocusMode m) {
+    switch (m) {
+      case FocusMode.pomodoro:
+        return 'Pomodoro';
+      case FocusMode.countdown:
+        return 'Timer';
+      case FocusMode.stopwatch:
+        return 'Stopwatch';
+    }
+  }
+
   String _todayStats(List<FocusSession> sessions) {
     final today = DateTime.now();
     // FocusSession.startedAt is stored as UTC; convert to local so sessions
@@ -215,6 +247,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     // Do NOT reset _selectedPreset — preserve the user's chosen duration.
     svc.reset();
     svc.configure(
+      mode: _selectedMode,
       plannedDuration: _selectedPreset,
       category: _selectedCategory,
     );
@@ -231,6 +264,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
       await ref.read(dataNotifierProvider.notifier).addFocusSession(session);
       svc.reset();
       svc.configure(
+        mode: _selectedMode,
         plannedDuration: _selectedPreset,
         category: _selectedCategory,
       );
