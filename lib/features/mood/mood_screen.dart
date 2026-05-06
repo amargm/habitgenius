@@ -964,6 +964,10 @@ class _MiniMonthMood extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: context.appColors.bgElevated,
                   borderRadius: BorderRadius.circular(2),
+                  border: Border.all(
+                    color: context.appColors.textMuted.withValues(alpha: 0.35),
+                    width: 0.5,
+                  ),
                 ),
               );
             },

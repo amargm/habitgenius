@@ -46,7 +46,7 @@ class HabitCheckWidget extends ConsumerWidget {
           unit: habit.unit ?? '',
           color: color,
           isCompleted: isCompleted,
-          onIncrement: () => _increment(context, ref, 1),
+          onIncrement: isCompleted ? null : () => _increment(context, ref, 1),
           onDecrement: () => _increment(context, ref, -1),
         );
 
@@ -200,13 +200,54 @@ class HabitCheckWidget extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Slider(
-                          min: 0,
-                          max: maxMins.toDouble(),
-                          divisions: maxMins,
-                          value: val.toDouble(),
-                          onChanged: (v) => setState(() => val = v.round()),
+                        const SizedBox(height: 4),
+                        // Slider with target marker overlay
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Slider(
+                              min: 0,
+                              max: maxMins.toDouble(),
+                              divisions: maxMins,
+                              value: val.toDouble(),
+                              onChanged: (v) => setState(() => val = v.round()),
+                            ),
+                            // Target time marker
+                            if (target > 0 && target <= maxMins)
+                              Positioned(
+                                left: (target / maxMins) *
+                                    (MediaQuery.of(ctx).size.width - 48 - 24),
+                                top: -4,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 2,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(ctx)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.55),
+                                        borderRadius: BorderRadius.circular(1),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${target}m',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        color: Theme.of(ctx)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -333,7 +374,7 @@ class _CounterControl extends StatelessWidget {
   final String unit;
   final Color color;
   final bool isCompleted;
-  final VoidCallback onIncrement;
+  final VoidCallback? onIncrement;
   final VoidCallback onDecrement;
 
   const _CounterControl({
@@ -377,7 +418,10 @@ class _CounterControl extends StatelessWidget {
           onTap: onIncrement,
           child: Icon(
             Icons.add_circle_rounded,
-            color: isCompleted ? color : context.appColors.textSecondary,
+            color:
+                onIncrement != null
+                    ? (isCompleted ? color : context.appColors.textSecondary)
+                    : context.appColors.textMuted,
             size: 22,
           ),
         ),

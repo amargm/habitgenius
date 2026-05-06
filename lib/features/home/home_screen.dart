@@ -709,80 +709,160 @@ class _TodayHabitsRow extends ConsumerWidget {
     String dateStr,
   ) {
     final target = habit.targetValue > 0 ? habit.targetValue : 60;
-    final remaining = (target - currentVal).clamp(0, target + 60);
-    final presets =
-        [5, 10, 15, 20, 30, 45, 60].where((m) => m <= remaining + 30).toList();
-    if (presets.isEmpty) presets.add(15);
+    final maxMins = (target * 1.5).clamp(30, 240).toInt();
+    int val = currentVal.clamp(0, maxMins);
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
         final primary = Theme.of(context).colorScheme.primary;
-        return Container(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-          decoration: BoxDecoration(
-            color: context.appColors.bgCard,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.appColors.border,
-                  borderRadius: BorderRadius.circular(2),
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+              decoration: BoxDecoration(
+                color: context.appColors.bgCard,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Log time · ${habit.name}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '$currentVal / $target ${habit.unit ?? 'min'} done',
-                style: TextStyle(
-                  color: context.appColors.textMuted,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children:
-                    presets
-                        .map(
-                          (mins) => ElevatedButton(
-                            onPressed: () async {
-                              Navigator.pop(ctx);
-                              await ref
-                                  .read(dataNotifierProvider.notifier)
-                                  .toggleHabit(
-                                    habitId: habit.id,
-                                    dateStr: dateStr,
-                                    delta: mins,
-                                  );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primary.withValues(alpha: 0.12),
-                              foregroundColor: primary,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.appColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Log time · ${habit.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$currentVal / $target ${habit.unit ?? 'min'} done',
+                    style: TextStyle(
+                      color: context.appColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // +/- stepper row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed:
+                            val > 0 ? () => setState(() => val--) : null,
+                        icon: const Icon(Icons.remove_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor:
+                              primary.withValues(alpha: 0.1),
+                          foregroundColor: primary,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Text(
+                        '+$val min',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: primary,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        onPressed:
+                            () => setState(
+                              () => val = (val + 1).clamp(0, maxMins),
                             ),
-                            child: Text('+$mins min'),
+                        icon: const Icon(Icons.add_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor:
+                              primary.withValues(alpha: 0.1),
+                          foregroundColor: primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Slider with target marker
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Slider(
+                        min: 0,
+                        max: maxMins.toDouble(),
+                        divisions: maxMins,
+                        value: val.toDouble(),
+                        onChanged:
+                            (v) => setState(() => val = v.round()),
+                      ),
+                      if (target <= maxMins)
+                        Positioned(
+                          left: (target / maxMins) *
+                              (MediaQuery.of(ctx).size.width - 72),
+                          top: -4,
+                          child: IgnorePointer(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 2,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: primary.withValues(alpha: 0.5),
+                                    borderRadius:
+                                        BorderRadius.circular(1),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${target}m',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: primary.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        )
-                        .toList(),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        if (val == 0) return;
+                        await ref
+                            .read(dataNotifierProvider.notifier)
+                            .toggleHabit(
+                              habitId: habit.id,
+                              dateStr: dateStr,
+                              delta: val,
+                            );
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -1644,45 +1724,55 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
 
     // ── 4-week aggregates (shown in header when expanded) ─────────────
     final fourWeekStart = weekStart.subtract(const Duration(days: 21));
-    final allFourWeekDays = List.generate(
-      28,
-      (i) => fourWeekStart.add(Duration(days: i)),
-    ).where((d) => !d.isAfter(todayMid)).toList();
+    final allFourWeekDays =
+        List.generate(
+          28,
+          (i) => fourWeekStart.add(Duration(days: i)),
+        ).where((d) => !d.isAfter(todayMid)).toList();
 
     // Habits 4w: average completion rate across all days with scheduled habits
-    final fw4HabitsRatios = allFourWeekDays.map((day) {
-      final sched = HabitHelpers.habitsForDate(activeHabits, day);
-      if (sched.isEmpty) return null;
-      final ds = _fmt(day);
-      final done = sched
-          .where((h) => HabitHelpers.isCompletedOn(h, data.habitLogs, ds))
-          .length;
-      return done / sched.length;
-    }).whereType<double>().toList();
-    final fw4HabitsAvg = fw4HabitsRatios.isEmpty
-        ? null
-        : fw4HabitsRatios.reduce((a, b) => a + b) / fw4HabitsRatios.length;
-    final fw4HabitsLabel = fw4HabitsAvg == null
-        ? '--'
-        : '${(fw4HabitsAvg * 100).round()}% avg';
+    final fw4HabitsRatios =
+        allFourWeekDays
+            .map((day) {
+              final sched = HabitHelpers.habitsForDate(activeHabits, day);
+              if (sched.isEmpty) return null;
+              final ds = _fmt(day);
+              final done =
+                  sched
+                      .where(
+                        (h) =>
+                            HabitHelpers.isCompletedOn(h, data.habitLogs, ds),
+                      )
+                      .length;
+              return done / sched.length;
+            })
+            .whereType<double>()
+            .toList();
+    final fw4HabitsAvg =
+        fw4HabitsRatios.isEmpty
+            ? null
+            : fw4HabitsRatios.reduce((a, b) => a + b) / fw4HabitsRatios.length;
+    final fw4HabitsLabel =
+        fw4HabitsAvg == null ? '--' : '${(fw4HabitsAvg * 100).round()}% avg';
 
     // Mood 4w: average mood level
-    final fw4Moods = allFourWeekDays
-        .map((d) => moodMap[_fmt(d)])
-        .whereType<Mood>()
-        .toList();
-    final fw4AvgMoodLevel = fw4Moods.isEmpty
-        ? null
-        : (fw4Moods.map((m) => m.level).reduce((a, b) => a + b) /
-                fw4Moods.length)
-            .round()
-            .clamp(1, 5);
-    final fw4MoodLabel = fw4AvgMoodLevel == null
-        ? '--'
-        : _WeeklyOverview._moodEmojis[fw4AvgMoodLevel - 1];
-    final fw4MoodColor = fw4AvgMoodLevel == null
-        ? AppColors.textMuted
-        : _WeeklyOverview._moodColors[fw4AvgMoodLevel - 1];
+    final fw4Moods =
+        allFourWeekDays.map((d) => moodMap[_fmt(d)]).whereType<Mood>().toList();
+    final fw4AvgMoodLevel =
+        fw4Moods.isEmpty
+            ? null
+            : (fw4Moods.map((m) => m.level).reduce((a, b) => a + b) /
+                    fw4Moods.length)
+                .round()
+                .clamp(1, 5);
+    final fw4MoodLabel =
+        fw4AvgMoodLevel == null
+            ? '--'
+            : _WeeklyOverview._moodEmojis[fw4AvgMoodLevel - 1];
+    final fw4MoodColor =
+        fw4AvgMoodLevel == null
+            ? AppColors.textMuted
+            : _WeeklyOverview._moodColors[fw4AvgMoodLevel - 1];
 
     // Focus 4w: total minutes
     final fw4TotalFocus = allFourWeekDays.fold<int>(0, (sum, day) {
@@ -1703,12 +1793,10 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
     final fw4Journal = allFourWeekDays.fold<int>(0, (sum, day) {
       final ds = _fmt(day);
       return sum +
-          data.journal
-              .where((e) {
-                final d = DateTime.tryParse(e.createdAt)?.toLocal();
-                return d != null && _fmt(d) == ds;
-              })
-              .length;
+          data.journal.where((e) {
+            final d = DateTime.tryParse(e.createdAt)?.toLocal();
+            return d != null && _fmt(d) == ds;
+          }).length;
     });
     final fw4JournalLabel = fw4Journal == 0 ? '--' : '$fw4Journal';
 
@@ -1719,9 +1807,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
         final ds = _fmt(day);
         return sum +
             data.transactions
-                .where(
-                  (t) => t.date == ds && t.type == TransactionType.expense,
-                )
+                .where((t) => t.date == ds && t.type == TransactionType.expense)
                 .fold<double>(0, (s, t) => s + t.amount);
       });
     }
@@ -1957,6 +2043,7 @@ class _WeekRowCard extends StatelessWidget {
   final List<Widget> dayCells;
   final String aggregate;
   final Color aggregateColor;
+
   /// Shown in place of [aggregate] (with a cross-fade) when [expanded] is true.
   final String? expandedAggregate;
   final Color? expandedAggregateColor;
@@ -2018,25 +2105,23 @@ class _WeekRowCard extends StatelessWidget {
                   ),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: child,
-                    ),
+                    transitionBuilder:
+                        (child, anim) =>
+                            FadeTransition(opacity: anim, child: child),
                     child: Text(
                       expanded && expandedAggregate != null
                           ? expandedAggregate!
                           : aggregate,
                       key: ValueKey(
-                        expanded && expandedAggregate != null
-                            ? 'exp'
-                            : 'cur',
+                        expanded && expandedAggregate != null ? 'exp' : 'cur',
                       ),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: expanded && expandedAggregateColor != null
-                            ? expandedAggregateColor!
-                            : aggregateColor,
+                        color:
+                            expanded && expandedAggregateColor != null
+                                ? expandedAggregateColor!
+                                : aggregateColor,
                       ),
                     ),
                   ),
