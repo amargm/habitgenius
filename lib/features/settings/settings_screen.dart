@@ -349,7 +349,10 @@ class _ProCardState extends ConsumerState<_ProCard> {
               ),
               if (priceLabel != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: gold.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -469,7 +472,8 @@ class _ProCardState extends ConsumerState<_ProCard> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _openUrl(context, 'https://habitgenius.app/privacy'),
+                onTap:
+                    () => _openUrl(context, 'https://habitgenius.app/privacy'),
                 child: const Text(
                   'Privacy Policy',
                   style: TextStyle(
@@ -1043,7 +1047,10 @@ class _AccountSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -1271,7 +1278,11 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
                 Switch(
                   value: _enabled,
                   onChanged: isPermanentlyDenied ? null : _setEnabled,
-                  activeColor: primary,
+                  thumbColor: WidgetStateProperty.resolveWith<Color?>(
+                    (states) => states.contains(WidgetState.selected)
+                        ? primary
+                        : null,
+                  ),
                 ),
               ],
             ),

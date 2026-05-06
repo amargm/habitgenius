@@ -306,7 +306,7 @@ class _GoogleGPainter extends CustomPainter {
     canvas.drawArc(
       rect,
       -1.047, // -60°
-      2.094,  // 120°
+      2.094, // 120°
       true,
       Paint()..color = const Color(0xFF4285F4),
     );
@@ -314,7 +314,7 @@ class _GoogleGPainter extends CustomPainter {
     canvas.drawArc(
       rect,
       -3.665, // -210°
-      2.094,  // 120°
+      2.094, // 120°
       true,
       Paint()..color = const Color(0xFFDB4437),
     );
@@ -336,11 +336,7 @@ class _GoogleGPainter extends CustomPainter {
     );
 
     // White centre circle to create the "G" ring effect
-    canvas.drawCircle(
-      Offset(cx, cy),
-      r * 0.56,
-      Paint()..color = Colors.white,
-    );
+    canvas.drawCircle(Offset(cx, cy), r * 0.56, Paint()..color = Colors.white);
 
     // White bar for the horizontal stem of the "G"
     final barLeft = cx;

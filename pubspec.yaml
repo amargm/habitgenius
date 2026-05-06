@@ -45,8 +45,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
+  # assets:  # Add assets here when image files are present
+  #   - assets/images/
 
 flutter_launcher_icons:
   android: true
