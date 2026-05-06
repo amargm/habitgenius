@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/cloud_sync_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
@@ -85,6 +86,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       final notifier = ref.read(dataNotifierProvider.notifier);
       await notifier.load(isGuest: false, customDir: null);
       await SyncService.instance.seedTimestamp(notifier.filePath);
+
+      // Cloud sync: download-first sync on launch so the latest data from
+      // another device is available before the home screen is shown.
+      if (!auth.isGuest) {
+        await ref
+            .read(cloudSyncProvider.notifier)
+            .syncOnLaunch(
+              dataNotifier: notifier,
+              googleSignIn: ref.read(authServiceProvider).googleSignIn,
+            );
+      }
 
       if (!mounted) return;
       final prefs = ref.read(sharedPreferencesProvider);

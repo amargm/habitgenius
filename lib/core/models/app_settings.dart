@@ -47,6 +47,7 @@ class AppSettings {
   final String locale;
   final String? dataFilePath;
   final bool notificationsEnabled;
+  final bool cloudSyncEnabled;
 
   const AppSettings({
     required this.userTier,
@@ -59,6 +60,7 @@ class AppSettings {
     required this.locale,
     this.dataFilePath,
     required this.notificationsEnabled,
+    this.cloudSyncEnabled = false,
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -69,6 +71,7 @@ class AppSettings {
     currencySymbol: r'$',
     locale: 'en_US',
     notificationsEnabled: true,
+    cloudSyncEnabled: false,
   );
 
   factory AppSettings.fromJson(Map<String, dynamic> json) =>
@@ -87,6 +90,7 @@ class AppSettings {
     String? locale,
     String? dataFilePath,
     bool? notificationsEnabled,
+    bool? cloudSyncEnabled,
   }) => AppSettings(
     userTier: userTier ?? this.userTier,
     displayName: displayName ?? this.displayName,
@@ -98,5 +102,6 @@ class AppSettings {
     locale: locale ?? this.locale,
     dataFilePath: dataFilePath ?? this.dataFilePath,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
   );
 }

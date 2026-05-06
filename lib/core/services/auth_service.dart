@@ -141,6 +141,28 @@ class AuthService {
     await _prefs.remove(_kIsGuest);
   }
 
+  /// Requests the Drive App Data scope incrementally (without signing out).
+  ///
+  /// Only call this after the user has already signed in with Google.
+  /// Returns true if the scope was granted, false if denied or not signed in.
+  Future<bool> requestDriveScope() async {
+    const driveAppDataScope = 'https://www.googleapis.com/auth/drive.appdata';
+    try {
+      final account = _googleSignIn.currentUser;
+      if (account == null) return false;
+      final granted = await _googleSignIn.requestScopes([driveAppDataScope]);
+      return granted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Returns the currently signed-in [GoogleSignInAccount], or null.
+  GoogleSignInAccount? get currentGoogleAccount => _googleSignIn.currentUser;
+
+  /// Exposes the underlying [GoogleSignIn] instance for use by Drive API auth.
+  GoogleSignIn get googleSignIn => _googleSignIn;
+
   // ── Helpers ───────────────────────────────────────────────
 
   AppUser _mapUser(User user) => AppUser(

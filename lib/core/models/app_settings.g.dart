@@ -17,18 +17,21 @@ AppSettings _$AppSettingsFromJson(Map<String, dynamic> json) => AppSettings(
   locale: json['locale'] as String,
   dataFilePath: json['dataFilePath'] as String?,
   notificationsEnabled: json['notificationsEnabled'] as bool,
+  cloudSyncEnabled: json['cloudSyncEnabled'] as bool? ?? false,
 );
 
-Map<String, dynamic> _$AppSettingsToJson(AppSettings instance) =>
-    <String, dynamic>{
-      'userTier': const _UserTierConverter().toJson(instance.userTier),
-      if (instance.displayName case final value?) 'displayName': value,
-      if (instance.avatarInitials case final value?) 'avatarInitials': value,
-      'primaryColorHex': instance.primaryColorHex,
-      'themeMode': instance.themeMode,
-      'currency': instance.currency,
-      'currencySymbol': instance.currencySymbol,
-      'locale': instance.locale,
-      if (instance.dataFilePath case final value?) 'dataFilePath': value,
-      'notificationsEnabled': instance.notificationsEnabled,
-    };
+Map<String, dynamic> _$AppSettingsToJson(
+  AppSettings instance,
+) => <String, dynamic>{
+  'userTier': const _UserTierConverter().toJson(instance.userTier),
+  if (instance.displayName case final value?) 'displayName': value,
+  if (instance.avatarInitials case final value?) 'avatarInitials': value,
+  'primaryColorHex': instance.primaryColorHex,
+  'themeMode': instance.themeMode,
+  'currency': instance.currency,
+  'currencySymbol': instance.currencySymbol,
+  'locale': instance.locale,
+  if (instance.dataFilePath case final value?) 'dataFilePath': value,
+  'notificationsEnabled': instance.notificationsEnabled,
+  if (instance.cloudSyncEnabled) 'cloudSyncEnabled': instance.cloudSyncEnabled,
+};

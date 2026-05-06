@@ -16,6 +16,7 @@ import '../../core/router/app_router.dart';
 import '../../core/utils/habit_helpers.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/services/permission_service.dart';
+import '../../shared/widgets/celebration_overlay.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 
 // ── Screen ────────────────────────────────────────────────
@@ -513,19 +514,8 @@ class _TodayHabitsRow extends ConsumerWidget {
                         ref.read(dataNotifierProvider).value?.habitLogs ?? logs,
                         todayStr,
                       );
-                      if (nowDone) {
-                        final celebrate =
-                            ref
-                                .read(sharedPreferencesProvider)
-                                .getBool(PrefKeys.celebrationHaptic) ??
-                            true;
-                        if (celebrate) {
-                          HapticFeedback.heavyImpact();
-                          await Future<void>.delayed(
-                            const Duration(milliseconds: 120),
-                          );
-                          HapticFeedback.mediumImpact();
-                        }
+                      if (nowDone && context.mounted) {
+                        _celebrate(context, ref);
                       }
                     }
                   } else if (isTimer) {
@@ -541,17 +531,13 @@ class _TodayHabitsRow extends ConsumerWidget {
                         .read(dataNotifierProvider.notifier)
                         .toggleHabit(habitId: habit.id, dateStr: todayStr);
                     if (!wasDone) {
-                      final celebrate =
-                          ref
-                              .read(sharedPreferencesProvider)
-                              .getBool(PrefKeys.celebrationHaptic) ??
-                          true;
-                      if (celebrate) {
-                        HapticFeedback.heavyImpact();
-                        await Future<void>.delayed(
-                          const Duration(milliseconds: 120),
-                        );
-                        HapticFeedback.mediumImpact();
+                      final nowDone = HabitHelpers.isCompletedOn(
+                        habit,
+                        ref.read(dataNotifierProvider).value?.habitLogs ?? logs,
+                        todayStr,
+                      );
+                      if (nowDone && context.mounted) {
+                        _celebrate(context, ref);
                       }
                     }
                   }
@@ -711,6 +697,30 @@ class _TodayHabitsRow extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => _MoodQuickPicker(todayStr: todayStr, existing: existing),
     );
+  }
+
+  /// Fires the full celebration sequence on habit completion:
+  /// haptic (3-pulse), sound, and confetti visual — all gated by user prefs.
+  void _celebrate(BuildContext context, WidgetRef ref) {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
+    if (!master) return;
+
+    final vibration = prefs.getBool(PrefKeys.celebrationVibration) ?? true;
+    final sound = prefs.getBool(PrefKeys.celebrationSound) ?? true;
+    final visual = prefs.getBool(PrefKeys.celebrationVisual) ?? true;
+
+    if (vibration) {
+      HapticFeedback.heavyImpact();
+      Future<void>.delayed(const Duration(milliseconds: 120), () {
+        HapticFeedback.mediumImpact();
+      });
+      Future<void>.delayed(const Duration(milliseconds: 240), () {
+        HapticFeedback.lightImpact();
+      });
+    }
+    if (sound) SystemSound.play(SystemSoundType.click);
+    if (visual && context.mounted) CelebrationOverlay.show(context);
   }
 
   void _showYearHeatmap(

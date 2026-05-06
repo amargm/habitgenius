@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/cloud_sync_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
@@ -88,6 +89,12 @@ class SettingsScreen extends ConsumerWidget {
             _SectionHeader(label: 'Data'),
             const SizedBox(height: 12),
             _DataSection(tier: tier),
+            const SizedBox(height: 24),
+
+            // ── Cloud Backup ──────────────────────────────
+            _SectionHeader(label: 'Cloud Backup'),
+            const SizedBox(height: 12),
+            _CloudSyncSection(authState: authState),
             const SizedBox(height: 24),
 
             // ── About & Support ───────────────────────────
@@ -374,7 +381,6 @@ class _ProCardState extends ConsumerState<_ProCard> {
             '✓ Unlimited habits',
             '✓ Unlimited journal entries',
             '✓ Unlimited transactions & accounts',
-            '✓ 4 exclusive Pro theme colors',
             '✓ Custom focus durations',
             '✓ One-time payment, no subscription',
           ].map(
@@ -938,6 +944,226 @@ class _DataRow extends StatelessWidget {
   );
 }
 
+// ── Cloud Sync section ────────────────────────────────────
+
+class _CloudSyncSection extends ConsumerStatefulWidget {
+  final AuthState authState;
+  const _CloudSyncSection({required this.authState});
+
+  @override
+  ConsumerState<_CloudSyncSection> createState() => _CloudSyncSectionState();
+}
+
+class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
+  bool _toggling = false;
+
+  Future<void> _onToggle(bool value, CloudSyncState syncState) async {
+    // Guest users cannot use Cloud Backup — they have no Google account.
+    if (widget.authState.isGuest) {
+      AppToast.show(
+        context,
+        'Sign in with Google to use Cloud Backup',
+        type: ToastType.error,
+      );
+      return;
+    }
+
+    if (value) {
+      setState(() => _toggling = true);
+      final authService = ref.read(authServiceProvider);
+      final granted = await authService.requestDriveScope();
+      if (!mounted) return;
+      if (!granted) {
+        AppToast.show(
+          context,
+          'Drive permission denied — Cloud Backup not enabled',
+          type: ToastType.error,
+        );
+        setState(() => _toggling = false);
+        return;
+      }
+      await ref
+          .read(cloudSyncProvider.notifier)
+          .enableSync(
+            dataNotifier: ref.read(dataNotifierProvider.notifier),
+            googleSignIn: authService.googleSignIn,
+          );
+      setState(() => _toggling = false);
+    } else {
+      await ref.read(cloudSyncProvider.notifier).disableSync();
+    }
+  }
+
+  Future<void> _onSyncNow() async {
+    final authService = ref.read(authServiceProvider);
+    await ref
+        .read(cloudSyncProvider.notifier)
+        .syncNow(
+          dataNotifier: ref.read(dataNotifierProvider.notifier),
+          googleSignIn: authService.googleSignIn,
+        );
+  }
+
+  String _lastSyncedLabel(DateTime? lastSynced) {
+    if (lastSynced == null) return 'Not yet synced';
+    final now = DateTime.now();
+    final local = lastSynced.toLocal();
+    final diff = now.difference(local);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) {
+      final hm =
+          '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+      return 'Today, $hm';
+    }
+    return '${local.day}/${local.month}/${local.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final syncState = ref.watch(cloudSyncProvider);
+    final primary = Theme.of(context).colorScheme.primary;
+    final isSyncing = syncState.status == SyncStatus.syncing;
+
+    return Container(
+      decoration: context.cardDecoration,
+      child: Column(
+        children: [
+          // ── Toggle row ──────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.cloud_sync_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Sync to Google Drive',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+                _toggling
+                    ? const SizedBox(
+                      width: 36,
+                      height: 20,
+                      child: Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    )
+                    : Switch(
+                      value: syncState.isEnabled,
+                      onChanged:
+                          _toggling ? null : (v) => _onToggle(v, syncState),
+                      activeColor: primary,
+                    ),
+              ],
+            ),
+          ),
+
+          if (syncState.isEnabled) ...[
+            const Divider(height: 1, indent: 16, endIndent: 16),
+
+            // ── Status row ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  if (isSyncing) ...[
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Syncing…',
+                      style: TextStyle(fontSize: 13, color: primary),
+                    ),
+                  ] else if (syncState.status == SyncStatus.error) ...[
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 14,
+                      color: AppColors.danger,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        syncState.errorMessage ?? 'Sync error',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _lastSyncedLabel(syncState.lastSynced),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  // Sync Now button
+                  if (!isSyncing)
+                    TextButton(
+                      onPressed: _onSyncNow,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Sync Now',
+                        style: TextStyle(fontSize: 12, color: primary),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Disclosure ─────────────────────────────────
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Text(
+              'Your data is stored in Google Drive\'s hidden App Data folder — '
+              'it is only accessible by this app and is not visible in your Drive.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textMuted,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Account section ───────────────────────────────────────
 
 class _AccountSection extends ConsumerWidget {
@@ -1278,11 +1504,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
                 Switch(
                   value: _enabled,
                   onChanged: isPermanentlyDenied ? null : _setEnabled,
-                  thumbColor: WidgetStateProperty.resolveWith<Color?>(
-                    (states) => states.contains(WidgetState.selected)
-                        ? primary
-                        : null,
-                  ),
+                  activeColor: primary,
                 ),
               ],
             ),

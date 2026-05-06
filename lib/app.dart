@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/providers/auth_provider.dart';
+import 'core/providers/cloud_sync_provider.dart';
 import 'core/providers/data_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
@@ -54,6 +56,10 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
       if (next.hasValue && (prev == null || !prev.hasValue)) {
         _rescheduleHabitReminders();
       }
+      // After every mutation (value → value), schedule a debounced upload.
+      if (prev?.hasValue == true && next.hasValue) {
+        _scheduleCloudUpload();
+      }
     });
   }
 
@@ -94,7 +100,32 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
       final notifier = ref.read(dataNotifierProvider.notifier);
       SyncService.instance.checkAndReload(notifier);
       _rescheduleHabitReminders();
+      // Cloud sync: download-first check so any change made on another device
+      // is reflected immediately when the user opens the app.
+      _checkCloudSyncOnResume(notifier);
     }
+  }
+
+  void _scheduleCloudUpload() {
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isGuest) return;
+    ref
+        .read(cloudSyncProvider.notifier)
+        .scheduleUpload(
+          dataNotifier: ref.read(dataNotifierProvider.notifier),
+          googleSignIn: ref.read(authServiceProvider).googleSignIn,
+        );
+  }
+
+  void _checkCloudSyncOnResume(DataNotifier dataNotifier) {
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isGuest) return;
+    ref
+        .read(cloudSyncProvider.notifier)
+        .checkOnResume(
+          dataNotifier: dataNotifier,
+          googleSignIn: ref.read(authServiceProvider).googleSignIn,
+        );
   }
 
   /// Re-registers all habit reminders so they survive OS reboots and

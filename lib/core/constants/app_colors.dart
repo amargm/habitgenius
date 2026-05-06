@@ -97,14 +97,14 @@ class AppColors {
       primaryDark: Color(0xFFB01E6B),
       requiredTier: UserTier.registered,
     ),
-    // Pro-only below
+    // Previously Pro-only; now available to all signed-in users
     ThemeColor(
       id: 'sky',
       name: 'Sky',
       primary: Color(0xFF74B9FF),
       primaryLight: Color(0xFFB2D8FF),
       primaryDark: Color(0xFF3A8FD8),
-      requiredTier: UserTier.pro,
+      requiredTier: UserTier.guest,
     ),
     ThemeColor(
       id: 'lime',
@@ -112,7 +112,7 @@ class AppColors {
       primary: Color(0xFF55EFC4),
       primaryLight: Color(0xFF9DFCE0),
       primaryDark: Color(0xFF2DC49A),
-      requiredTier: UserTier.pro,
+      requiredTier: UserTier.guest,
     ),
     ThemeColor(
       id: 'peach',
@@ -120,7 +120,7 @@ class AppColors {
       primary: Color(0xFFFAB1A0),
       primaryLight: Color(0xFFFFD5CB),
       primaryDark: Color(0xFFD47A69),
-      requiredTier: UserTier.pro,
+      requiredTier: UserTier.guest,
     ),
     ThemeColor(
       id: 'slate',
@@ -128,7 +128,7 @@ class AppColors {
       primary: Color(0xFF636E72),
       primaryLight: Color(0xFF95A5A6),
       primaryDark: Color(0xFF3D4547),
-      requiredTier: UserTier.pro,
+      requiredTier: UserTier.guest,
     ),
   ];
 
