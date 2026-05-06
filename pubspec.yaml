@@ -35,6 +35,7 @@ dependencies:
   flutter_colorpicker: ^1.1.0
   googleapis: ^13.0.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.12
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:

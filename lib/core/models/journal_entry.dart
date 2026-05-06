@@ -9,6 +9,7 @@ class JournalEntry {
   final String body;
   final List<String> tags;
   final String? linkedMoodId;
+  final bool pinned;
   final String createdAt; // ISO 8601
   final String updatedAt; // ISO 8601
 
@@ -18,6 +19,7 @@ class JournalEntry {
     required this.body,
     required this.tags,
     this.linkedMoodId,
+    this.pinned = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -33,6 +35,7 @@ class JournalEntry {
     String? body,
     List<String>? tags,
     String? linkedMoodId,
+    bool? pinned,
     String? createdAt,
     String? updatedAt,
   }) => JournalEntry(
@@ -41,6 +44,7 @@ class JournalEntry {
     body: body ?? this.body,
     tags: tags ?? this.tags,
     linkedMoodId: linkedMoodId ?? this.linkedMoodId,
+    pinned: pinned ?? this.pinned,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );

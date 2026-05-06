@@ -89,6 +89,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             if (sessions.isNotEmpty) ...[
               const SizedBox(height: 14),
               _FocusStatsRow(sessions: sessions),
+              const SizedBox(height: 10),
+              _FocusCategoryRow(sessions: sessions),
             ],
             const SizedBox(height: 24),
 
@@ -991,12 +993,35 @@ class _FocusStatsRow extends StatelessWidget {
   final List<FocusSession> sessions;
   const _FocusStatsRow({required this.sessions});
 
+  /// Consecutive days (ending today) that each had at least one session.
+  static int _streak(List<FocusSession> sessions) {
+    if (sessions.isEmpty) return 0;
+    final days = <String>{};
+    for (final s in sessions) {
+      final d = DateTime.tryParse(s.startedAt)?.toLocal();
+      if (d == null) continue;
+      days.add(
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}',
+      );
+    }
+    int streak = 0;
+    var day = DateTime.now();
+    while (true) {
+      final key =
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      if (!days.contains(key)) break;
+      streak++;
+      day = day.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final todaySec = sessions
         .where((s) {
-          final d = DateTime.tryParse(s.startedAt);
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
           return d != null &&
               d.year == now.year &&
               d.month == now.month &&
@@ -1007,12 +1032,12 @@ class _FocusStatsRow extends StatelessWidget {
     final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
     final weekSec = sessions
         .where((s) {
-          final d = DateTime.tryParse(s.startedAt);
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
           return d != null && !d.isBefore(startOfWeek);
         })
         .fold<int>(0, (sum, s) => sum + s.actualDuration);
 
-    final total = sessions.length;
+    final streak = _streak(sessions);
 
     String fmt(int sec) {
       final min = sec ~/ 60;
@@ -1026,10 +1051,103 @@ class _FocusStatsRow extends StatelessWidget {
         Expanded(
           child: _FocusStatCard(label: 'This week', value: fmt(weekSec)),
         ),
-
         const SizedBox(width: 10),
-        Expanded(child: _FocusStatCard(label: 'Sessions', value: '$total')),
+        Expanded(
+          child: _FocusStatCard(
+            label: 'Day streak',
+            value: streak > 0 ? '🔥 $streak' : '—',
+          ),
+        ),
       ],
+    );
+  }
+}
+
+// ── Category breakdown row ────────────────────────────────
+
+class _FocusCategoryRow extends StatelessWidget {
+  final List<FocusSession> sessions;
+  const _FocusCategoryRow({required this.sessions});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    // Aggregate seconds per category
+    final Map<String, int> byCat = {};
+    for (final s in sessions) {
+      final cat = s.category.isNotEmpty ? s.category : 'Other';
+      byCat[cat] = (byCat[cat] ?? 0) + s.actualDuration;
+    }
+    if (byCat.isEmpty) return const SizedBox.shrink();
+
+    final total = byCat.values.fold<int>(0, (a, b) => a + b);
+    final sorted =
+        byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    // Show top 4 categories
+    final top = sorted.take(4).toList();
+
+    String fmt(int sec) {
+      final min = sec ~/ 60;
+      return min >= 60 ? '${(min / 60).toStringAsFixed(1)}h' : '${min}m';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: context.cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'BY CATEGORY',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: context.appColors.textMuted,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...top.map((e) {
+            final fraction = total > 0 ? e.value / total : 0.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          e.key,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      Text(
+                        '${fmt(e.value)} (${(fraction * 100).round()}%)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: fraction,
+                      minHeight: 6,
+                      backgroundColor: primary.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(primary),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }

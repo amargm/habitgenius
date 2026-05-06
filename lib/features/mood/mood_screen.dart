@@ -208,6 +208,7 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
   int? _selectedLevel;
   final Set<String> _selectedTags = {};
   final _noteCtrl = TextEditingController();
+  final _customTagCtrl = TextEditingController();
   bool _saving = false;
 
   @override
@@ -239,7 +240,18 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
   @override
   void dispose() {
     _noteCtrl.dispose();
+    _customTagCtrl.dispose();
     super.dispose();
+  }
+
+  void _addCustomTag() {
+    final t = _customTagCtrl.text.trim();
+    if (t.isNotEmpty && t.length <= 20) {
+      setState(() {
+        _selectedTags.add(t);
+        _customTagCtrl.clear();
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -388,6 +400,84 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
                         ),
                       );
                     }).toList(),
+              ),
+              // Custom tags (non-preset)
+              ...(_selectedTags
+                  .where((t) => !_kTags.contains(t))
+                  .map(
+                    (t) => GestureDetector(
+                      onTap: () => setState(() => _selectedTags.remove(t)),
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: primary),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              t,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.close_rounded, size: 12, color: primary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customTagCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        hintText: 'Add custom tag…',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: context.appColors.textMuted,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onSubmitted: (_) => _addCustomTag(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _addCustomTag,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

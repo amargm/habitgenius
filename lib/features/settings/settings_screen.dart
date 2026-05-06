@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme_extension.dart';
@@ -144,18 +145,75 @@ class SettingsScreen extends ConsumerWidget {
 
 // ── Profile card ──────────────────────────────────────────
 
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends ConsumerStatefulWidget {
   final AuthState authState;
   final UserTier tier;
 
   const _ProfileCard({required this.authState, required this.tier});
 
   @override
+  ConsumerState<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends ConsumerState<_ProfileCard> {
+  Future<void> _editName(BuildContext context) async {
+    if (widget.authState.isGuest) return;
+    final user = widget.authState.user;
+    final ctrl = TextEditingController(text: user?.displayName ?? '');
+    // Capture before any await.
+    final scaffoldMsg = ScaffoldMessenger.of(context);
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Edit display name'),
+            content: TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(hintText: 'Your name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+    ctrl.dispose();
+    if (result == null || result.isEmpty) return;
+    try {
+      await FirebaseAuth.instance.currentUser?.updateDisplayName(result);
+      // Also save locally in app settings
+      final settings = ref.read(appDataProvider).settings;
+      await ref
+          .read(dataNotifierProvider.notifier)
+          .updateSettings(settings.copyWith(displayName: result));
+      if (!mounted) return;
+      scaffoldMsg.showSnackBar(const SnackBar(content: Text('Name updated')));
+    } catch (_) {
+      if (!mounted) return;
+      scaffoldMsg.showSnackBar(
+        const SnackBar(content: Text('Could not update name.')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = widget.authState;
+    final tier = widget.tier;
     final user = authState.user;
+    final displayName =
+        user?.displayName ?? ref.watch(appDataProvider).settings.displayName;
     final initials =
-        user?.displayName != null
-            ? user!.displayName!
+        displayName != null
+            ? displayName
                 .split(' ')
                 .map((w) => w.isNotEmpty ? w[0] : '')
                 .take(2)
@@ -206,12 +264,28 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  user?.displayName ??
-                      (authState.isGuest ? 'Guest User' : 'User'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
+                GestureDetector(
+                  onTap: authState.isGuest ? null : () => _editName(context),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayName ??
+                            (authState.isGuest ? 'Guest User' : 'User'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (!authState.isGuest) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 14,
+                          color: context.appColors.textMuted,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (user?.email != null) ...[
@@ -882,6 +956,28 @@ class _DataSection extends ConsumerWidget {
   final UserTier tier;
   const _DataSection({required this.tier});
 
+  Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(dataNotifierProvider.notifier);
+    final path = notifier.filePath;
+    if (path == null) {
+      AppToast.show(context, 'Data file not found.', type: ToastType.error);
+      return;
+    }
+    try {
+      await Share.shareXFiles([
+        XFile(path, mimeType: 'application/json'),
+      ], subject: 'HabitGenius backup');
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(
+          context,
+          'Could not share backup.',
+          type: ToastType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appData = ref.watch(appDataProvider);
@@ -898,10 +994,12 @@ class _DataSection extends ConsumerWidget {
           _DataRow(label: 'Journal entries', value: '$entryCount'),
           _DataRow(label: 'Transactions', value: '$txCount'),
           _DataRow(label: 'Mood logs', value: '$moodCount'),
-          const _DataRow(
-            label: 'Storage',
-            value: 'Local (on-device)',
-            isLast: true,
+          const _DataRow(label: 'Storage', value: 'Local (on-device)'),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          _ActionRow(
+            icon: Icons.download_rounded,
+            label: 'Export backup (JSON)',
+            onTap: () => _exportBackup(context, ref),
           ),
         ],
       ),
@@ -912,13 +1010,8 @@ class _DataSection extends ConsumerWidget {
 class _DataRow extends StatelessWidget {
   final String label;
   final String value;
-  final bool isLast;
 
-  const _DataRow({
-    required this.label,
-    required this.value,
-    this.isLast = false,
-  });
+  const _DataRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) => Column(
@@ -939,7 +1032,7 @@ class _DataRow extends StatelessWidget {
           ],
         ),
       ),
-      if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+      const Divider(height: 1, indent: 16, endIndent: 16),
     ],
   );
 }

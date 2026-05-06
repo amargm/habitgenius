@@ -81,6 +81,22 @@ class HabitCheckWidget extends ConsumerWidget {
       final prefs = ref.read(sharedPreferencesProvider);
       final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
       if (master) _celebrate(context, prefs);
+      // Undo snackbar
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${habit.name} checked ✓'),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed:
+                  () => ref
+                      .read(dataNotifierProvider.notifier)
+                      .toggleHabit(habitId: habit.id, dateStr: dateStr),
+            ),
+          ),
+        );
+      }
     }
   }
 

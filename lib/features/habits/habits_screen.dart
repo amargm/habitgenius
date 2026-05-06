@@ -228,17 +228,40 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         );
 
       case _HabitView.all:
-        return ListView.separated(
+        return ReorderableListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
           itemCount: habits.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder:
-              (_, i) => _HabitTile(
-                habit: habits[i],
+          onReorder: (oldIndex, newIndex) {
+            if (newIndex > oldIndex) newIndex--;
+            final reordered = [...habits];
+            final item = reordered.removeAt(oldIndex);
+            reordered.insert(newIndex, item);
+            // archived habits remain at end of full list
+            final archived =
+                ref
+                    .read(appDataProvider)
+                    .habits
+                    .where((h) => h.archivedAt != null)
+                    .toList();
+            ref.read(dataNotifierProvider.notifier).reorderHabits([
+              ...reordered,
+              ...archived,
+            ]);
+          },
+          proxyDecorator: (child, index, animation) => child,
+          itemBuilder: (_, i) {
+            final h = habits[i];
+            return Padding(
+              key: ValueKey(h.id),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _HabitTile(
+                habit: h,
                 logs: logs,
                 dateStr: todayStr,
                 primary: primary,
               ),
+            );
+          },
         );
 
       case _HabitView.year:
@@ -391,19 +414,7 @@ class _HabitTile extends ConsumerWidget {
                       ),
                     )
                   else if (streak > 0)
-                    Row(
-                      children: [
-                        const Text('🔥', style: TextStyle(fontSize: 12)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$streak day streak',
-                          style: TextStyle(
-                            color: context.appColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _StreakBadge(streak: streak),
                 ],
               ),
             ),
@@ -551,6 +562,43 @@ class _HabitTile extends ConsumerWidget {
 }
 
 enum _HabitAction { edit, archive, delete }
+
+// ── Streak badge ──────────────────────────────────────────
+
+class _StreakBadge extends StatelessWidget {
+  final int streak;
+  const _StreakBadge({required this.streak});
+
+  static String? _milestone(int streak) {
+    if (streak >= 365) return '🏆 $streak days';
+    if (streak >= 100) return '💎 $streak days';
+    if (streak >= 30) return '⭐ $streak days';
+    if (streak >= 7) return '🔥 $streak days';
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _milestone(streak) ?? '🔥 $streak days';
+    final isMilestone = streak >= 7;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color:
+                isMilestone
+                    ? Theme.of(context).colorScheme.primary
+                    : context.appColors.textSecondary,
+            fontWeight: isMilestone ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 // ── Archived habit tile ───────────────────────────────────
 

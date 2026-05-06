@@ -38,9 +38,12 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                   e.tags.any((t) => t.toLowerCase().contains(q));
             }).toList();
 
-    // Sort newest first
-    final sorted = [...filtered]
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Sort pinned first, then newest first
+    final sorted = [...filtered]..sort((a, b) {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.createdAt.compareTo(a.createdAt);
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -105,18 +108,7 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                                     : 'Tap the pencil button to write your first entry.',
                           ),
                         )
-                        : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                          itemCount: sorted.length,
-                          separatorBuilder:
-                              (_, __) => const SizedBox(height: 12),
-                          itemBuilder:
-                              (_, i) => _EntryTile(
-                                entry: sorted[i],
-                                onTap: () => _openEntry(context, sorted[i]),
-                                onDelete: () => _deleteEntry(sorted[i].id),
-                              ),
-                        ),
+                        : _buildList(context, ref, sorted, entries),
               ),
             ),
           ],
@@ -127,6 +119,55 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
         child: const Icon(Icons.edit_rounded),
       ),
     );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    WidgetRef ref,
+    List<JournalEntry> sorted,
+    List<JournalEntry> all,
+  ) {
+    // "On this day" — entries from previous years on the same month+day
+    final now = DateTime.now();
+    final onThisDay =
+        all.where((e) {
+            final d = DateTime.tryParse(e.createdAt)?.toLocal();
+            return d != null &&
+                d.year < now.year &&
+                d.month == now.month &&
+                d.day == now.day;
+          }).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      itemCount: sorted.length + (onThisDay.isNotEmpty ? 1 : 0),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) {
+        if (onThisDay.isNotEmpty && i == 0) {
+          return _OnThisDayCard(
+            entries: onThisDay,
+            onTap: (e) => _openEntry(context, e),
+          );
+        }
+        final idx = onThisDay.isNotEmpty ? i - 1 : i;
+        final entry = sorted[idx];
+        return _EntryTile(
+          entry: entry,
+          onTap: () => _openEntry(context, entry),
+          onDelete: () => _deleteEntry(entry.id),
+          onPin: () => _togglePin(entry),
+        );
+      },
+    );
+  }
+
+  Future<void> _togglePin(JournalEntry entry) async {
+    final updated = entry.copyWith(
+      pinned: !entry.pinned,
+      updatedAt: DateTime.now().toUtc().toIso8601String(),
+    );
+    await ref.read(dataNotifierProvider.notifier).updateJournalEntry(updated);
   }
 
   void _onNew(BuildContext context, UserTier tier, int count) {
@@ -185,11 +226,13 @@ class _EntryTile extends StatelessWidget {
   final JournalEntry entry;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback onPin;
 
   const _EntryTile({
     required this.entry,
     required this.onTap,
     required this.onDelete,
+    required this.onPin,
   });
 
   static const _months = [
@@ -258,16 +301,37 @@ class _EntryTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: onDelete,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: context.appColors.textMuted,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: onPin,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(
+                          entry.pinned
+                              ? Icons.push_pin_rounded
+                              : Icons.push_pin_outlined,
+                          size: 18,
+                          color:
+                              entry.pinned
+                                  ? Theme.of(context).colorScheme.primary
+                                  : context.appColors.textMuted,
+                        ),
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: onDelete,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -342,6 +406,21 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
   bool _saving = false;
   bool _preview = false;
 
+  static const _kPrompts = [
+    'What made today meaningful?',
+    'What are you grateful for right now?',
+    'What challenge are you facing and how will you overcome it?',
+    'Describe a moment that made you smile today.',
+    'What did you learn today?',
+    'What would you tell your past self from 5 years ago?',
+    'What are your top 3 priorities this week?',
+    'How are you feeling, and why?',
+    'What habit are you most proud of building?',
+    'What does your ideal day look like?',
+    'Write about a person who has positively influenced you.',
+    'What fear have you been avoiding, and what is one small step toward it?',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -406,6 +485,18 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _insertPrompt() {
+    final random = _kPrompts[DateTime.now().millisecond % _kPrompts.length];
+    if (_bodyCtrl.text.isNotEmpty && !_bodyCtrl.text.endsWith('\n')) {
+      _bodyCtrl.text += '\n\n';
+    }
+    _bodyCtrl.text += random;
+    // Move cursor to end
+    _bodyCtrl.selection = TextSelection.collapsed(
+      offset: _bodyCtrl.text.length,
+    );
   }
 
   void _addTag() {
@@ -539,6 +630,29 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                               ),
                             );
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        // Writing prompt button
+                        GestureDetector(
+                          onTap: _insertPrompt,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lightbulb_outline_rounded,
+                                size: 14,
+                                color: primary.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Get a writing prompt',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: primary.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -693,6 +807,92 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       'Sunday',
     ];
     return '${days[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+}
+
+// ── On this day card ──────────────────────────────────────
+
+class _OnThisDayCard extends StatelessWidget {
+  final List<JournalEntry> entries;
+  final void Function(JournalEntry) onTap;
+
+  const _OnThisDayCard({required this.entries, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            primary.withValues(alpha: 0.12),
+            primary.withValues(alpha: 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history_rounded, size: 16, color: primary),
+              const SizedBox(width: 6),
+              Text(
+                'On this day',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...entries.take(3).map((e) {
+            final dt = DateTime.tryParse(e.createdAt)?.toLocal();
+            final yearStr = dt != null ? '${dt.year}' : '';
+            return GestureDetector(
+              onTap: () => onTap(e),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${DateTime.now().year - (dt?.year ?? 0)}y ago  ($yearStr)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        e.title?.isNotEmpty == true
+                            ? e.title!
+                            : e.body.split('\n').first,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.appColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
   }
 }
 

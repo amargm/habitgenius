@@ -223,6 +223,9 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     ),
   );
 
+  Future<void> reorderHabits(List<Habit> reordered) =>
+      _save((d) => d.copyWith(habits: reordered));
+
   Future<void> deleteHabit(String habitId) => _save(
     (d) => d.copyWith(
       habits: d.habits.where((h) => h.id != habitId).toList(),
