@@ -1642,6 +1642,91 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
           .fold<double>(0, (s, v) => s + v!);
     }
 
+    // ── 4-week aggregates (shown in header when expanded) ─────────────
+    final fourWeekStart = weekStart.subtract(const Duration(days: 21));
+    final allFourWeekDays = List.generate(
+      28,
+      (i) => fourWeekStart.add(Duration(days: i)),
+    ).where((d) => !d.isAfter(todayMid)).toList();
+
+    // Habits 4w: average completion rate across all days with scheduled habits
+    final fw4HabitsRatios = allFourWeekDays.map((day) {
+      final sched = HabitHelpers.habitsForDate(activeHabits, day);
+      if (sched.isEmpty) return null;
+      final ds = _fmt(day);
+      final done = sched
+          .where((h) => HabitHelpers.isCompletedOn(h, data.habitLogs, ds))
+          .length;
+      return done / sched.length;
+    }).whereType<double>().toList();
+    final fw4HabitsAvg = fw4HabitsRatios.isEmpty
+        ? null
+        : fw4HabitsRatios.reduce((a, b) => a + b) / fw4HabitsRatios.length;
+    final fw4HabitsLabel = fw4HabitsAvg == null
+        ? '--'
+        : '${(fw4HabitsAvg * 100).round()}% avg';
+
+    // Mood 4w: average mood level
+    final fw4Moods = allFourWeekDays
+        .map((d) => moodMap[_fmt(d)])
+        .whereType<Mood>()
+        .toList();
+    final fw4AvgMoodLevel = fw4Moods.isEmpty
+        ? null
+        : (fw4Moods.map((m) => m.level).reduce((a, b) => a + b) /
+                fw4Moods.length)
+            .round()
+            .clamp(1, 5);
+    final fw4MoodLabel = fw4AvgMoodLevel == null
+        ? '--'
+        : _WeeklyOverview._moodEmojis[fw4AvgMoodLevel - 1];
+    final fw4MoodColor = fw4AvgMoodLevel == null
+        ? AppColors.textMuted
+        : _WeeklyOverview._moodColors[fw4AvgMoodLevel - 1];
+
+    // Focus 4w: total minutes
+    final fw4TotalFocus = allFourWeekDays.fold<int>(0, (sum, day) {
+      return sum +
+          data.focusSessions
+              .where((s) {
+                final d = DateTime.tryParse(s.startedAt)?.toLocal();
+                return d != null &&
+                    d.year == day.year &&
+                    d.month == day.month &&
+                    d.day == day.day;
+              })
+              .fold<int>(0, (s, fs) => s + (fs.actualDuration ~/ 60));
+    });
+    final fw4FocusLabel = _fmtMins(fw4TotalFocus);
+
+    // Journal 4w: total entries
+    final fw4Journal = allFourWeekDays.fold<int>(0, (sum, day) {
+      final ds = _fmt(day);
+      return sum +
+          data.journal
+              .where((e) {
+                final d = DateTime.tryParse(e.createdAt)?.toLocal();
+                return d != null && _fmt(d) == ds;
+              })
+              .length;
+    });
+    final fw4JournalLabel = fw4Journal == 0 ? '--' : '$fw4Journal';
+
+    // Spend 4w: total expenses
+    double fw4Spend = 0;
+    if (tier != UserTier.guest) {
+      fw4Spend = allFourWeekDays.fold<double>(0, (sum, day) {
+        final ds = _fmt(day);
+        return sum +
+            data.transactions
+                .where(
+                  (t) => t.date == ds && t.type == TransactionType.expense,
+                )
+                .fold<double>(0, (s, t) => s + t.amount);
+      });
+    }
+    final fw4SpendLabel = fw4Spend == 0 ? '--' : _smartMoney(fw4Spend);
+
     return Column(
       children: [
         _WeekRowCard(
@@ -1653,11 +1738,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
               days.asMap().entries.map((e) {
                 final r = habitsRatios[e.key];
                 if (r == null || r < 0) {
-                  return _DayCellBox(
-                    fill: 0,
-                    color: primary,
-                    empty: true,
-                  );
+                  return _DayCellBox(fill: 0, color: primary, empty: true);
                 }
                 return _DayCellBox(fill: r, color: primary, empty: false);
               }).toList(),
@@ -1668,19 +1749,21 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
           aggregateColor: primary,
           expanded: _expandedRow == 'Habits',
           onTap: () => _toggle('Habits'),
+          expandedAggregate: fw4HabitsLabel,
+          expandedAggregateColor: primary,
           expansionContent:
               _expandedRow == 'Habits'
                   ? _FourWeekExpansion(
-                      title: 'Habits',
-                      data: data,
-                      activeHabits: activeHabits,
-                      today: today,
-                      thisWeekStart: weekStart,
-                      primary: primary,
-                      tier: tier,
-                      skipCurrentWeek: true,
-                      inlineMode: true,
-                    )
+                    title: 'Habits',
+                    data: data,
+                    activeHabits: activeHabits,
+                    today: today,
+                    thisWeekStart: weekStart,
+                    primary: primary,
+                    tier: tier,
+                    skipCurrentWeek: true,
+                    inlineMode: true,
+                  )
                   : null,
         ),
         const SizedBox(height: 10),
@@ -1711,19 +1794,21 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
                   : _WeeklyOverview._moodColors[avgMoodLevel - 1],
           expanded: _expandedRow == 'Mood',
           onTap: () => _toggle('Mood'),
+          expandedAggregate: fw4MoodLabel,
+          expandedAggregateColor: fw4MoodColor,
           expansionContent:
               _expandedRow == 'Mood'
                   ? _FourWeekExpansion(
-                      title: 'Mood',
-                      data: data,
-                      activeHabits: activeHabits,
-                      today: today,
-                      thisWeekStart: weekStart,
-                      primary: primary,
-                      tier: tier,
-                      skipCurrentWeek: true,
-                      inlineMode: true,
-                    )
+                    title: 'Mood',
+                    data: data,
+                    activeHabits: activeHabits,
+                    today: today,
+                    thisWeekStart: weekStart,
+                    primary: primary,
+                    tier: tier,
+                    skipCurrentWeek: true,
+                    inlineMode: true,
+                  )
                   : null,
         ),
         const SizedBox(height: 10),
@@ -1752,19 +1837,21 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
           aggregateColor: const Color(0xFFF39C12),
           expanded: _expandedRow == 'Focus',
           onTap: () => _toggle('Focus'),
+          expandedAggregate: fw4FocusLabel,
+          expandedAggregateColor: const Color(0xFFF39C12),
           expansionContent:
               _expandedRow == 'Focus'
                   ? _FourWeekExpansion(
-                      title: 'Focus',
-                      data: data,
-                      activeHabits: activeHabits,
-                      today: today,
-                      thisWeekStart: weekStart,
-                      primary: primary,
-                      tier: tier,
-                      skipCurrentWeek: true,
-                      inlineMode: true,
-                    )
+                    title: 'Focus',
+                    data: data,
+                    activeHabits: activeHabits,
+                    today: today,
+                    thisWeekStart: weekStart,
+                    primary: primary,
+                    tier: tier,
+                    skipCurrentWeek: true,
+                    inlineMode: true,
+                  )
                   : null,
         ),
         const SizedBox(height: 10),
@@ -1793,19 +1880,21 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
           aggregateColor: const Color(0xFF3498DB),
           expanded: _expandedRow == 'Journal',
           onTap: () => _toggle('Journal'),
+          expandedAggregate: fw4JournalLabel,
+          expandedAggregateColor: const Color(0xFF3498DB),
           expansionContent:
               _expandedRow == 'Journal'
                   ? _FourWeekExpansion(
-                      title: 'Journal',
-                      data: data,
-                      activeHabits: activeHabits,
-                      today: today,
-                      thisWeekStart: weekStart,
-                      primary: primary,
-                      tier: tier,
-                      skipCurrentWeek: true,
-                      inlineMode: true,
-                    )
+                    title: 'Journal',
+                    data: data,
+                    activeHabits: activeHabits,
+                    today: today,
+                    thisWeekStart: weekStart,
+                    primary: primary,
+                    tier: tier,
+                    skipCurrentWeek: true,
+                    inlineMode: true,
+                  )
                   : null,
         ),
         if (tier != UserTier.guest) ...[
@@ -1817,8 +1906,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
             dayNames: _WeeklyOverview._dayNames,
             dayCells:
                 days.asMap().entries.map((e) {
-                  final spend =
-                      daySpend.isNotEmpty ? daySpend[e.key] : null;
+                  final spend = daySpend.isNotEmpty ? daySpend[e.key] : null;
                   if (spend == null || spend == 0) {
                     return _DayCellBox(
                       fill: 0,
@@ -1836,19 +1924,21 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
             aggregateColor: const Color(0xFF2ECC71),
             expanded: _expandedRow == 'Spend',
             onTap: () => _toggle('Spend'),
+            expandedAggregate: fw4SpendLabel,
+            expandedAggregateColor: const Color(0xFF2ECC71),
             expansionContent:
                 _expandedRow == 'Spend'
                     ? _FourWeekExpansion(
-                        title: 'Spend',
-                        data: data,
-                        activeHabits: activeHabits,
-                        today: today,
-                        thisWeekStart: weekStart,
-                        primary: primary,
-                        tier: tier,
-                        skipCurrentWeek: true,
-                        inlineMode: true,
-                      )
+                      title: 'Spend',
+                      data: data,
+                      activeHabits: activeHabits,
+                      today: today,
+                      thisWeekStart: weekStart,
+                      primary: primary,
+                      tier: tier,
+                      skipCurrentWeek: true,
+                      inlineMode: true,
+                    )
                     : null,
           ),
         ],
@@ -1867,8 +1957,12 @@ class _WeekRowCard extends StatelessWidget {
   final List<Widget> dayCells;
   final String aggregate;
   final Color aggregateColor;
+  /// Shown in place of [aggregate] (with a cross-fade) when [expanded] is true.
+  final String? expandedAggregate;
+  final Color? expandedAggregateColor;
   final VoidCallback? onTap;
   final bool expanded;
+
   /// Previous 3 weeks rendered inside the card when [expanded] is true.
   /// The card itself expands downward — no separate container is introduced.
   final Widget? expansionContent;
@@ -1881,6 +1975,8 @@ class _WeekRowCard extends StatelessWidget {
     required this.dayCells,
     required this.aggregate,
     required this.aggregateColor,
+    this.expandedAggregate,
+    this.expandedAggregateColor,
     this.onTap,
     this.expanded = false,
     this.expansionContent,
@@ -1920,12 +2016,28 @@ class _WeekRowCard extends StatelessWidget {
                     color: context.appColors.border,
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  Text(
-                    aggregate,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: aggregateColor,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: child,
+                    ),
+                    child: Text(
+                      expanded && expandedAggregate != null
+                          ? expandedAggregate!
+                          : aggregate,
+                      key: ValueKey(
+                        expanded && expandedAggregate != null
+                            ? 'exp'
+                            : 'cur',
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: expanded && expandedAggregateColor != null
+                            ? expandedAggregateColor!
+                            : aggregateColor,
+                      ),
                     ),
                   ),
                   if (onTap != null) ...[
@@ -2088,147 +2200,144 @@ class _FourWeekExpansion extends StatelessWidget {
       }
     }
 
-    final weekRows = weeks.asMap().entries.map<Widget>((we) {
-      final weekIdx = we.key;
-      // Skip the current week row (index 3 = "Now") when the parent
-      // already renders it as a _WeekRowCard.
-      if (skipCurrentWeek && weekIdx == 3) {
-        return const SizedBox.shrink();
-      }
-      final ws = we.value;
-      final days = List.generate(7, (d) => ws.add(Duration(days: d)));
-      final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
+    final weekRows =
+        weeks.asMap().entries.map<Widget>((we) {
+          final weekIdx = we.key;
+          // Skip the current week row (index 3 = "Now") when the parent
+          // already renders it as a _WeekRowCard.
+          if (skipCurrentWeek && weekIdx == 3) {
+            return const SizedBox.shrink();
+          }
+          final ws = we.value;
+          final days = List.generate(7, (d) => ws.add(Duration(days: d)));
+          final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
 
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 28,
-              child: Text(
-                weekLabel,
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w600,
-                  color: context.appColors.textMuted,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    weekLabel,
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: context.appColors.textMuted,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            ...days.map((day) {
-              Widget cell;
-              if (day.isAfter(todayMid)) {
-                cell = _DayCellBox(fill: 0, color: color, empty: true);
-              } else {
-                final ds = _fmt(day);
-                switch (title) {
-                  case 'Habits':
-                    final sched = HabitHelpers.habitsForDate(
-                      activeHabits,
-                      day,
-                    );
-                    if (sched.isEmpty) {
-                      cell = _DayCellBox(
-                        fill: 0,
-                        color: color,
-                        empty: true,
-                      );
-                    } else {
-                      final done =
-                          sched
-                              .where(
-                                (h) => HabitHelpers.isCompletedOn(
-                                  h,
-                                  data.habitLogs,
-                                  ds,
-                                ),
-                              )
-                              .length;
-                      cell = _DayCellBox(
-                        fill: done / sched.length,
-                        color: color,
-                        empty: false,
-                      );
-                    }
-                  case 'Mood':
-                    final mood = moodMap[ds];
-                    if (mood == null) {
-                      cell = _DayCellBox(
-                        fill: 0,
-                        color: color,
-                        empty: true,
-                      );
-                    } else {
-                      cell = _DayCellText(text: mood.emoji);
-                    }
-                  case 'Focus':
-                    final mins = data.focusSessions
-                        .where((s) {
-                          final sd =
-                              DateTime.tryParse(s.startedAt)?.toLocal();
-                          return sd != null &&
-                              sd.year == day.year &&
-                              sd.month == day.month &&
-                              sd.day == day.day;
-                        })
-                        .fold<int>(
-                          0,
-                          (sum, s) => sum + (s.actualDuration ~/ 60),
+                ...days.map((day) {
+                  Widget cell;
+                  if (day.isAfter(todayMid)) {
+                    cell = _DayCellBox(fill: 0, color: color, empty: true);
+                  } else {
+                    final ds = _fmt(day);
+                    switch (title) {
+                      case 'Habits':
+                        final sched = HabitHelpers.habitsForDate(
+                          activeHabits,
+                          day,
                         );
-                    cell = _DayCellBox(
-                      fill:
-                          mins == 0
-                              ? 0
-                              : (mins / maxFocusMins).clamp(0.0, 1.0),
-                      color: color,
-                      empty: mins == 0,
-                    );
-                  case 'Journal':
-                    final count =
-                        data.journal.where((e) {
-                          final d =
-                              DateTime.tryParse(e.createdAt)?.toLocal();
-                          return d != null && _fmt(d) == ds;
-                        }).length;
-                    cell = _DayCellBox(
-                      fill: count > 0 ? 1.0 : 0,
-                      color: color,
-                      empty: count == 0,
-                    );
-                  case 'Spend':
-                    final spend = data.transactions
-                        .where(
-                          (t) =>
-                              t.date == ds &&
-                              t.type == TransactionType.expense,
-                        )
-                        .fold<double>(0, (s, t) => s + t.amount);
-                    if (spend == 0) {
-                      cell = _DayCellBox(
-                        fill: 0,
-                        color: color,
-                        empty: true,
-                      );
-                    } else {
-                      cell = _DayCellText(
-                        text: _smartMoney(spend),
-                        color: color,
-                        small: true,
-                      );
+                        if (sched.isEmpty) {
+                          cell = _DayCellBox(
+                            fill: 0,
+                            color: color,
+                            empty: true,
+                          );
+                        } else {
+                          final done =
+                              sched
+                                  .where(
+                                    (h) => HabitHelpers.isCompletedOn(
+                                      h,
+                                      data.habitLogs,
+                                      ds,
+                                    ),
+                                  )
+                                  .length;
+                          cell = _DayCellBox(
+                            fill: done / sched.length,
+                            color: color,
+                            empty: false,
+                          );
+                        }
+                      case 'Mood':
+                        final mood = moodMap[ds];
+                        if (mood == null) {
+                          cell = _DayCellBox(
+                            fill: 0,
+                            color: color,
+                            empty: true,
+                          );
+                        } else {
+                          cell = _DayCellText(text: mood.emoji);
+                        }
+                      case 'Focus':
+                        final mins = data.focusSessions
+                            .where((s) {
+                              final sd =
+                                  DateTime.tryParse(s.startedAt)?.toLocal();
+                              return sd != null &&
+                                  sd.year == day.year &&
+                                  sd.month == day.month &&
+                                  sd.day == day.day;
+                            })
+                            .fold<int>(
+                              0,
+                              (sum, s) => sum + (s.actualDuration ~/ 60),
+                            );
+                        cell = _DayCellBox(
+                          fill:
+                              mins == 0
+                                  ? 0
+                                  : (mins / maxFocusMins).clamp(0.0, 1.0),
+                          color: color,
+                          empty: mins == 0,
+                        );
+                      case 'Journal':
+                        final count =
+                            data.journal.where((e) {
+                              final d =
+                                  DateTime.tryParse(e.createdAt)?.toLocal();
+                              return d != null && _fmt(d) == ds;
+                            }).length;
+                        cell = _DayCellBox(
+                          fill: count > 0 ? 1.0 : 0,
+                          color: color,
+                          empty: count == 0,
+                        );
+                      case 'Spend':
+                        final spend = data.transactions
+                            .where(
+                              (t) =>
+                                  t.date == ds &&
+                                  t.type == TransactionType.expense,
+                            )
+                            .fold<double>(0, (s, t) => s + t.amount);
+                        if (spend == 0) {
+                          cell = _DayCellBox(
+                            fill: 0,
+                            color: color,
+                            empty: true,
+                          );
+                        } else {
+                          cell = _DayCellText(
+                            text: _smartMoney(spend),
+                            color: color,
+                            small: true,
+                          );
+                        }
+                      default:
+                        cell = _DayCellBox(fill: 0, color: color, empty: true);
                     }
-                  default:
-                    cell = _DayCellBox(
-                      fill: 0,
-                      color: color,
-                      empty: true,
-                    );
-                }
-              }
-              return Expanded(child: Center(child: cell));
-            }),
-          ],
-        ),
-      );
-    }).toList();
+                  }
+                  return Expanded(child: Center(child: cell));
+                }),
+              ],
+            ),
+          );
+        }).toList();
 
     // Inline mode: rendered inside _WeekRowCard — no decoration, no day header.
     if (inlineMode) {
