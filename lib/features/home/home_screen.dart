@@ -144,7 +144,8 @@ class _BodyState extends State<_Body> {
                 ),
                 const SizedBox(height: 28),
 
-                if (todayHabits.isNotEmpty) ...[
+                // Always show Today section (mood shown even when zero habits)
+                ...[
                   _SectionHeader(
                     label: 'Today',
                     trailing: Text(
@@ -169,6 +170,7 @@ class _BodyState extends State<_Body> {
                     today: today,
                     primary: primary,
                     todayMood: todayMood,
+                    allMoods: data.moods,
                   ),
                   const SizedBox(height: 28),
                 ],
@@ -236,7 +238,7 @@ class _FirstHabitCta extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: () => context.go(AppRoutes.habits),
+            onPressed: () => context.push(AppRoutes.addHabit),
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Add first habit'),
           ),
@@ -357,6 +359,7 @@ class _TodayHabitsRow extends ConsumerWidget {
   final DateTime today;
   final Color primary;
   final Mood? todayMood;
+  final List<Mood> allMoods;
 
   const _TodayHabitsRow({
     required this.habits,
@@ -367,6 +370,7 @@ class _TodayHabitsRow extends ConsumerWidget {
     required this.today,
     required this.primary,
     this.todayMood,
+    this.allMoods = const [],
   });
 
   @override
@@ -393,31 +397,117 @@ class _TodayHabitsRow extends ConsumerWidget {
               habitColor = primary;
             }
 
+            final log = HabitHelpers.logForDate(logs, habit.id, todayStr);
+            final currentVal = log?.value ?? 0;
+            final isCounter =
+                habit.progressType == HabitProgressType.counter;
+            final isTimer =
+                habit.progressType == HabitProgressType.timer;
+            final timerPct =
+                isTimer && habit.targetValue > 0
+                    ? (currentVal / habit.targetValue).clamp(0.0, 1.0)
+                    : 0.0;
+
+            Widget circleInner;
+            if (done) {
+              circleInner = const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 26,
+              );
+            } else if (isCounter) {
+              circleInner = Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    habit.icon,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  if (habit.targetValue > 0)
+                    Text(
+                      '$currentVal/${habit.targetValue}',
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: habitColor,
+                      ),
+                    ),
+                ],
+              );
+            } else {
+              circleInner = Text(
+                habit.icon,
+                style: const TextStyle(fontSize: 24),
+              );
+            }
+
             return Padding(
-              padding: EdgeInsets.only(right: 12, left: i == 0 ? 0 : 0),
+              padding: const EdgeInsets.only(right: 12),
               child: GestureDetector(
                 onTap: () async {
-                  HapticFeedback.selectionClick();
-                  final wasDone = HabitHelpers.isCompletedOn(
-                    habit,
-                    ref.read(dataNotifierProvider).value?.habitLogs ?? logs,
-                    todayStr,
-                  );
-                  await ref
-                      .read(dataNotifierProvider.notifier)
-                      .toggleHabit(habitId: habit.id, dateStr: todayStr);
-                  if (!wasDone) {
-                    final celebrate =
-                        ref
-                            .read(sharedPreferencesProvider)
-                            .getBool(PrefKeys.celebrationHaptic) ??
-                        true;
-                    if (celebrate) {
-                      HapticFeedback.heavyImpact();
-                      await Future<void>.delayed(
-                        const Duration(milliseconds: 120),
+                  if (isCounter) {
+                    HapticFeedback.selectionClick();
+                    final wasDone = done;
+                    await ref
+                        .read(dataNotifierProvider.notifier)
+                        .toggleHabit(
+                          habitId: habit.id,
+                          dateStr: todayStr,
+                          delta: 1,
+                        );
+                    if (!wasDone) {
+                      final nowDone = HabitHelpers.isCompletedOn(
+                        habit,
+                        ref.read(dataNotifierProvider).value?.habitLogs ??
+                            logs,
+                        todayStr,
                       );
-                      HapticFeedback.mediumImpact();
+                      if (nowDone) {
+                        final celebrate =
+                            ref
+                                .read(sharedPreferencesProvider)
+                                .getBool(PrefKeys.celebrationHaptic) ??
+                            true;
+                        if (celebrate) {
+                          HapticFeedback.heavyImpact();
+                          await Future<void>.delayed(
+                            const Duration(milliseconds: 120),
+                          );
+                          HapticFeedback.mediumImpact();
+                        }
+                      }
+                    }
+                  } else if (isTimer) {
+                    _showTimerPicker(
+                      context,
+                      ref,
+                      habit,
+                      currentVal,
+                      todayStr,
+                    );
+                  } else {
+                    HapticFeedback.selectionClick();
+                    final wasDone = HabitHelpers.isCompletedOn(
+                      habit,
+                      ref.read(dataNotifierProvider).value?.habitLogs ?? logs,
+                      todayStr,
+                    );
+                    await ref
+                        .read(dataNotifierProvider.notifier)
+                        .toggleHabit(habitId: habit.id, dateStr: todayStr);
+                    if (!wasDone) {
+                      final celebrate =
+                          ref
+                              .read(sharedPreferencesProvider)
+                              .getBool(PrefKeys.celebrationHaptic) ??
+                          true;
+                      if (celebrate) {
+                        HapticFeedback.heavyImpact();
+                        await Future<void>.delayed(
+                          const Duration(milliseconds: 120),
+                        );
+                        HapticFeedback.mediumImpact();
+                      }
                     }
                   }
                 },
@@ -428,40 +518,55 @@ class _TodayHabitsRow extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color:
-                            done
-                                ? habitColor
-                                : habitColor.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border:
-                            done
-                                ? null
-                                : Border.all(
-                                  color: habitColor.withValues(alpha: 0.5),
-                                  width: 1.5,
-                                ),
-                        boxShadow:
-                            done
-                                ? [
-                                  BoxShadow(
-                                    color: habitColor.withValues(alpha: 0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                                : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          habit.icon,
-                          style: const TextStyle(fontSize: 24),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color:
+                                done
+                                    ? habitColor
+                                    : habitColor.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border:
+                                done
+                                    ? null
+                                    : Border.all(
+                                      color: habitColor.withValues(alpha: 0.5),
+                                      width: 1.5,
+                                    ),
+                            boxShadow:
+                                done
+                                    ? [
+                                      BoxShadow(
+                                        color: habitColor.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                    : null,
+                          ),
+                          child: Center(child: circleInner),
                         ),
-                      ),
+                        if (isTimer && !done)
+                          SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: CircularProgressIndicator(
+                              value: timerPct,
+                              strokeWidth: 3,
+                              backgroundColor: habitColor.withValues(
+                                alpha: 0.15,
+                              ),
+                              color: habitColor,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     SizedBox(
@@ -491,6 +596,10 @@ class _TodayHabitsRow extends ConsumerWidget {
             onTap: () {
               HapticFeedback.selectionClick();
               _showMoodPicker(context, ref, todayStr, todayMood);
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              _showMoodYearHeatmap(context, allMoods, today);
             },
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -568,7 +677,7 @@ class _TodayHabitsRow extends ConsumerWidget {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        barrierColor: Colors.black.withValues(alpha: 0.85),
+        barrierColor: Colors.black,
         barrierDismissible: true,
         transitionDuration: const Duration(milliseconds: 350),
         reverseTransitionDuration: const Duration(milliseconds: 250),
@@ -584,6 +693,324 @@ class _TodayHabitsRow extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  void _showTimerPicker(
+    BuildContext context,
+    WidgetRef ref,
+    Habit habit,
+    int currentVal,
+    String dateStr,
+  ) {
+    final target = habit.targetValue > 0 ? habit.targetValue : 60;
+    final remaining = (target - currentVal).clamp(0, target + 60);
+    final presets = [5, 10, 15, 20, 30, 45, 60]
+        .where((m) => m <= remaining + 30)
+        .toList();
+    if (presets.isEmpty) presets.add(15);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final primary = Theme.of(context).colorScheme.primary;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+          decoration: BoxDecoration(
+            color: context.appColors.bgCard,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.appColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Log time · ${habit.name}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$currentVal / $target ${habit.unit ?? 'min'} done',
+                style: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: presets
+                    .map(
+                      (mins) => ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await ref
+                              .read(dataNotifierProvider.notifier)
+                              .toggleHabit(
+                                habitId: habit.id,
+                                dateStr: dateStr,
+                                delta: mins,
+                              );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary.withValues(alpha: 0.12),
+                          foregroundColor: primary,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                        ),
+                        child: Text('+$mins min'),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMoodYearHeatmap(
+    BuildContext context,
+    List<Mood> moods,
+    DateTime today,
+  ) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        barrierDismissible: true,
+        transitionDuration: const Duration(milliseconds: 350),
+        reverseTransitionDuration: const Duration(milliseconds: 250),
+        pageBuilder: (ctx, anim, _) {
+          return FadeTransition(
+            opacity: anim,
+            child: _MoodYearHeatmapPage(moods: moods, today: today),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MoodYearHeatmapPage extends StatelessWidget {
+  final List<Mood> moods;
+  final DateTime today;
+
+  static const _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  static const _moodColors = [
+    Color(0xFFE17055),
+    Color(0xFFFDAA6E),
+    Color(0xFF8E8EA0),
+    Color(0xFF00B894),
+    Color(0xFF6C5CE7),
+  ];
+
+  const _MoodYearHeatmapPage({required this.moods, required this.today});
+
+  @override
+  Widget build(BuildContext context) {
+    final moodMap = {for (final m in moods) m.date: m};
+    final logged = moods.where((m) {
+      final d = DateTime.tryParse(m.date);
+      return d != null && d.year == today.year;
+    }).toList();
+    final avgLevel = logged.isEmpty
+        ? null
+        : (logged.map((m) => m.level).reduce((a, b) => a + b) / logged.length)
+            .round()
+            .clamp(1, 5);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (_) {},
+      onHorizontalDragEnd: (_) {},
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Mood',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${logged.length} days logged  •  ${today.year}'
+                      '${avgLevel != null ? '  •  avg ${_moodColors[avgLevel - 1] != Colors.transparent ? '' : ''}' : ''}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.9,
+                        ),
+                    itemCount: 12,
+                    itemBuilder: (_, i) => _MoodMiniMonth(
+                      month: DateTime(today.year, i + 1, 1),
+                      moodByDate: moodMap,
+                      today: today,
+                      monthName: _monthNames[i],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MoodMiniMonth extends StatelessWidget {
+  final DateTime month;
+  final Map<String, Mood> moodByDate;
+  final DateTime today;
+  final String monthName;
+
+  static const _moodColors = [
+    Color(0xFFE17055),
+    Color(0xFFFDAA6E),
+    Color(0xFF8E8EA0),
+    Color(0xFF00B894),
+    Color(0xFF6C5CE7),
+  ];
+
+  const _MoodMiniMonth({
+    required this.month,
+    required this.moodByDate,
+    required this.today,
+    required this.monthName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
+    final firstWeekday = (DateTime(month.year, month.month, 1).weekday - 1) % 7;
+    final todayMid = DateTime(today.year, today.month, today.day);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          monthName,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.white70,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Expanded(
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+              childAspectRatio: 1,
+            ),
+            itemCount: firstWeekday + daysInMonth,
+            itemBuilder: (_, idx) {
+              if (idx < firstWeekday) return const SizedBox.shrink();
+              final day = idx - firstWeekday + 1;
+              final dayDate = DateTime(month.year, month.month, day);
+              if (dayDate.isAfter(todayMid)) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              }
+              final ds =
+                  '${month.year}-${month.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+              final mood = moodByDate[ds];
+              if (mood != null) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: _moodColors[mood.level.clamp(1, 5) - 1]
+                        .withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      mood.emoji,
+                      style: const TextStyle(fontSize: 7, height: 1),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1006,7 +1433,7 @@ class _MoodQuickPicker extends ConsumerWidget {
 
 // ── Weekly overview ───────────────────────────────────────
 
-class _WeeklyOverview extends StatelessWidget {
+class _WeeklyOverview extends StatefulWidget {
   final AppData data;
   final List<Habit> activeHabits;
   final DateTime weekStart;
@@ -1033,6 +1460,16 @@ class _WeeklyOverview extends StatelessWidget {
     required this.tier,
   });
 
+  @override
+  State<_WeeklyOverview> createState() => _WeeklyOverviewState();
+}
+
+class _WeeklyOverviewState extends State<_WeeklyOverview> {
+  String? _expandedRow;
+
+  void _toggle(String title) =>
+      setState(() => _expandedRow = _expandedRow == title ? null : title);
+
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -1051,6 +1488,12 @@ class _WeeklyOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = widget.data;
+    final activeHabits = widget.activeHabits;
+    final weekStart = widget.weekStart;
+    final today = widget.today;
+    final primary = widget.primary;
+    final tier = widget.tier;
     final todayMid = DateTime(today.year, today.month, today.day);
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
 
@@ -1058,7 +1501,6 @@ class _WeeklyOverview extends StatelessWidget {
     final habitsRatios =
         days.map<double?>((day) {
           if (day.isAfter(todayMid)) return null;
-          // Only include habits that existed on [day] (creation date ≤ day).
           final sched =
               HabitHelpers.habitsForDate(activeHabits, day).where((h) {
                 final created = DateTime.tryParse(h.createdAt)?.toLocal();
@@ -1164,7 +1606,7 @@ class _WeeklyOverview extends StatelessWidget {
           icon: Icons.check_circle_outline_rounded,
           title: 'Habits',
           color: primary,
-          dayNames: _dayNames,
+          dayNames: _WeeklyOverview._dayNames,
           dayCells:
               days.asMap().entries.map((e) {
                 final r = habitsRatios[e.key];
@@ -1178,13 +1620,25 @@ class _WeeklyOverview extends StatelessWidget {
                   ? '--'
                   : '${(weekHabitsAvg * 100).round()}%',
           aggregateColor: primary,
+          expanded: _expandedRow == 'Habits',
+          onTap: () => _toggle('Habits'),
         ),
+        if (_expandedRow == 'Habits')
+          _FourWeekExpansion(
+            title: 'Habits',
+            data: data,
+            activeHabits: activeHabits,
+            today: today,
+            thisWeekStart: weekStart,
+            primary: primary,
+            tier: tier,
+          ),
         const SizedBox(height: 10),
         _WeekRowCard(
           icon: Icons.sentiment_satisfied_alt_rounded,
           title: 'Mood',
           color: const Color(0xFF9B59B6),
-          dayNames: _dayNames,
+          dayNames: _WeeklyOverview._dayNames,
           dayCells:
               days.asMap().entries.map((e) {
                 final mood = dayMoods[e.key];
@@ -1198,18 +1652,32 @@ class _WeeklyOverview extends StatelessWidget {
                 return _DayCellText(text: mood.emoji);
               }).toList(),
           aggregate:
-              avgMoodLevel == null ? '--' : _moodEmojis[avgMoodLevel - 1],
+              avgMoodLevel == null
+                  ? '--'
+                  : _WeeklyOverview._moodEmojis[avgMoodLevel - 1],
           aggregateColor:
               avgMoodLevel == null
                   ? AppColors.textMuted
-                  : _moodColors[avgMoodLevel - 1],
+                  : _WeeklyOverview._moodColors[avgMoodLevel - 1],
+          expanded: _expandedRow == 'Mood',
+          onTap: () => _toggle('Mood'),
         ),
+        if (_expandedRow == 'Mood')
+          _FourWeekExpansion(
+            title: 'Mood',
+            data: data,
+            activeHabits: activeHabits,
+            today: today,
+            thisWeekStart: weekStart,
+            primary: primary,
+            tier: tier,
+          ),
         const SizedBox(height: 10),
         _WeekRowCard(
           icon: Icons.timer_rounded,
           title: 'Focus',
           color: const Color(0xFFF39C12),
-          dayNames: _dayNames,
+          dayNames: _WeeklyOverview._dayNames,
           dayCells:
               days.asMap().entries.map((e) {
                 final mins = dayFocusMins[e.key];
@@ -1228,13 +1696,25 @@ class _WeeklyOverview extends StatelessWidget {
               }).toList(),
           aggregate: _fmtMins(totalFocusMins),
           aggregateColor: const Color(0xFFF39C12),
+          expanded: _expandedRow == 'Focus',
+          onTap: () => _toggle('Focus'),
         ),
+        if (_expandedRow == 'Focus')
+          _FourWeekExpansion(
+            title: 'Focus',
+            data: data,
+            activeHabits: activeHabits,
+            today: today,
+            thisWeekStart: weekStart,
+            primary: primary,
+            tier: tier,
+          ),
         const SizedBox(height: 10),
         _WeekRowCard(
           icon: Icons.menu_book_rounded,
           title: 'Journal',
           color: const Color(0xFF3498DB),
-          dayNames: _dayNames,
+          dayNames: _WeeklyOverview._dayNames,
           dayCells:
               days.asMap().entries.map((e) {
                 final count = dayJournal[e.key];
@@ -1253,17 +1733,30 @@ class _WeeklyOverview extends StatelessWidget {
               }).toList(),
           aggregate: totalJournal == 0 ? '--' : '$totalJournal',
           aggregateColor: const Color(0xFF3498DB),
+          expanded: _expandedRow == 'Journal',
+          onTap: () => _toggle('Journal'),
         ),
+        if (_expandedRow == 'Journal')
+          _FourWeekExpansion(
+            title: 'Journal',
+            data: data,
+            activeHabits: activeHabits,
+            today: today,
+            thisWeekStart: weekStart,
+            primary: primary,
+            tier: tier,
+          ),
         if (tier != UserTier.guest) ...[
           const SizedBox(height: 10),
           _WeekRowCard(
             icon: Icons.account_balance_wallet_rounded,
             title: 'Spend',
             color: const Color(0xFF2ECC71),
-            dayNames: _dayNames,
+            dayNames: _WeeklyOverview._dayNames,
             dayCells:
                 days.asMap().entries.map((e) {
-                  final spend = daySpend.isNotEmpty ? daySpend[e.key] : null;
+                  final spend =
+                      daySpend.isNotEmpty ? daySpend[e.key] : null;
                   if (spend == null || spend == 0) {
                     return _DayCellBox(
                       fill: 0,
@@ -1279,7 +1772,19 @@ class _WeeklyOverview extends StatelessWidget {
                 }).toList(),
             aggregate: totalSpend == 0 ? '--' : _smartMoney(totalSpend),
             aggregateColor: const Color(0xFF2ECC71),
+            expanded: _expandedRow == 'Spend',
+            onTap: () => _toggle('Spend'),
           ),
+          if (_expandedRow == 'Spend')
+            _FourWeekExpansion(
+              title: 'Spend',
+              data: data,
+              activeHabits: activeHabits,
+              today: today,
+              thisWeekStart: weekStart,
+              primary: primary,
+              tier: tier,
+            ),
         ],
       ],
     );
@@ -1296,6 +1801,8 @@ class _WeekRowCard extends StatelessWidget {
   final List<Widget> dayCells;
   final String aggregate;
   final Color aggregateColor;
+  final VoidCallback? onTap;
+  final bool expanded;
 
   const _WeekRowCard({
     required this.icon,
@@ -1305,53 +1812,202 @@ class _WeekRowCard extends StatelessWidget {
     required this.dayCells,
     required this.aggregate,
     required this.aggregateColor,
+    this.onTap,
+    this.expanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: context.cardDecoration,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.appColors.textSecondary,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: context.cardDecoration,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 14, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 1,
+                  height: 14,
+                  color: context.appColors.border,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                Text(
+                  aggregate,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: aggregateColor,
+                  ),
+                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 16,
+                      color: context.appColors.textMuted,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: List.generate(
+                7,
+                (i) => Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        dayNames[i],
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: context.appColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 5),
+                      Center(child: dayCells[i]),
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
-              Container(
-                width: 1,
-                height: 14,
-                color: context.appColors.border,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              Text(
-                aggregate,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: aggregateColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: List.generate(
-              7,
-              (i) => Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      dayNames[i],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Four-week expansion ───────────────────────────────────
+
+class _FourWeekExpansion extends StatelessWidget {
+  final String title;
+  final AppData data;
+  final List<Habit> activeHabits;
+  final DateTime today;
+  final DateTime thisWeekStart;
+  final Color primary;
+  final UserTier tier;
+
+  static const _dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  const _FourWeekExpansion({
+    required this.title,
+    required this.data,
+    required this.activeHabits,
+    required this.today,
+    required this.thisWeekStart,
+    required this.primary,
+    required this.tier,
+  });
+
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _fmtMins(int m) =>
+      m == 0
+          ? '--'
+          : m >= 60
+          ? '${m ~/ 60}h'
+          : '${m}m';
+
+  String _smartMoney(double v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return v.toStringAsFixed(0);
+  }
+
+  Color _metricColor() {
+    switch (title) {
+      case 'Habits':
+        return primary;
+      case 'Mood':
+        return const Color(0xFF9B59B6);
+      case 'Focus':
+        return const Color(0xFFF39C12);
+      case 'Journal':
+        return const Color(0xFF3498DB);
+      case 'Spend':
+        return const Color(0xFF2ECC71);
+      default:
+        return primary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final todayMid = DateTime(today.year, today.month, today.day);
+    final color = _metricColor();
+    // Build 4 weeks ending at thisWeekStart (week 0 = current, week -1, -2, -3)
+    final weeks = List.generate(
+      4,
+      (i) => thisWeekStart.subtract(Duration(days: 7 * (3 - i))),
+    );
+
+    final moodMap = {for (final m in data.moods) m.date: m};
+
+    // For Focus bars: compute max across all 4 weeks
+    int maxFocusMins = 1;
+    if (title == 'Focus') {
+      for (final ws in weeks) {
+        for (int d = 0; d < 7; d++) {
+          final day = ws.add(Duration(days: d));
+          if (!day.isAfter(todayMid)) {
+            final mins = data.focusSessions
+                .where((s) {
+                  final sd = DateTime.tryParse(s.startedAt)?.toLocal();
+                  return sd != null &&
+                      sd.year == day.year &&
+                      sd.month == day.month &&
+                      sd.day == day.day;
+                })
+                .fold<int>(0, (sum, s) => sum + (s.actualDuration ~/ 60));
+            if (mins > maxFocusMins) maxFocusMins = mins;
+          }
+        }
+      }
+    }
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child: Container(
+        margin: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          children: [
+            // Day name header
+            Row(
+              children: [
+                const SizedBox(width: 28),
+                ...List.generate(
+                  7,
+                  (i) => Expanded(
+                    child: Text(
+                      _dayNames[i],
                       style: TextStyle(
                         fontSize: 9,
                         color: context.appColors.textMuted,
@@ -1359,14 +2015,161 @@ class _WeekRowCard extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 5),
-                    Center(child: dayCells[i]),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ...weeks.asMap().entries.map((we) {
+              final weekIdx = we.key;
+              final ws = we.value;
+              final days =
+                  List.generate(7, (d) => ws.add(Duration(days: d)));
+              final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        weekLabel,
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ),
+                    ...days.map((day) {
+                      Widget cell;
+                      if (day.isAfter(todayMid)) {
+                        cell = _DayCellBox(
+                          fill: 0,
+                          color: color,
+                          empty: true,
+                        );
+                      } else {
+                        final ds = _fmt(day);
+                        switch (title) {
+                          case 'Habits':
+                            final sched = HabitHelpers.habitsForDate(
+                              activeHabits,
+                              day,
+                            );
+                            if (sched.isEmpty) {
+                              cell = _DayCellBox(
+                                fill: 0,
+                                color: color,
+                                empty: true,
+                              );
+                            } else {
+                              final done =
+                                  sched
+                                      .where(
+                                        (h) => HabitHelpers.isCompletedOn(
+                                          h,
+                                          data.habitLogs,
+                                          ds,
+                                        ),
+                                      )
+                                      .length;
+                              cell = _DayCellBox(
+                                fill: done / sched.length,
+                                color: color,
+                                empty: false,
+                              );
+                            }
+                          case 'Mood':
+                            final mood = moodMap[ds];
+                            if (mood == null) {
+                              cell = _DayCellBox(
+                                fill: 0,
+                                color: color,
+                                empty: true,
+                              );
+                            } else {
+                              cell = _DayCellText(text: mood.emoji);
+                            }
+                          case 'Focus':
+                            final mins = data.focusSessions
+                                .where((s) {
+                                  final sd =
+                                      DateTime.tryParse(s.startedAt)
+                                          ?.toLocal();
+                                  return sd != null &&
+                                      sd.year == day.year &&
+                                      sd.month == day.month &&
+                                      sd.day == day.day;
+                                })
+                                .fold<int>(
+                                  0,
+                                  (sum, s) => sum + (s.actualDuration ~/ 60),
+                                );
+                            if (mins == 0) {
+                              cell = _DayCellBox(
+                                fill: 0,
+                                color: color,
+                                empty: true,
+                              );
+                            } else {
+                              cell = _DayCellBar(
+                                ratio: mins / maxFocusMins,
+                                color: color,
+                                label: _fmtMins(mins),
+                              );
+                            }
+                          case 'Journal':
+                            final count = data.journal
+                                .where((e) {
+                                  final d =
+                                      DateTime.tryParse(e.createdAt)?.toLocal();
+                                  return d != null && _fmt(d) == ds;
+                                })
+                                .length;
+                            cell = _DayCellBox(
+                              fill: count > 0 ? 1.0 : 0,
+                              color: color,
+                              empty: count == 0,
+                            );
+                          case 'Spend':
+                            final spend = data.transactions
+                                .where(
+                                  (t) =>
+                                      t.date == ds &&
+                                      t.type == TransactionType.expense,
+                                )
+                                .fold<double>(0, (s, t) => s + t.amount);
+                            if (spend == 0) {
+                              cell = _DayCellBox(
+                                fill: 0,
+                                color: color,
+                                empty: true,
+                              );
+                            } else {
+                              cell = _DayCellText(
+                                text: _smartMoney(spend),
+                                color: color,
+                                small: true,
+                              );
+                            }
+                          default:
+                            cell = _DayCellBox(
+                              fill: 0,
+                              color: color,
+                              empty: true,
+                            );
+                        }
+                      }
+                      return Expanded(child: Center(child: cell));
+                    }),
                   ],
                 ),
-              ),
-            ),
-          ),
-        ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }

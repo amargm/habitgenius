@@ -493,23 +493,22 @@ const _kCategoryColors = <String, Color>{
 
 // ── Timeline tab ──────────────────────────────────────────
 
-class _TimelineTab extends StatelessWidget {
+enum _Period { week, month, quarter, year }
+
+class _TimelineTab extends StatefulWidget {
   final List<Transaction> transactions;
   const _TimelineTab({required this.transactions});
 
+  @override
+  State<_TimelineTab> createState() => _TimelineTabState();
+}
+
+class _TimelineTabState extends State<_TimelineTab> {
+  _Period _period = _Period.month;
+
   static const _months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
   String _smartMoney(double v) {
@@ -518,9 +517,137 @@ class _TimelineTab extends StatelessWidget {
     return v.toStringAsFixed(0);
   }
 
+  /// Returns (labels, expValues, incValues) for the current period.
+  ({List<String> labels, List<double> exp, List<double> inc}) _chartData() {
+    final txs = widget.transactions;
+    final now = DateTime.now();
+
+    switch (_period) {
+      case _Period.week:
+        // Last 7 days
+        final dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        final labels = <String>[];
+        final exp = <double>[];
+        final inc = <double>[];
+        for (int i = 6; i >= 0; i--) {
+          final d = now.subtract(Duration(days: i));
+          final ds =
+              '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+          labels.add(dayNames[(d.weekday - 1) % 7]);
+          exp.add(
+            txs
+                .where(
+                  (t) => t.date == ds && t.type == TransactionType.expense,
+                )
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+          inc.add(
+            txs
+                .where((t) => t.date == ds && t.type == TransactionType.income)
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+        }
+        return (labels: labels, exp: exp, inc: inc);
+
+      case _Period.month:
+        // Current month by week (W1–W5)
+        final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+        final labels = <String>[];
+        final exp = <double>[];
+        final inc = <double>[];
+        int weekNum = 1;
+        int day = 1;
+        while (day <= daysInMonth) {
+          final weekEnd = (day + 6).clamp(1, daysInMonth);
+          labels.add('W$weekNum');
+          double e = 0, i2 = 0;
+          for (int d = day; d <= weekEnd; d++) {
+            final ds =
+                '${now.year}-${now.month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
+            e += txs
+                .where(
+                  (t) => t.date == ds && t.type == TransactionType.expense,
+                )
+                .fold(0.0, (s, t) => s + t.amount);
+            i2 += txs
+                .where((t) => t.date == ds && t.type == TransactionType.income)
+                .fold(0.0, (s, t) => s + t.amount);
+          }
+          exp.add(e);
+          inc.add(i2);
+          day += 7;
+          weekNum++;
+        }
+        return (labels: labels, exp: exp, inc: inc);
+
+      case _Period.quarter:
+        // Last 3 months
+        final labels = <String>[];
+        final exp = <double>[];
+        final inc = <double>[];
+        for (int i = 2; i >= 0; i--) {
+          final m = DateTime(now.year, now.month - i, 1);
+          final ym =
+              '${m.year}-${m.month.toString().padLeft(2, '0')}';
+          labels.add(_months[m.month - 1]);
+          exp.add(
+            txs
+                .where(
+                  (t) =>
+                      t.date.startsWith(ym) &&
+                      t.type == TransactionType.expense,
+                )
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+          inc.add(
+            txs
+                .where(
+                  (t) =>
+                      t.date.startsWith(ym) &&
+                      t.type == TransactionType.income,
+                )
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+        }
+        return (labels: labels, exp: exp, inc: inc);
+
+      case _Period.year:
+        // Last 12 months
+        final labels = <String>[];
+        final exp = <double>[];
+        final inc = <double>[];
+        for (int i = 11; i >= 0; i--) {
+          final m = DateTime(now.year, now.month - i, 1);
+          final ym =
+              '${m.year}-${m.month.toString().padLeft(2, '0')}';
+          labels.add(_months[m.month - 1]);
+          exp.add(
+            txs
+                .where(
+                  (t) =>
+                      t.date.startsWith(ym) &&
+                      t.type == TransactionType.expense,
+                )
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+          inc.add(
+            txs
+                .where(
+                  (t) =>
+                      t.date.startsWith(ym) &&
+                      t.type == TransactionType.income,
+                )
+                .fold(0.0, (s, t) => s + t.amount),
+          );
+        }
+        return (labels: labels, exp: exp, inc: inc);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (transactions.isEmpty) {
+    final txs = widget.transactions;
+    if (txs.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.bar_chart_rounded,
         title: 'No transactions yet',
@@ -534,7 +661,7 @@ class _TimelineTab extends StatelessWidget {
     final Map<String, double> monthExpense = {};
     final Map<String, double> monthIncome = {};
     String? currency;
-    for (final tx in transactions) {
+    for (final tx in txs) {
       final month = tx.date.substring(0, 7);
       if (tx.type == TransactionType.expense) {
         monthExpense[month] = (monthExpense[month] ?? 0) + tx.amount;
@@ -559,46 +686,60 @@ class _TimelineTab extends StatelessWidget {
         )
         .reduce((a, b) => a > b ? a : b);
 
+    final chart = _chartData();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
       children: [
+        // ── Period filter chips ────────────────────────────
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _Period.values.map((p) {
+              final label = switch (p) {
+                _Period.week => 'Week',
+                _Period.month => 'Month',
+                _Period.quarter => 'Quarter',
+                _Period.year => 'Year',
+              };
+              final sel = _period == p;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(label),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _period = p),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Bar chart ──────────────────────────────────────
+        Container(
+          height: 180,
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          decoration: context.cardDecoration,
+          child: _SpendBarChart(
+            labels: chart.labels,
+            expValues: chart.exp,
+            incValues: chart.inc,
+            expColor: expenseColor,
+            incColor: incomeColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ── Legend ─────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: expenseColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Expense',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.appColors.textSecondary,
-                ),
-              ),
+              _LegendDot(color: expenseColor, label: 'Expense'),
               const SizedBox(width: 16),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: incomeColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Income',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.appColors.textSecondary,
-                ),
-              ),
+              _LegendDot(color: incomeColor, label: 'Income'),
               const Spacer(),
               Text(
                 currency ?? '',
@@ -611,6 +752,8 @@ class _TimelineTab extends StatelessWidget {
             ],
           ),
         ),
+
+        // ── Month cards ────────────────────────────────────
         ...allMonths.reversed.map((m) {
           final exp = monthExpense[m] ?? 0;
           final inc = monthIncome[m] ?? 0;
@@ -697,6 +840,197 @@ class _TimelineTab extends StatelessWidget {
     );
   }
 }
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: context.appColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpendBarChart extends StatelessWidget {
+  final List<String> labels;
+  final List<double> expValues;
+  final List<double> incValues;
+  final Color expColor;
+  final Color incColor;
+
+  const _SpendBarChart({
+    required this.labels,
+    required this.expValues,
+    required this.incValues,
+    required this.expColor,
+    required this.incColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (labels.isEmpty) return const SizedBox.shrink();
+    final allVals = [...expValues, ...incValues];
+    final maxVal = allVals.isEmpty
+        ? 1.0
+        : allVals.reduce((a, b) => a > b ? a : b).clamp(1.0, double.infinity);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final barAreaW = constraints.maxWidth;
+        final chartH = constraints.maxHeight - 24; // reserve for labels
+        final n = labels.length;
+        final groupW = barAreaW / n;
+        final barW = (groupW * 0.3).clamp(4.0, 16.0);
+        final gap = barW * 0.4;
+
+        return Column(
+          children: [
+            Expanded(
+              child: CustomPaint(
+                size: Size(barAreaW, chartH),
+                painter: _BarChartPainter(
+                  labels: labels,
+                  expValues: expValues,
+                  incValues: incValues,
+                  maxVal: maxVal,
+                  expColor: expColor,
+                  incColor: incColor,
+                  barW: barW,
+                  gap: gap,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 24,
+              child: Row(
+                children: labels.map((l) {
+                  return Expanded(
+                    child: Text(
+                      l,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: context.appColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BarChartPainter extends CustomPainter {
+  final List<String> labels;
+  final List<double> expValues;
+  final List<double> incValues;
+  final double maxVal;
+  final Color expColor;
+  final Color incColor;
+  final double barW;
+  final double gap;
+
+  const _BarChartPainter({
+    required this.labels,
+    required this.expValues,
+    required this.incValues,
+    required this.maxVal,
+    required this.expColor,
+    required this.incColor,
+    required this.barW,
+    required this.gap,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = labels.length;
+    if (n == 0) return;
+    final groupW = size.width / n;
+    final h = size.height;
+
+    for (int i = 0; i < n; i++) {
+      final centerX = groupW * i + groupW / 2;
+      final expH = maxVal > 0 ? (expValues[i] / maxVal) * (h - 8) : 0.0;
+      final incH = maxVal > 0 ? (incValues[i] / maxVal) * (h - 8) : 0.0;
+
+      // Expense bar (left of center)
+      if (expH > 0) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            centerX - gap / 2 - barW,
+            h - expH,
+            barW,
+            expH,
+          ),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(
+          rect,
+          Paint()..color = expColor.withAlpha(210),
+        );
+      }
+
+      // Income bar (right of center)
+      if (incH > 0) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            centerX + gap / 2,
+            h - incH,
+            barW,
+            incH,
+          ),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(
+          rect,
+          Paint()..color = incColor.withAlpha(210),
+        );
+      }
+    }
+
+    // Baseline
+    canvas.drawLine(
+      Offset(0, h),
+      Offset(size.width, h),
+      Paint()
+        ..color = expColor.withAlpha(30)
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BarChartPainter old) =>
+      old.expValues != expValues ||
+      old.incValues != incValues ||
+      old.maxVal != maxVal;
+}
+
 
 class _MonthBar extends StatelessWidget {
   final String label;

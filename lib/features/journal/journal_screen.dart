@@ -438,9 +438,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
             tooltip: _preview ? 'Edit' : 'Preview',
             onPressed: () => setState(() => _preview = !_preview),
             icon: Icon(
-              _preview
-                  ? Icons.edit_rounded
-                  : Icons.visibility_rounded,
+              _preview ? Icons.edit_rounded : Icons.visibility_rounded,
               size: 20,
             ),
           ),
@@ -468,171 +466,201 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       body: Column(
         children: [
           Expanded(
-            child: _preview
-                ? _MarkdownPreview(
-                    title: _titleCtrl.text,
-                    body: _bodyCtrl.text,
-                  )
-                : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              children: [
-                // Date display
-                Text(
-                  _fmtFullDate(DateTime.now()),
-                  style: TextStyle(
-                    color: context.appColors.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Title field
-                TextField(
-                  controller: _titleCtrl,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Title',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-
-                // Body field
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _bodyCtrl,
-                  builder: (_, val, __) {
-                    final words =
-                        val.text.trim().isEmpty
-                            ? 0
-                            : val.text.trim().split(RegExp(r'\s+')).length;
-                    return Text(
-                      '$words words  •  ${val.text.length} chars',
-                      style: TextStyle(
-                        color: context.appColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: context.appColors.bgCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: context.appColors.border),
-                  ),
-                  padding: const EdgeInsets.all(14),
-                  child: TextField(
-                    controller: _bodyCtrl,
-                    maxLines: null,
-                    minLines: 12,
-                    style: const TextStyle(fontSize: 15, height: 1.7),
-                    decoration: InputDecoration(
-                      hintText: 'Write your thoughts…',
-                      alignLabelWithHint: true,
-                      hintStyle: TextStyle(
-                        color: context.appColors.textMuted,
-                        fontSize: 15,
-                      ),
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                ),
-                const Divider(height: 32),
-
-                // Tags
-                Text(
-                  'TAGS',
-                  style: TextStyle(
-                    color: context.appColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    ..._tags.map(
-                      (t) => GestureDetector(
-                        onTap: () => setState(() => _tags.remove(t)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+            child:
+                _preview
+                    ? _MarkdownPreview(
+                      title: _titleCtrl.text,
+                      body: _bodyCtrl.text,
+                    )
+                    : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      children: [
+                        // Date display
+                        Text(
+                          _fmtFullDate(DateTime.now()),
+                          style: TextStyle(
+                            color: context.appColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Title field
+                        Container(
                           decoration: BoxDecoration(
-                            color: primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
+                            color: context.appColors.bgCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: context.appColors.border,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                t,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: primary,
-                                  fontWeight: FontWeight.w600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          child: TextField(
+                            controller: _titleCtrl,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Title',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            textCapitalization: TextCapitalization.sentences,
+                          ),
+                        ),
+
+                        // Body field
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _bodyCtrl,
+                          builder: (_, val, __) {
+                            final words =
+                                val.text.trim().isEmpty
+                                    ? 0
+                                    : val.text
+                                        .trim()
+                                        .split(RegExp(r'\s+'))
+                                        .length;
+                            return Text(
+                              '$words words  •  ${val.text.length} chars',
+                              style: TextStyle(
+                                color: context.appColors.textMuted,
+                                fontSize: 11,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: context.appColors.bgCard,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: context.appColors.border),
+                          ),
+                          padding: const EdgeInsets.all(14),
+                          child: TextField(
+                            controller: _bodyCtrl,
+                            maxLines: null,
+                            minLines: 12,
+                            style: const TextStyle(fontSize: 15, height: 1.7),
+                            decoration: InputDecoration(
+                              hintText: 'Write your thoughts…',
+                              alignLabelWithHint: true,
+                              hintStyle: TextStyle(
+                                color: context.appColors.textMuted,
+                                fontSize: 15,
+                              ),
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            textCapitalization: TextCapitalization.sentences,
+                          ),
+                        ),
+                        const Divider(height: 32),
+
+                        // Tags
+                        Text(
+                          'TAGS',
+                          style: TextStyle(
+                            color: context.appColors.textMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            ..._tags.map(
+                              (t) => GestureDetector(
+                                onTap: () => setState(() => _tags.remove(t)),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: primary.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        t,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        Icons.close,
+                                        size: 12,
+                                        color: primary,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(Icons.close, size: 12, color: primary),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: context.appColors.bgCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: context.appColors.border,
+                            ),
+                          ),
+                          padding: const EdgeInsets.only(left: 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _tagCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: 'Add tag…',
+                                    hintStyle: TextStyle(
+                                      color: context.appColors.textMuted,
+                                      fontSize: 13,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                  ),
+                                  onSubmitted: (_) => _addTag(),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _addTag,
+                                icon: Icon(
+                                  Icons.add_rounded,
+                                  color: primary,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _tagCtrl,
-                        decoration: InputDecoration(
-                          hintText: 'Add tag…',
-                          hintStyle: TextStyle(
-                            color: context.appColors.textMuted,
-                            fontSize: 13,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(
-                              color: primary.withValues(alpha: 0.4),
-                            ),
-                          ),
-                        ),
-                        onSubmitted: (_) => _addTag(),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _addTag,
-                      icon: Icon(Icons.add_rounded, color: primary),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
           if (!_preview) _JournalToolbar(bodyCtrl: _bodyCtrl),
         ],
@@ -721,13 +749,19 @@ class _MarkdownPreview extends StatelessWidget {
     while (i < lines.length) {
       final line = lines[i];
       if (line.startsWith('### ')) {
-        widgets.add(_styledLine(line.substring(4), 16, FontWeight.w700, context));
+        widgets.add(
+          _styledLine(line.substring(4), 16, FontWeight.w700, context),
+        );
         widgets.add(const SizedBox(height: 6));
       } else if (line.startsWith('## ')) {
-        widgets.add(_styledLine(line.substring(3), 18, FontWeight.w700, context));
+        widgets.add(
+          _styledLine(line.substring(3), 18, FontWeight.w700, context),
+        );
         widgets.add(const SizedBox(height: 8));
       } else if (line.startsWith('# ')) {
-        widgets.add(_styledLine(line.substring(2), 22, FontWeight.w800, context));
+        widgets.add(
+          _styledLine(line.substring(2), 22, FontWeight.w800, context),
+        );
         widgets.add(const SizedBox(height: 10));
       } else if (line.startsWith('- ') || line.startsWith('* ')) {
         widgets.add(
@@ -779,9 +813,7 @@ class _MarkdownPreview extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             decoration: BoxDecoration(
               color: primary.withValues(alpha: 0.07),
-              border: Border(
-                left: BorderSide(color: primary, width: 3),
-              ),
+              border: Border(left: BorderSide(color: primary, width: 3)),
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(8),
                 bottomRight: Radius.circular(8),
@@ -818,7 +850,12 @@ class _MarkdownPreview extends StatelessWidget {
     FontWeight weight,
     BuildContext context,
   ) {
-    return _inlineSpansStyled(text, context, fontSize: size, fontWeight: weight);
+    return _inlineSpansStyled(
+      text,
+      context,
+      fontSize: size,
+      fontWeight: weight,
+    );
   }
 
   Widget _inlineSpans(String text, BuildContext context) =>
@@ -832,9 +869,7 @@ class _MarkdownPreview extends StatelessWidget {
   }) {
     // Parse inline: **bold**, *italic*, `code`, ~~strikethrough~~
     final spans = <InlineSpan>[];
-    final pattern = RegExp(
-      r'(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~)',
-    );
+    final pattern = RegExp(r'(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~)');
     int last = 0;
     for (final m in pattern.allMatches(text)) {
       if (m.start > last) {

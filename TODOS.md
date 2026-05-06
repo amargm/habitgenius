@@ -86,3 +86,18 @@
 
 ---
 
+## New — May 2026 (Batch 4)
+
+- [ ] **22** Focus auto-save works only if Focus screen is open when timer completes — fix so auto-save fires from the background service regardless of screen visibility.
+- [ ] **23** Journal entry: rounded corners for title field and tags input area.
+- [ ] **24** Mood yearly heatmap: show actual mood emoji in each day cell instead of a solid colour block.
+- [ ] **24.1** Home screen: press-and-hold on the Mood weekly row shows the yearly mood heatmap (same behaviour as habit heatmap overlay).
+- [ ] **25** Home screen Today section: always show mood tracker row even when user has zero habits (first-time user).
+- [ ] **25.1** Home screen CTA (first habit): "Add first habit" button should open the new-habit form directly (not redirect to Habits screen then require another tap).
+- [ ] **26** Habits progress types: fully implement Counter, Timer, and Checklist interactions. Remove Stopwatch as a progress type option. Update home-screen Today row to support inline Counter/Timer/Checklist actions.
+- [ ] **27** Habit heatmap overlay: background must be fully opaque (zero transparency).
+- [ ] **28** Expense Timeline tab: add a line/bar chart with time-period filter chips (Week / Month / Quarter / Year, default Month) above the existing list.
+- [ ] **29** Home screen "This Week" section: tapping a weekly status rectangle expands it to a 4-week monthly heatmap; tapping again collapses it. Togglable per habit row.
+
+---
+

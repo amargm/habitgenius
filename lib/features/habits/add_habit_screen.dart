@@ -447,7 +447,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             Wrap(
               spacing: 8,
               children:
-                  HabitProgressType.values.map((pt) {
+                  HabitProgressType.values
+                      .where((pt) => pt != HabitProgressType.stopwatch)
+                      .map((pt) {
                     final selected =
                         _progressType == pt &&
                         (_progressTypeChosen || !_isTemplate);

@@ -944,16 +944,25 @@ class _MiniMonthMood extends StatelessWidget {
               final dateStr =
                   '${month.year}-${month.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
               final mood = moodByDate[dateStr];
-              final color =
-                  mood != null
-                      ? _kMoodLevels[mood.level.clamp(1, 5) - 1].color
-                      : null;
+              if (mood != null) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: _kMoodLevels[mood.level.clamp(1, 5) - 1].color
+                        .withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      mood.emoji,
+                      style: const TextStyle(fontSize: 7, height: 1),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
               return Container(
                 decoration: BoxDecoration(
-                  color:
-                      color != null
-                          ? color.withValues(alpha: 0.75)
-                          : context.appColors.bgElevated,
+                  color: context.appColors.bgElevated,
                   borderRadius: BorderRadius.circular(2),
                 ),
               );
