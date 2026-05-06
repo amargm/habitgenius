@@ -1644,242 +1644,212 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
 
     return Column(
       children: [
-        AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: Column(
-            children: [
-              if (_expandedRow == 'Habits')
-                _FourWeekExpansion(
-                  title: 'Habits',
-                  data: data,
-                  activeHabits: activeHabits,
-                  today: today,
-                  thisWeekStart: weekStart,
-                  primary: primary,
-                  tier: tier,
-                  skipCurrentWeek: true,
-                ),
-              _WeekRowCard(
-                icon: Icons.check_circle_outline_rounded,
-                title: 'Habits',
-                color: primary,
-                dayNames: _WeeklyOverview._dayNames,
-                dayCells:
-                    days.asMap().entries.map((e) {
-                      final r = habitsRatios[e.key];
-                      if (r == null || r < 0) {
-                        return _DayCellBox(
-                          fill: 0,
-                          color: primary,
-                          empty: true,
-                        );
-                      }
-                      return _DayCellBox(fill: r, color: primary, empty: false);
-                    }).toList(),
-                aggregate:
-                    weekHabitsAvg == null
-                        ? '--'
-                        : '${(weekHabitsAvg * 100).round()}%',
-                aggregateColor: primary,
-                expanded: _expandedRow == 'Habits',
-                onTap: () => _toggle('Habits'),
-              ),
-            ],
-          ),
+        _WeekRowCard(
+          icon: Icons.check_circle_outline_rounded,
+          title: 'Habits',
+          color: primary,
+          dayNames: _WeeklyOverview._dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final r = habitsRatios[e.key];
+                if (r == null || r < 0) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: primary,
+                    empty: true,
+                  );
+                }
+                return _DayCellBox(fill: r, color: primary, empty: false);
+              }).toList(),
+          aggregate:
+              weekHabitsAvg == null
+                  ? '--'
+                  : '${(weekHabitsAvg * 100).round()}%',
+          aggregateColor: primary,
+          expanded: _expandedRow == 'Habits',
+          onTap: () => _toggle('Habits'),
+          expansionContent:
+              _expandedRow == 'Habits'
+                  ? _FourWeekExpansion(
+                      title: 'Habits',
+                      data: data,
+                      activeHabits: activeHabits,
+                      today: today,
+                      thisWeekStart: weekStart,
+                      primary: primary,
+                      tier: tier,
+                      skipCurrentWeek: true,
+                      inlineMode: true,
+                    )
+                  : null,
         ),
         const SizedBox(height: 10),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: Column(
-            children: [
-              if (_expandedRow == 'Mood')
-                _FourWeekExpansion(
-                  title: 'Mood',
-                  data: data,
-                  activeHabits: activeHabits,
-                  today: today,
-                  thisWeekStart: weekStart,
-                  primary: primary,
-                  tier: tier,
-                  skipCurrentWeek: true,
-                ),
-              _WeekRowCard(
-                icon: Icons.sentiment_satisfied_alt_rounded,
-                title: 'Mood',
-                color: const Color(0xFF9B59B6),
-                dayNames: _WeeklyOverview._dayNames,
-                dayCells:
-                    days.asMap().entries.map((e) {
-                      final mood = dayMoods[e.key];
-                      if (mood == null) {
-                        return _DayCellBox(
-                          fill: 0,
-                          color: const Color(0xFF9B59B6),
-                          empty: true,
-                        );
-                      }
-                      return _DayCellText(text: mood.emoji);
-                    }).toList(),
-                aggregate:
-                    avgMoodLevel == null
-                        ? '--'
-                        : _WeeklyOverview._moodEmojis[avgMoodLevel - 1],
-                aggregateColor:
-                    avgMoodLevel == null
-                        ? AppColors.textMuted
-                        : _WeeklyOverview._moodColors[avgMoodLevel - 1],
-                expanded: _expandedRow == 'Mood',
-                onTap: () => _toggle('Mood'),
-              ),
-            ],
-          ),
+        _WeekRowCard(
+          icon: Icons.sentiment_satisfied_alt_rounded,
+          title: 'Mood',
+          color: const Color(0xFF9B59B6),
+          dayNames: _WeeklyOverview._dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final mood = dayMoods[e.key];
+                if (mood == null) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFF9B59B6),
+                    empty: true,
+                  );
+                }
+                return _DayCellText(text: mood.emoji);
+              }).toList(),
+          aggregate:
+              avgMoodLevel == null
+                  ? '--'
+                  : _WeeklyOverview._moodEmojis[avgMoodLevel - 1],
+          aggregateColor:
+              avgMoodLevel == null
+                  ? AppColors.textMuted
+                  : _WeeklyOverview._moodColors[avgMoodLevel - 1],
+          expanded: _expandedRow == 'Mood',
+          onTap: () => _toggle('Mood'),
+          expansionContent:
+              _expandedRow == 'Mood'
+                  ? _FourWeekExpansion(
+                      title: 'Mood',
+                      data: data,
+                      activeHabits: activeHabits,
+                      today: today,
+                      thisWeekStart: weekStart,
+                      primary: primary,
+                      tier: tier,
+                      skipCurrentWeek: true,
+                      inlineMode: true,
+                    )
+                  : null,
         ),
         const SizedBox(height: 10),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: Column(
-            children: [
-              if (_expandedRow == 'Focus')
-                _FourWeekExpansion(
-                  title: 'Focus',
-                  data: data,
-                  activeHabits: activeHabits,
-                  today: today,
-                  thisWeekStart: weekStart,
-                  primary: primary,
-                  tier: tier,
-                  skipCurrentWeek: true,
-                ),
-              _WeekRowCard(
-                icon: Icons.timer_rounded,
-                title: 'Focus',
-                color: const Color(0xFFF39C12),
-                dayNames: _WeeklyOverview._dayNames,
-                dayCells:
-                    days.asMap().entries.map((e) {
-                      final mins = dayFocusMins[e.key];
-                      if (mins == null || mins == 0) {
-                        return _DayCellBox(
-                          fill: 0,
-                          color: const Color(0xFFF39C12),
-                          empty: true,
-                        );
-                      }
-                      return _DayCellBox(
-                        fill: (mins / maxFocusMins).clamp(0.0, 1.0),
-                        color: const Color(0xFFF39C12),
-                        empty: false,
-                      );
-                    }).toList(),
-                aggregate: _fmtMins(totalFocusMins),
-                aggregateColor: const Color(0xFFF39C12),
-                expanded: _expandedRow == 'Focus',
-                onTap: () => _toggle('Focus'),
-              ),
-            ],
-          ),
+        _WeekRowCard(
+          icon: Icons.timer_rounded,
+          title: 'Focus',
+          color: const Color(0xFFF39C12),
+          dayNames: _WeeklyOverview._dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final mins = dayFocusMins[e.key];
+                if (mins == null || mins == 0) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFFF39C12),
+                    empty: true,
+                  );
+                }
+                return _DayCellBox(
+                  fill: (mins / maxFocusMins).clamp(0.0, 1.0),
+                  color: const Color(0xFFF39C12),
+                  empty: false,
+                );
+              }).toList(),
+          aggregate: _fmtMins(totalFocusMins),
+          aggregateColor: const Color(0xFFF39C12),
+          expanded: _expandedRow == 'Focus',
+          onTap: () => _toggle('Focus'),
+          expansionContent:
+              _expandedRow == 'Focus'
+                  ? _FourWeekExpansion(
+                      title: 'Focus',
+                      data: data,
+                      activeHabits: activeHabits,
+                      today: today,
+                      thisWeekStart: weekStart,
+                      primary: primary,
+                      tier: tier,
+                      skipCurrentWeek: true,
+                      inlineMode: true,
+                    )
+                  : null,
         ),
         const SizedBox(height: 10),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: Column(
-            children: [
-              if (_expandedRow == 'Journal')
-                _FourWeekExpansion(
-                  title: 'Journal',
-                  data: data,
-                  activeHabits: activeHabits,
-                  today: today,
-                  thisWeekStart: weekStart,
-                  primary: primary,
-                  tier: tier,
-                  skipCurrentWeek: true,
-                ),
-              _WeekRowCard(
-                icon: Icons.menu_book_rounded,
-                title: 'Journal',
-                color: const Color(0xFF3498DB),
-                dayNames: _WeeklyOverview._dayNames,
-                dayCells:
-                    days.asMap().entries.map((e) {
-                      final count = dayJournal[e.key];
-                      if (count == null || count == 0) {
-                        return _DayCellBox(
-                          fill: 0,
-                          color: const Color(0xFF3498DB),
-                          empty: true,
-                        );
-                      }
-                      return _DayCellBox(
-                        fill: 1.0,
-                        color: const Color(0xFF3498DB),
-                        empty: false,
-                      );
-                    }).toList(),
-                aggregate: totalJournal == 0 ? '--' : '$totalJournal',
-                aggregateColor: const Color(0xFF3498DB),
-                expanded: _expandedRow == 'Journal',
-                onTap: () => _toggle('Journal'),
-              ),
-            ],
-          ),
+        _WeekRowCard(
+          icon: Icons.menu_book_rounded,
+          title: 'Journal',
+          color: const Color(0xFF3498DB),
+          dayNames: _WeeklyOverview._dayNames,
+          dayCells:
+              days.asMap().entries.map((e) {
+                final count = dayJournal[e.key];
+                if (count == null || count == 0) {
+                  return _DayCellBox(
+                    fill: 0,
+                    color: const Color(0xFF3498DB),
+                    empty: true,
+                  );
+                }
+                return _DayCellBox(
+                  fill: 1.0,
+                  color: const Color(0xFF3498DB),
+                  empty: false,
+                );
+              }).toList(),
+          aggregate: totalJournal == 0 ? '--' : '$totalJournal',
+          aggregateColor: const Color(0xFF3498DB),
+          expanded: _expandedRow == 'Journal',
+          onTap: () => _toggle('Journal'),
+          expansionContent:
+              _expandedRow == 'Journal'
+                  ? _FourWeekExpansion(
+                      title: 'Journal',
+                      data: data,
+                      activeHabits: activeHabits,
+                      today: today,
+                      thisWeekStart: weekStart,
+                      primary: primary,
+                      tier: tier,
+                      skipCurrentWeek: true,
+                      inlineMode: true,
+                    )
+                  : null,
         ),
         if (tier != UserTier.guest) ...[
           const SizedBox(height: 10),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: Column(
-              children: [
-                if (_expandedRow == 'Spend')
-                  _FourWeekExpansion(
-                    title: 'Spend',
-                    data: data,
-                    activeHabits: activeHabits,
-                    today: today,
-                    thisWeekStart: weekStart,
-                    primary: primary,
-                    tier: tier,
-                    skipCurrentWeek: true,
-                  ),
-                _WeekRowCard(
-                  icon: Icons.account_balance_wallet_rounded,
-                  title: 'Spend',
-                  color: const Color(0xFF2ECC71),
-                  dayNames: _WeeklyOverview._dayNames,
-                  dayCells:
-                      days.asMap().entries.map((e) {
-                        final spend =
-                            daySpend.isNotEmpty ? daySpend[e.key] : null;
-                        if (spend == null || spend == 0) {
-                          return _DayCellBox(
-                            fill: 0,
-                            color: const Color(0xFF2ECC71),
-                            empty: true,
-                          );
-                        }
-                        return _DayCellText(
-                          text: _smartMoney(spend),
-                          color: const Color(0xFF2ECC71),
-                          small: true,
-                        );
-                      }).toList(),
-                  aggregate: totalSpend == 0 ? '--' : _smartMoney(totalSpend),
-                  aggregateColor: const Color(0xFF2ECC71),
-                  expanded: _expandedRow == 'Spend',
-                  onTap: () => _toggle('Spend'),
-                ),
-              ],
-            ),
+          _WeekRowCard(
+            icon: Icons.account_balance_wallet_rounded,
+            title: 'Spend',
+            color: const Color(0xFF2ECC71),
+            dayNames: _WeeklyOverview._dayNames,
+            dayCells:
+                days.asMap().entries.map((e) {
+                  final spend =
+                      daySpend.isNotEmpty ? daySpend[e.key] : null;
+                  if (spend == null || spend == 0) {
+                    return _DayCellBox(
+                      fill: 0,
+                      color: const Color(0xFF2ECC71),
+                      empty: true,
+                    );
+                  }
+                  return _DayCellText(
+                    text: _smartMoney(spend),
+                    color: const Color(0xFF2ECC71),
+                    small: true,
+                  );
+                }).toList(),
+            aggregate: totalSpend == 0 ? '--' : _smartMoney(totalSpend),
+            aggregateColor: const Color(0xFF2ECC71),
+            expanded: _expandedRow == 'Spend',
+            onTap: () => _toggle('Spend'),
+            expansionContent:
+                _expandedRow == 'Spend'
+                    ? _FourWeekExpansion(
+                        title: 'Spend',
+                        data: data,
+                        activeHabits: activeHabits,
+                        today: today,
+                        thisWeekStart: weekStart,
+                        primary: primary,
+                        tier: tier,
+                        skipCurrentWeek: true,
+                        inlineMode: true,
+                      )
+                    : null,
           ),
         ],
       ],
@@ -1899,6 +1869,9 @@ class _WeekRowCard extends StatelessWidget {
   final Color aggregateColor;
   final VoidCallback? onTap;
   final bool expanded;
+  /// Previous 3 weeks rendered inside the card when [expanded] is true.
+  /// The card itself expands downward — no separate container is introduced.
+  final Widget? expansionContent;
 
   const _WeekRowCard({
     required this.icon,
@@ -1910,66 +1883,74 @@ class _WeekRowCard extends StatelessWidget {
     required this.aggregateColor,
     this.onTap,
     this.expanded = false,
+    this.expansionContent,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        decoration: context.cardDecoration,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: color),
-                const SizedBox(width: 6),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.appColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  width: 1,
-                  height: 14,
-                  color: context.appColors.border,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                Text(
-                  aggregate,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: aggregateColor,
-                  ),
-                ),
-                if (onTap != null) ...[
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOut,
+        alignment: Alignment.topCenter,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          decoration: context.cardDecoration,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ────────────────────────────────
+              Row(
+                children: [
+                  Icon(icon, size: 14, color: color),
                   const SizedBox(width: 6),
-                  AnimatedRotation(
-                    turns: expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 16,
-                      color: context.appColors.textMuted,
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: context.appColors.textSecondary,
                     ),
                   ),
+                  const Spacer(),
+                  Container(
+                    width: 1,
+                    height: 14,
+                    color: context.appColors.border,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  Text(
+                    aggregate,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: aggregateColor,
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 6),
+                    AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: context.appColors.textMuted,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: List.generate(
-                7,
-                (i) => Expanded(
-                  child: Column(
-                    children: [
-                      Text(
+              ),
+              const SizedBox(height: 8),
+              // ── Day names header ─────────────────────
+              Row(
+                children: [
+                  if (expanded) const SizedBox(width: 28),
+                  ...List.generate(
+                    7,
+                    (i) => Expanded(
+                      child: Text(
                         dayNames[i],
                         style: TextStyle(
                           fontSize: 9,
@@ -1978,14 +1959,36 @@ class _WeekRowCard extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 5),
-                      Center(child: dayCells[i]),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 5),
+              // ── Previous 3 weeks (inside same card, above current) ──
+              if (expanded && expansionContent != null) ...[
+                expansionContent!,
+                const SizedBox(height: 4),
+              ],
+              // ── Current week row ─────────────────────
+              Row(
+                children: [
+                  if (expanded)
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        'Now',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ...dayCells.map((c) => Expanded(child: Center(child: c))),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2007,6 +2010,10 @@ class _FourWeekExpansion extends StatelessWidget {
   /// current week is already shown by the parent _WeekRowCard.
   final bool skipCurrentWeek;
 
+  /// When true, renders only the week rows with no outer container decoration
+  /// or day-name header — used when embedded inside a _WeekRowCard.
+  final bool inlineMode;
+
   static const _dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   const _FourWeekExpansion({
@@ -2018,6 +2025,7 @@ class _FourWeekExpansion extends StatelessWidget {
     required this.primary,
     required this.tier,
     this.skipCurrentWeek = false,
+    this.inlineMode = false,
   });
 
   String _fmt(DateTime d) =>
@@ -2080,6 +2088,153 @@ class _FourWeekExpansion extends StatelessWidget {
       }
     }
 
+    final weekRows = weeks.asMap().entries.map<Widget>((we) {
+      final weekIdx = we.key;
+      // Skip the current week row (index 3 = "Now") when the parent
+      // already renders it as a _WeekRowCard.
+      if (skipCurrentWeek && weekIdx == 3) {
+        return const SizedBox.shrink();
+      }
+      final ws = we.value;
+      final days = List.generate(7, (d) => ws.add(Duration(days: d)));
+      final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              child: Text(
+                weekLabel,
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600,
+                  color: context.appColors.textMuted,
+                ),
+              ),
+            ),
+            ...days.map((day) {
+              Widget cell;
+              if (day.isAfter(todayMid)) {
+                cell = _DayCellBox(fill: 0, color: color, empty: true);
+              } else {
+                final ds = _fmt(day);
+                switch (title) {
+                  case 'Habits':
+                    final sched = HabitHelpers.habitsForDate(
+                      activeHabits,
+                      day,
+                    );
+                    if (sched.isEmpty) {
+                      cell = _DayCellBox(
+                        fill: 0,
+                        color: color,
+                        empty: true,
+                      );
+                    } else {
+                      final done =
+                          sched
+                              .where(
+                                (h) => HabitHelpers.isCompletedOn(
+                                  h,
+                                  data.habitLogs,
+                                  ds,
+                                ),
+                              )
+                              .length;
+                      cell = _DayCellBox(
+                        fill: done / sched.length,
+                        color: color,
+                        empty: false,
+                      );
+                    }
+                  case 'Mood':
+                    final mood = moodMap[ds];
+                    if (mood == null) {
+                      cell = _DayCellBox(
+                        fill: 0,
+                        color: color,
+                        empty: true,
+                      );
+                    } else {
+                      cell = _DayCellText(text: mood.emoji);
+                    }
+                  case 'Focus':
+                    final mins = data.focusSessions
+                        .where((s) {
+                          final sd =
+                              DateTime.tryParse(s.startedAt)?.toLocal();
+                          return sd != null &&
+                              sd.year == day.year &&
+                              sd.month == day.month &&
+                              sd.day == day.day;
+                        })
+                        .fold<int>(
+                          0,
+                          (sum, s) => sum + (s.actualDuration ~/ 60),
+                        );
+                    cell = _DayCellBox(
+                      fill:
+                          mins == 0
+                              ? 0
+                              : (mins / maxFocusMins).clamp(0.0, 1.0),
+                      color: color,
+                      empty: mins == 0,
+                    );
+                  case 'Journal':
+                    final count =
+                        data.journal.where((e) {
+                          final d =
+                              DateTime.tryParse(e.createdAt)?.toLocal();
+                          return d != null && _fmt(d) == ds;
+                        }).length;
+                    cell = _DayCellBox(
+                      fill: count > 0 ? 1.0 : 0,
+                      color: color,
+                      empty: count == 0,
+                    );
+                  case 'Spend':
+                    final spend = data.transactions
+                        .where(
+                          (t) =>
+                              t.date == ds &&
+                              t.type == TransactionType.expense,
+                        )
+                        .fold<double>(0, (s, t) => s + t.amount);
+                    if (spend == 0) {
+                      cell = _DayCellBox(
+                        fill: 0,
+                        color: color,
+                        empty: true,
+                      );
+                    } else {
+                      cell = _DayCellText(
+                        text: _smartMoney(spend),
+                        color: color,
+                        small: true,
+                      );
+                    }
+                  default:
+                    cell = _DayCellBox(
+                      fill: 0,
+                      color: color,
+                      empty: true,
+                    );
+                }
+              }
+              return Expanded(child: Center(child: cell));
+            }),
+          ],
+        ),
+      );
+    }).toList();
+
+    // Inline mode: rendered inside _WeekRowCard — no decoration, no day header.
+    if (inlineMode) {
+      return Column(children: weekRows);
+    }
+
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
@@ -2114,147 +2269,7 @@ class _FourWeekExpansion extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            ...weeks.asMap().entries.map((we) {
-              final weekIdx = we.key;
-              // Skip the current week row (index 3 = "Now") when the parent
-              // already renders it as a _WeekRowCard.
-              if (skipCurrentWeek && weekIdx == 3) {
-                return const SizedBox.shrink();
-              }
-              final ws = we.value;
-              final days = List.generate(7, (d) => ws.add(Duration(days: d)));
-              final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        weekLabel,
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w600,
-                          color: context.appColors.textMuted,
-                        ),
-                      ),
-                    ),
-                    ...days.map((day) {
-                      Widget cell;
-                      if (day.isAfter(todayMid)) {
-                        cell = _DayCellBox(fill: 0, color: color, empty: true);
-                      } else {
-                        final ds = _fmt(day);
-                        switch (title) {
-                          case 'Habits':
-                            final sched = HabitHelpers.habitsForDate(
-                              activeHabits,
-                              day,
-                            );
-                            if (sched.isEmpty) {
-                              cell = _DayCellBox(
-                                fill: 0,
-                                color: color,
-                                empty: true,
-                              );
-                            } else {
-                              final done =
-                                  sched
-                                      .where(
-                                        (h) => HabitHelpers.isCompletedOn(
-                                          h,
-                                          data.habitLogs,
-                                          ds,
-                                        ),
-                                      )
-                                      .length;
-                              cell = _DayCellBox(
-                                fill: done / sched.length,
-                                color: color,
-                                empty: false,
-                              );
-                            }
-                          case 'Mood':
-                            final mood = moodMap[ds];
-                            if (mood == null) {
-                              cell = _DayCellBox(
-                                fill: 0,
-                                color: color,
-                                empty: true,
-                              );
-                            } else {
-                              cell = _DayCellText(text: mood.emoji);
-                            }
-                          case 'Focus':
-                            final mins = data.focusSessions
-                                .where((s) {
-                                  final sd =
-                                      DateTime.tryParse(s.startedAt)?.toLocal();
-                                  return sd != null &&
-                                      sd.year == day.year &&
-                                      sd.month == day.month &&
-                                      sd.day == day.day;
-                                })
-                                .fold<int>(
-                                  0,
-                                  (sum, s) => sum + (s.actualDuration ~/ 60),
-                                );
-                            cell = _DayCellBox(
-                              fill:
-                                  mins == 0
-                                      ? 0
-                                      : (mins / maxFocusMins).clamp(0.0, 1.0),
-                              color: color,
-                              empty: mins == 0,
-                            );
-                          case 'Journal':
-                            final count =
-                                data.journal.where((e) {
-                                  final d =
-                                      DateTime.tryParse(e.createdAt)?.toLocal();
-                                  return d != null && _fmt(d) == ds;
-                                }).length;
-                            cell = _DayCellBox(
-                              fill: count > 0 ? 1.0 : 0,
-                              color: color,
-                              empty: count == 0,
-                            );
-                          case 'Spend':
-                            final spend = data.transactions
-                                .where(
-                                  (t) =>
-                                      t.date == ds &&
-                                      t.type == TransactionType.expense,
-                                )
-                                .fold<double>(0, (s, t) => s + t.amount);
-                            if (spend == 0) {
-                              cell = _DayCellBox(
-                                fill: 0,
-                                color: color,
-                                empty: true,
-                              );
-                            } else {
-                              cell = _DayCellText(
-                                text: _smartMoney(spend),
-                                color: color,
-                                small: true,
-                              );
-                            }
-                          default:
-                            cell = _DayCellBox(
-                              fill: 0,
-                              color: color,
-                              empty: true,
-                            );
-                        }
-                      }
-                      return Expanded(child: Center(child: cell));
-                    }),
-                  ],
-                ),
-              );
-            }),
+            ...weekRows,
           ],
         ),
       ),

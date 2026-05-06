@@ -141,11 +141,7 @@ class HabitCheckWidget extends ConsumerWidget {
           HabitHelpers.logForDate(logs, habit.id, dateStr)?.value ?? 0;
       await ref
           .read(dataNotifierProvider.notifier)
-          .toggleHabit(
-            habitId: habit.id,
-            dateStr: dateStr,
-            delta: -currentVal,
-          );
+          .toggleHabit(habitId: habit.id, dateStr: dateStr, delta: -currentVal);
     }
   }
 
@@ -196,9 +192,10 @@ class HabitCheckWidget extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => setState(
-                                () => val = (val + 1).clamp(0, maxMins),
-                              ),
+                              onPressed:
+                                  () => setState(
+                                    () => val = (val + 1).clamp(0, maxMins),
+                                  ),
                               icon: const Icon(Icons.add_rounded),
                             ),
                           ],
