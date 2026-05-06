@@ -491,9 +491,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                           decoration: BoxDecoration(
                             color: context.appColors.bgCard,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: context.appColors.border,
-                            ),
+                            border: Border.all(color: context.appColors.border),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -623,9 +621,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                           decoration: BoxDecoration(
                             color: context.appColors.bgCard,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: context.appColors.border,
-                            ),
+                            border: Border.all(color: context.appColors.border),
                           ),
                           padding: const EdgeInsets.only(left: 14),
                           child: Row(
@@ -651,10 +647,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                               ),
                               IconButton(
                                 onPressed: _addTag,
-                                icon: Icon(
-                                  Icons.add_rounded,
-                                  color: primary,
-                                ),
+                                icon: Icon(Icons.add_rounded, color: primary),
                               ),
                             ],
                           ),

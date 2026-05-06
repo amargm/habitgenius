@@ -44,6 +44,16 @@ class PrefKeys {
   /// ISO 4217 currency code used as default in the Expenses feature.
   static const defaultCurrency = 'default_currency';
 
-  /// Whether to play haptic celebration when a habit is completed (default: true).
+  /// Master switch: whether any celebration feedback fires on habit completion
+  /// (default: true).  Controls visibility of the three sub-toggles below.
   static const celebrationHaptic = 'celebration_haptic';
+
+  /// Whether to vibrate (haptic) on completion (default: true).
+  static const celebrationVibration = 'celebration_vibration';
+
+  /// Whether to play a short click sound on completion (default: true).
+  static const celebrationSound = 'celebration_sound';
+
+  /// Whether to show the confetti visual effect on completion (default: true).
+  static const celebrationVisual = 'celebration_visual';
 }

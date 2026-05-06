@@ -1212,6 +1212,9 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
   int _firstDayOfWeek = 1; // 0=Sun, 1=Mon
   String _currency = 'USD';
   bool _celebrationHaptic = true;
+  bool _celebrationVibration = true;
+  bool _celebrationSound = true;
+  bool _celebrationVisual = true;
   bool _loaded = false;
 
   @override
@@ -1226,6 +1229,10 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
       _firstDayOfWeek = prefs.getInt(PrefKeys.firstDayOfWeek) ?? 1;
       _currency = prefs.getString(PrefKeys.defaultCurrency) ?? 'USD';
       _celebrationHaptic = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
+      _celebrationVibration =
+          prefs.getBool(PrefKeys.celebrationVibration) ?? true;
+      _celebrationSound = prefs.getBool(PrefKeys.celebrationSound) ?? true;
+      _celebrationVisual = prefs.getBool(PrefKeys.celebrationVisual) ?? true;
       _loaded = true;
     });
   }
@@ -1439,7 +1446,8 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
-          // Celebration haptic toggle
+          // ── Celebration feedback ─────────────────────────
+          // Master toggle
           SwitchListTile.adaptive(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -1451,11 +1459,11 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
               size: 20,
             ),
             title: const Text(
-              'Celebration haptic',
+              'Celebration feedback',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
             subtitle: const Text(
-              'Vibrate when a habit is completed',
+              'Show effects when a habit is completed',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
             value: _celebrationHaptic,
@@ -1465,6 +1473,66 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
               setState(() => _celebrationHaptic = v);
             },
           ),
+          // Sub-toggles (only visible when master is on)
+          if (_celebrationHaptic) ...[
+            const Divider(height: 1, indent: 52, endIndent: 16),
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.only(
+                left: 52,
+                right: 16,
+                top: 2,
+                bottom: 2,
+              ),
+              title: const Text(
+                'Vibration',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+              ),
+              value: _celebrationVibration,
+              onChanged: (v) async {
+                final prefs = ref.read(sharedPreferencesProvider);
+                await prefs.setBool(PrefKeys.celebrationVibration, v);
+                setState(() => _celebrationVibration = v);
+              },
+            ),
+            const Divider(height: 1, indent: 52, endIndent: 16),
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.only(
+                left: 52,
+                right: 16,
+                top: 2,
+                bottom: 2,
+              ),
+              title: const Text(
+                'Sound',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+              ),
+              value: _celebrationSound,
+              onChanged: (v) async {
+                final prefs = ref.read(sharedPreferencesProvider);
+                await prefs.setBool(PrefKeys.celebrationSound, v);
+                setState(() => _celebrationSound = v);
+              },
+            ),
+            const Divider(height: 1, indent: 52, endIndent: 16),
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.only(
+                left: 52,
+                right: 16,
+                top: 2,
+                bottom: 2,
+              ),
+              title: const Text(
+                'Visual (confetti)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+              ),
+              value: _celebrationVisual,
+              onChanged: (v) async {
+                final prefs = ref.read(sharedPreferencesProvider);
+                await prefs.setBool(PrefKeys.celebrationVisual, v);
+                setState(() => _celebrationVisual = v);
+              },
+            ),
+          ],
         ],
       ),
     );

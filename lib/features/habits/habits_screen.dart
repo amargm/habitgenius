@@ -9,6 +9,7 @@ import '../../core/models/habit_log.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/utils/habit_helpers.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/habit_check_widget.dart';
@@ -458,6 +459,10 @@ class _HabitTile extends ConsumerWidget {
         archivedAt: DateTime.now().toUtc().toIso8601String(),
       );
       await ref.read(dataNotifierProvider.notifier).updateHabit(archived);
+      // Cancel the reminder so it doesn't fire for an archived habit.
+      if (habit.reminderTime != null) {
+        await NotificationService.cancelHabitReminder(habit.id);
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -468,6 +473,22 @@ class _HabitTile extends ConsumerWidget {
                 await ref
                     .read(dataNotifierProvider.notifier)
                     .updateHabit(habit);
+                // Restore the reminder after un-archiving.
+                if (habit.reminderTime != null) {
+                  final parts = habit.reminderTime!.split(':');
+                  if (parts.length == 2) {
+                    final h = int.tryParse(parts[0]);
+                    final m = int.tryParse(parts[1]);
+                    if (h != null && m != null) {
+                      await NotificationService.scheduleHabitReminder(
+                        habitId: habit.id,
+                        habitName: habit.name,
+                        timeOfDay: TimeOfDay(hour: h, minute: m),
+                        scheduleDays: habit.scheduleDays,
+                      );
+                    }
+                  }
+                }
               },
             ),
             duration: const Duration(seconds: 3),
@@ -499,6 +520,9 @@ class _HabitTile extends ConsumerWidget {
             ),
       );
       if (confirmed == true) {
+        if (habit.reminderTime != null) {
+          await NotificationService.cancelHabitReminder(habit.id);
+        }
         await ref.read(dataNotifierProvider.notifier).deleteHabit(habit.id);
       }
     }
@@ -597,6 +621,22 @@ class _ArchivedHabitTile extends ConsumerWidget {
               await ref
                   .read(dataNotifierProvider.notifier)
                   .updateHabit(unarchived);
+              // Restore reminder notification after unarchiving.
+              if (habit.reminderTime != null) {
+                final parts = habit.reminderTime!.split(':');
+                if (parts.length == 2) {
+                  final h = int.tryParse(parts[0]);
+                  final m = int.tryParse(parts[1]);
+                  if (h != null && m != null) {
+                    await NotificationService.scheduleHabitReminder(
+                      habitId: habit.id,
+                      habitName: habit.name,
+                      timeOfDay: TimeOfDay(hour: h, minute: m),
+                      scheduleDays: habit.scheduleDays,
+                    );
+                  }
+                }
+              }
             },
           ),
           // Delete button
@@ -633,6 +673,9 @@ class _ArchivedHabitTile extends ConsumerWidget {
                     ),
               );
               if (confirmed == true && context.mounted) {
+                if (habit.reminderTime != null) {
+                  await NotificationService.cancelHabitReminder(habit.id);
+                }
                 await ref
                     .read(dataNotifierProvider.notifier)
                     .deleteHabit(habit.id);

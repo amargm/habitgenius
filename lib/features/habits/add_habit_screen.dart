@@ -288,6 +288,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       );
 
       if (_isEditing) {
+        // If the reminder was removed during editing, cancel the old notification.
+        if (widget.initialHabit!.reminderTime != null && reminderStr == null) {
+          await NotificationService.cancelHabitReminder(habit.id);
+        }
         await ref.read(dataNotifierProvider.notifier).updateHabit(habit);
       } else {
         await ref.read(dataNotifierProvider.notifier).addHabit(habit);
@@ -450,19 +454,20 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                   HabitProgressType.values
                       .where((pt) => pt != HabitProgressType.stopwatch)
                       .map((pt) {
-                    final selected =
-                        _progressType == pt &&
-                        (_progressTypeChosen || !_isTemplate);
-                    return ChoiceChip(
-                      label: Text(_progressLabel(pt)),
-                      selected: selected,
-                      onSelected:
-                          (_) => setState(() {
-                            _progressType = pt;
-                            _progressTypeChosen = true;
-                          }),
-                    );
-                  }).toList(),
+                        final selected =
+                            _progressType == pt &&
+                            (_progressTypeChosen || !_isTemplate);
+                        return ChoiceChip(
+                          label: Text(_progressLabel(pt)),
+                          selected: selected,
+                          onSelected:
+                              (_) => setState(() {
+                                _progressType = pt;
+                                _progressTypeChosen = true;
+                              }),
+                        );
+                      })
+                      .toList(),
             ),
             if (_progressType == HabitProgressType.counter ||
                 _progressType == HabitProgressType.timer) ...[

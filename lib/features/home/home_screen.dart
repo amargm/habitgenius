@@ -275,7 +275,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$greeting, $firstName',
+                greeting,
                 style: TextStyle(
                   color: context.appColors.textSecondary,
                   fontSize: 13,
@@ -399,10 +399,8 @@ class _TodayHabitsRow extends ConsumerWidget {
 
             final log = HabitHelpers.logForDate(logs, habit.id, todayStr);
             final currentVal = log?.value ?? 0;
-            final isCounter =
-                habit.progressType == HabitProgressType.counter;
-            final isTimer =
-                habit.progressType == HabitProgressType.timer;
+            final isCounter = habit.progressType == HabitProgressType.counter;
+            final isTimer = habit.progressType == HabitProgressType.timer;
             final timerPct =
                 isTimer && habit.targetValue > 0
                     ? (currentVal / habit.targetValue).clamp(0.0, 1.0)
@@ -419,10 +417,7 @@ class _TodayHabitsRow extends ConsumerWidget {
               circleInner = Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    habit.icon,
-                    style: const TextStyle(fontSize: 18),
-                  ),
+                  Text(habit.icon, style: const TextStyle(fontSize: 18)),
                   if (habit.targetValue > 0)
                     Text(
                       '$currentVal/${habit.targetValue}',
@@ -458,8 +453,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                     if (!wasDone) {
                       final nowDone = HabitHelpers.isCompletedOn(
                         habit,
-                        ref.read(dataNotifierProvider).value?.habitLogs ??
-                            logs,
+                        ref.read(dataNotifierProvider).value?.habitLogs ?? logs,
                         todayStr,
                       );
                       if (nowDone) {
@@ -478,13 +472,7 @@ class _TodayHabitsRow extends ConsumerWidget {
                       }
                     }
                   } else if (isTimer) {
-                    _showTimerPicker(
-                      context,
-                      ref,
-                      habit,
-                      currentVal,
-                      todayStr,
-                    );
+                    _showTimerPicker(context, ref, habit, currentVal, todayStr);
                   } else {
                     HapticFeedback.selectionClick();
                     final wasDone = HabitHelpers.isCompletedOn(
@@ -705,9 +693,8 @@ class _TodayHabitsRow extends ConsumerWidget {
   ) {
     final target = habit.targetValue > 0 ? habit.targetValue : 60;
     final remaining = (target - currentVal).clamp(0, target + 60);
-    final presets = [5, 10, 15, 20, 30, 45, 60]
-        .where((m) => m <= remaining + 30)
-        .toList();
+    final presets =
+        [5, 10, 15, 20, 30, 45, 60].where((m) => m <= remaining + 30).toList();
     if (presets.isEmpty) presets.add(15);
 
     showModalBottomSheet<void>(
@@ -719,9 +706,7 @@ class _TodayHabitsRow extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
           decoration: BoxDecoration(
             color: context.appColors.bgCard,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -754,29 +739,30 @@ class _TodayHabitsRow extends ConsumerWidget {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: presets
-                    .map(
-                      (mins) => ElevatedButton(
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          await ref
-                              .read(dataNotifierProvider.notifier)
-                              .toggleHabit(
-                                habitId: habit.id,
-                                dateStr: dateStr,
-                                delta: mins,
-                              );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primary.withValues(alpha: 0.12),
-                          foregroundColor: primary,
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: Text('+$mins min'),
-                      ),
-                    )
-                    .toList(),
+                children:
+                    presets
+                        .map(
+                          (mins) => ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(ctx);
+                              await ref
+                                  .read(dataNotifierProvider.notifier)
+                                  .toggleHabit(
+                                    habitId: habit.id,
+                                    dateStr: dateStr,
+                                    delta: mins,
+                                  );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary.withValues(alpha: 0.12),
+                              foregroundColor: primary,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                            ),
+                            child: Text('+$mins min'),
+                          ),
+                        )
+                        .toList(),
               ),
             ],
           ),
@@ -813,8 +799,18 @@ class _MoodYearHeatmapPage extends StatelessWidget {
   final DateTime today;
 
   static const _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   static const _moodColors = [
     Color(0xFFE17055),
@@ -829,15 +825,18 @@ class _MoodYearHeatmapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final moodMap = {for (final m in moods) m.date: m};
-    final logged = moods.where((m) {
-      final d = DateTime.tryParse(m.date);
-      return d != null && d.year == today.year;
-    }).toList();
-    final avgLevel = logged.isEmpty
-        ? null
-        : (logged.map((m) => m.level).reduce((a, b) => a + b) / logged.length)
-            .round()
-            .clamp(1, 5);
+    final logged =
+        moods.where((m) {
+          final d = DateTime.tryParse(m.date);
+          return d != null && d.year == today.year;
+        }).toList();
+    final avgLevel =
+        logged.isEmpty
+            ? null
+            : (logged.map((m) => m.level).reduce((a, b) => a + b) /
+                    logged.length)
+                .round()
+                .clamp(1, 5);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -903,12 +902,13 @@ class _MoodYearHeatmapPage extends StatelessWidget {
                           childAspectRatio: 0.9,
                         ),
                     itemCount: 12,
-                    itemBuilder: (_, i) => _MoodMiniMonth(
-                      month: DateTime(today.year, i + 1, 1),
-                      moodByDate: moodMap,
-                      today: today,
-                      monthName: _monthNames[i],
-                    ),
+                    itemBuilder:
+                        (_, i) => _MoodMiniMonth(
+                          month: DateTime(today.year, i + 1, 1),
+                          moodByDate: moodMap,
+                          today: today,
+                          monthName: _monthNames[i],
+                        ),
                   ),
                 ),
               ),
@@ -988,8 +988,9 @@ class _MoodMiniMonth extends StatelessWidget {
               if (mood != null) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: _moodColors[mood.level.clamp(1, 5) - 1]
-                        .withValues(alpha: 0.25),
+                    color: _moodColors[mood.level.clamp(1, 5) - 1].withValues(
+                      alpha: 0.25,
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Center(
@@ -1755,8 +1756,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
             dayNames: _WeeklyOverview._dayNames,
             dayCells:
                 days.asMap().entries.map((e) {
-                  final spend =
-                      daySpend.isNotEmpty ? daySpend[e.key] : null;
+                  final spend = daySpend.isNotEmpty ? daySpend[e.key] : null;
                   if (spend == null || spend == 0) {
                     return _DayCellBox(
                       fill: 0,
@@ -2023,8 +2023,7 @@ class _FourWeekExpansion extends StatelessWidget {
             ...weeks.asMap().entries.map((we) {
               final weekIdx = we.key;
               final ws = we.value;
-              final days =
-                  List.generate(7, (d) => ws.add(Duration(days: d)));
+              final days = List.generate(7, (d) => ws.add(Duration(days: d)));
               final weekLabel = weekIdx == 3 ? 'Now' : '-${3 - weekIdx}w';
 
               return Padding(
@@ -2045,11 +2044,7 @@ class _FourWeekExpansion extends StatelessWidget {
                     ...days.map((day) {
                       Widget cell;
                       if (day.isAfter(todayMid)) {
-                        cell = _DayCellBox(
-                          fill: 0,
-                          color: color,
-                          empty: true,
-                        );
+                        cell = _DayCellBox(fill: 0, color: color, empty: true);
                       } else {
                         final ds = _fmt(day);
                         switch (title) {
@@ -2096,8 +2091,7 @@ class _FourWeekExpansion extends StatelessWidget {
                             final mins = data.focusSessions
                                 .where((s) {
                                   final sd =
-                                      DateTime.tryParse(s.startedAt)
-                                          ?.toLocal();
+                                      DateTime.tryParse(s.startedAt)?.toLocal();
                                   return sd != null &&
                                       sd.year == day.year &&
                                       sd.month == day.month &&
@@ -2121,13 +2115,12 @@ class _FourWeekExpansion extends StatelessWidget {
                               );
                             }
                           case 'Journal':
-                            final count = data.journal
-                                .where((e) {
+                            final count =
+                                data.journal.where((e) {
                                   final d =
                                       DateTime.tryParse(e.createdAt)?.toLocal();
                                   return d != null && _fmt(d) == ds;
-                                })
-                                .length;
+                                }).length;
                             cell = _DayCellBox(
                               fill: count > 0 ? 1.0 : 0,
                               color: color,

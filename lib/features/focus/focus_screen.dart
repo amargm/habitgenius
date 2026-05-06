@@ -46,16 +46,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   final FocusMode _selectedMode = FocusMode.pomodoro;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final tier = ref.watch(authNotifierProvider).tier;
     final svc = ref.watch(focusSvcProvider);
@@ -145,7 +135,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                 HapticFeedback.lightImpact();
                 svc.pause();
               },
-      onReset: () {
+              onReset: () {
                 HapticFeedback.lightImpact();
                 _onReset(svc); // async; fire-and-forget is intentional
               },

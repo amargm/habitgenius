@@ -507,8 +507,18 @@ class _TimelineTabState extends State<_TimelineTab> {
   _Period _period = _Period.month;
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   String _smartMoney(double v) {
@@ -536,9 +546,7 @@ class _TimelineTabState extends State<_TimelineTab> {
           labels.add(dayNames[(d.weekday - 1) % 7]);
           exp.add(
             txs
-                .where(
-                  (t) => t.date == ds && t.type == TransactionType.expense,
-                )
+                .where((t) => t.date == ds && t.type == TransactionType.expense)
                 .fold(0.0, (s, t) => s + t.amount),
           );
           inc.add(
@@ -565,9 +573,7 @@ class _TimelineTabState extends State<_TimelineTab> {
             final ds =
                 '${now.year}-${now.month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
             e += txs
-                .where(
-                  (t) => t.date == ds && t.type == TransactionType.expense,
-                )
+                .where((t) => t.date == ds && t.type == TransactionType.expense)
                 .fold(0.0, (s, t) => s + t.amount);
             i2 += txs
                 .where((t) => t.date == ds && t.type == TransactionType.income)
@@ -587,8 +593,7 @@ class _TimelineTabState extends State<_TimelineTab> {
         final inc = <double>[];
         for (int i = 2; i >= 0; i--) {
           final m = DateTime(now.year, now.month - i, 1);
-          final ym =
-              '${m.year}-${m.month.toString().padLeft(2, '0')}';
+          final ym = '${m.year}-${m.month.toString().padLeft(2, '0')}';
           labels.add(_months[m.month - 1]);
           exp.add(
             txs
@@ -603,8 +608,7 @@ class _TimelineTabState extends State<_TimelineTab> {
             txs
                 .where(
                   (t) =>
-                      t.date.startsWith(ym) &&
-                      t.type == TransactionType.income,
+                      t.date.startsWith(ym) && t.type == TransactionType.income,
                 )
                 .fold(0.0, (s, t) => s + t.amount),
           );
@@ -618,8 +622,7 @@ class _TimelineTabState extends State<_TimelineTab> {
         final inc = <double>[];
         for (int i = 11; i >= 0; i--) {
           final m = DateTime(now.year, now.month - i, 1);
-          final ym =
-              '${m.year}-${m.month.toString().padLeft(2, '0')}';
+          final ym = '${m.year}-${m.month.toString().padLeft(2, '0')}';
           labels.add(_months[m.month - 1]);
           exp.add(
             txs
@@ -634,8 +637,7 @@ class _TimelineTabState extends State<_TimelineTab> {
             txs
                 .where(
                   (t) =>
-                      t.date.startsWith(ym) &&
-                      t.type == TransactionType.income,
+                      t.date.startsWith(ym) && t.type == TransactionType.income,
                 )
                 .fold(0.0, (s, t) => s + t.amount),
           );
@@ -696,23 +698,24 @@ class _TimelineTabState extends State<_TimelineTab> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: _Period.values.map((p) {
-              final label = switch (p) {
-                _Period.week => 'Week',
-                _Period.month => 'Month',
-                _Period.quarter => 'Quarter',
-                _Period.year => 'Year',
-              };
-              final sel = _period == p;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(label),
-                  selected: sel,
-                  onSelected: (_) => setState(() => _period = p),
-                ),
-              );
-            }).toList(),
+            children:
+                _Period.values.map((p) {
+                  final label = switch (p) {
+                    _Period.week => 'Week',
+                    _Period.month => 'Month',
+                    _Period.quarter => 'Quarter',
+                    _Period.year => 'Year',
+                  };
+                  final sel = _period == p;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: sel,
+                      onSelected: (_) => setState(() => _period = p),
+                    ),
+                  );
+                }).toList(),
           ),
         ),
         const SizedBox(height: 16),
@@ -891,9 +894,12 @@ class _SpendBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (labels.isEmpty) return const SizedBox.shrink();
     final allVals = [...expValues, ...incValues];
-    final maxVal = allVals.isEmpty
-        ? 1.0
-        : allVals.reduce((a, b) => a > b ? a : b).clamp(1.0, double.infinity);
+    final maxVal =
+        allVals.isEmpty
+            ? 1.0
+            : allVals
+                .reduce((a, b) => a > b ? a : b)
+                .clamp(1.0, double.infinity);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -924,19 +930,20 @@ class _SpendBarChart extends StatelessWidget {
             SizedBox(
               height: 24,
               child: Row(
-                children: labels.map((l) {
-                  return Expanded(
-                    child: Text(
-                      l,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: context.appColors.textMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }).toList(),
+                children:
+                    labels.map((l) {
+                      return Expanded(
+                        child: Text(
+                          l,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: context.appColors.textMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }).toList(),
               ),
             ),
           ],
@@ -982,35 +989,19 @@ class _BarChartPainter extends CustomPainter {
       // Expense bar (left of center)
       if (expH > 0) {
         final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            centerX - gap / 2 - barW,
-            h - expH,
-            barW,
-            expH,
-          ),
+          Rect.fromLTWH(centerX - gap / 2 - barW, h - expH, barW, expH),
           const Radius.circular(3),
         );
-        canvas.drawRRect(
-          rect,
-          Paint()..color = expColor.withAlpha(210),
-        );
+        canvas.drawRRect(rect, Paint()..color = expColor.withAlpha(210));
       }
 
       // Income bar (right of center)
       if (incH > 0) {
         final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            centerX + gap / 2,
-            h - incH,
-            barW,
-            incH,
-          ),
+          Rect.fromLTWH(centerX + gap / 2, h - incH, barW, incH),
           const Radius.circular(3),
         );
-        canvas.drawRRect(
-          rect,
-          Paint()..color = incColor.withAlpha(210),
-        );
+        canvas.drawRRect(rect, Paint()..color = incColor.withAlpha(210));
       }
     }
 
@@ -1030,7 +1021,6 @@ class _BarChartPainter extends CustomPainter {
       old.incValues != incValues ||
       old.maxVal != maxVal;
 }
-
 
 class _MonthBar extends StatelessWidget {
   final String label;

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme_extension.dart';
 import '../../core/models/habit.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/utils/habit_helpers.dart';
+import 'celebration_overlay.dart';
 
 /// Renders the interactive progress control for a single habit tile.
 /// Adapts its appearance and tap behaviour to [habit.progressType].
@@ -34,7 +36,7 @@ class HabitCheckWidget extends ConsumerWidget {
         return _CheckboxControl(
           isCompleted: isCompleted,
           color: color,
-          onTap: () => _toggle(ref),
+          onTap: () => _toggle(context, ref),
         );
 
       case HabitProgressType.counter:
@@ -44,8 +46,8 @@ class HabitCheckWidget extends ConsumerWidget {
           unit: habit.unit ?? '',
           color: color,
           isCompleted: isCompleted,
-          onIncrement: () => _increment(ref, 1),
-          onDecrement: () => _increment(ref, -1),
+          onIncrement: () => _increment(context, ref, 1),
+          onDecrement: () => _increment(context, ref, -1),
         );
 
       case HabitProgressType.timer:
@@ -55,12 +57,12 @@ class HabitCheckWidget extends ConsumerWidget {
           unit: habit.unit ?? 'min',
           color: color,
           isCompleted: isCompleted,
-          onTap: () => _toggle(ref),
+          onTap: () => _toggle(context, ref),
         );
     }
   }
 
-  Future<void> _toggle(WidgetRef ref) async {
+  Future<void> _toggle(BuildContext context, WidgetRef ref) async {
     HapticFeedback.lightImpact();
     final wasDone = HabitHelpers.isCompletedOn(
       habit,
@@ -71,17 +73,18 @@ class HabitCheckWidget extends ConsumerWidget {
         .read(dataNotifierProvider.notifier)
         .toggleHabit(habitId: habit.id, dateStr: dateStr);
     // Celebration on transition to completed
-    if (!wasDone) {
-      final celebrate =
-          ref
-              .read(sharedPreferencesProvider)
-              .getBool(PrefKeys.celebrationHaptic) ??
-          true;
-      if (celebrate) _celebrate();
+    if (!wasDone && context.mounted) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
+      if (master) _celebrate(context, prefs);
     }
   }
 
-  Future<void> _increment(WidgetRef ref, int delta) async {
+  Future<void> _increment(
+    BuildContext context,
+    WidgetRef ref,
+    int delta,
+  ) async {
     HapticFeedback.selectionClick();
     final wasDone = HabitHelpers.isCompletedOn(
       habit,
@@ -97,25 +100,36 @@ class HabitCheckWidget extends ConsumerWidget {
         ref.read(appDataProvider).habitLogs,
         dateStr,
       );
-      if (nowDone) {
-        final celebrate =
-            ref
-                .read(sharedPreferencesProvider)
-                .getBool(PrefKeys.celebrationHaptic) ??
-            true;
-        if (celebrate) _celebrate();
+      if (nowDone && context.mounted) {
+        final prefs = ref.read(sharedPreferencesProvider);
+        final master = prefs.getBool(PrefKeys.celebrationHaptic) ?? true;
+        if (master) _celebrate(context, prefs);
       }
     }
   }
 
-  static void _celebrate() {
-    HapticFeedback.heavyImpact();
-    Future<void>.delayed(const Duration(milliseconds: 120), () {
-      HapticFeedback.mediumImpact();
-    });
-    Future<void>.delayed(const Duration(milliseconds: 240), () {
-      HapticFeedback.lightImpact();
-    });
+  void _celebrate(BuildContext context, SharedPreferences prefs) {
+    final vibration = prefs.getBool(PrefKeys.celebrationVibration) ?? true;
+    final sound = prefs.getBool(PrefKeys.celebrationSound) ?? true;
+    final visual = prefs.getBool(PrefKeys.celebrationVisual) ?? true;
+
+    if (vibration) {
+      HapticFeedback.heavyImpact();
+      Future<void>.delayed(const Duration(milliseconds: 120), () {
+        HapticFeedback.mediumImpact();
+      });
+      Future<void>.delayed(const Duration(milliseconds: 240), () {
+        HapticFeedback.lightImpact();
+      });
+    }
+
+    if (sound) {
+      SystemSound.play(SystemSoundType.click);
+    }
+
+    if (visual && context.mounted) {
+      CelebrationOverlay.show(context);
+    }
   }
 
   static Color _habitColor(String hex, Color fallback) {

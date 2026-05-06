@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/data_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/sync_service.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/utils/app_toast.dart';
@@ -75,6 +76,28 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     if (state == AppLifecycleState.resumed) {
       final notifier = ref.read(dataNotifierProvider.notifier);
       SyncService.instance.checkAndReload(notifier);
+      _rescheduleHabitReminders();
+    }
+  }
+
+  /// Re-registers all habit reminders so they survive OS reboots and
+  /// notification permission changes.
+  Future<void> _rescheduleHabitReminders() async {
+    final data = ref.read(dataNotifierProvider).valueOrNull;
+    if (data == null) return;
+    for (final habit in data.habits) {
+      if (habit.reminderTime == null || habit.archivedAt != null) continue;
+      final parts = habit.reminderTime!.split(':');
+      if (parts.length != 2) continue;
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h == null || m == null) continue;
+      await NotificationService.scheduleHabitReminder(
+        habitId: habit.id,
+        habitName: habit.name,
+        timeOfDay: TimeOfDay(hour: h, minute: m),
+        scheduleDays: habit.scheduleDays,
+      );
     }
   }
 
