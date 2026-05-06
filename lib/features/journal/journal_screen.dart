@@ -8,6 +8,7 @@ import '../../core/constants/app_limits.dart';
 import '../../core/models/journal_entry.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/data_provider.dart';
+import '../../core/utils/app_toast.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
@@ -339,6 +340,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
   late final TextEditingController _tagCtrl;
   final Set<String> _tags = {};
   bool _saving = false;
+  bool _preview = false;
 
   @override
   void initState() {
@@ -360,9 +362,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
 
   Future<void> _save() async {
     if (_bodyCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write something before saving.')),
-      );
+      AppToast.show(context, 'Write something before saving.');
       return;
     }
     setState(() => _saving = true);
@@ -392,9 +392,11 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Could not save entry: $e')));
+          'Could not save entry. Please try again.',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -431,6 +433,17 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
+          // Preview / edit toggle
+          IconButton(
+            tooltip: _preview ? 'Edit' : 'Preview',
+            onPressed: () => setState(() => _preview = !_preview),
+            icon: Icon(
+              _preview
+                  ? Icons.edit_rounded
+                  : Icons.visibility_rounded,
+              size: 20,
+            ),
+          ),
           TextButton(
             onPressed: _saving ? null : _save,
             child:
@@ -455,7 +468,12 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            child: _preview
+                ? _MarkdownPreview(
+                    title: _titleCtrl.text,
+                    body: _bodyCtrl.text,
+                  )
+                : ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               children: [
                 // Date display
@@ -616,7 +634,7 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
               ],
             ),
           ),
-          _JournalToolbar(bodyCtrl: _bodyCtrl),
+          if (!_preview) _JournalToolbar(bodyCtrl: _bodyCtrl),
         ],
       ),
     );
@@ -647,6 +665,269 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
       'Sunday',
     ];
     return '${days[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+}
+
+// ── Markdown preview ──────────────────────────────────────
+
+class _MarkdownPreview extends StatelessWidget {
+  final String title;
+  final String body;
+  const _MarkdownPreview({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title.trim().isNotEmpty) ...[
+            Text(
+              title.trim(),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (body.trim().isEmpty)
+            Text(
+              'Nothing to preview yet.',
+              style: TextStyle(
+                color: context.appColors.textMuted,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          else
+            ..._parseMarkdown(body, context, primary),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _parseMarkdown(
+    String text,
+    BuildContext context,
+    Color primary,
+  ) {
+    final lines = text.split('\n');
+    final widgets = <Widget>[];
+    int i = 0;
+    while (i < lines.length) {
+      final line = lines[i];
+      if (line.startsWith('### ')) {
+        widgets.add(_styledLine(line.substring(4), 16, FontWeight.w700, context));
+        widgets.add(const SizedBox(height: 6));
+      } else if (line.startsWith('## ')) {
+        widgets.add(_styledLine(line.substring(3), 18, FontWeight.w700, context));
+        widgets.add(const SizedBox(height: 8));
+      } else if (line.startsWith('# ')) {
+        widgets.add(_styledLine(line.substring(2), 22, FontWeight.w800, context));
+        widgets.add(const SizedBox(height: 10));
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '•  ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Expanded(child: _inlineSpans(line.substring(2), context)),
+              ],
+            ),
+          ),
+        );
+      } else if (RegExp(r'^\d+\. ').hasMatch(line)) {
+        final num = line.indexOf('. ');
+        final numStr = line.substring(0, num + 1);
+        final content = line.substring(num + 2);
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$numStr  ',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Expanded(child: _inlineSpans(content, context)),
+              ],
+            ),
+          ),
+        );
+      } else if (line.startsWith('> ')) {
+        widgets.add(
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.07),
+              border: Border(
+                left: BorderSide(color: primary, width: 3),
+              ),
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
+            ),
+            child: _inlineSpans(line.substring(2), context),
+          ),
+        );
+      } else if (line.trim() == '---' || line.trim() == '***') {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(color: context.appColors.border),
+          ),
+        );
+      } else if (line.trim().isEmpty) {
+        widgets.add(const SizedBox(height: 10));
+      } else {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _inlineSpans(line, context),
+          ),
+        );
+      }
+      i++;
+    }
+    return widgets;
+  }
+
+  Widget _styledLine(
+    String text,
+    double size,
+    FontWeight weight,
+    BuildContext context,
+  ) {
+    return _inlineSpansStyled(text, context, fontSize: size, fontWeight: weight);
+  }
+
+  Widget _inlineSpans(String text, BuildContext context) =>
+      _inlineSpansStyled(text, context);
+
+  Widget _inlineSpansStyled(
+    String text,
+    BuildContext context, {
+    double fontSize = 15,
+    FontWeight fontWeight = FontWeight.w400,
+  }) {
+    // Parse inline: **bold**, *italic*, `code`, ~~strikethrough~~
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(
+      r'(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~)',
+    );
+    int last = 0;
+    for (final m in pattern.allMatches(text)) {
+      if (m.start > last) {
+        spans.add(
+          TextSpan(
+            text: text.substring(last, m.start),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              height: 1.6,
+              color: context.appColors.textPrimary,
+            ),
+          ),
+        );
+      }
+      if (m.group(2) != null) {
+        // **bold**
+        spans.add(
+          TextSpan(
+            text: m.group(2),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w700,
+              height: 1.6,
+              color: context.appColors.textPrimary,
+            ),
+          ),
+        );
+      } else if (m.group(3) != null) {
+        // *italic*
+        spans.add(
+          TextSpan(
+            text: m.group(3),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontStyle: FontStyle.italic,
+              height: 1.6,
+              color: context.appColors.textPrimary,
+            ),
+          ),
+        );
+      } else if (m.group(4) != null) {
+        // `code`
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: context.appColors.bgElevated,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                m.group(4)!,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: fontSize - 1,
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        );
+      } else if (m.group(5) != null) {
+        // ~~strikethrough~~
+        spans.add(
+          TextSpan(
+            text: m.group(5),
+            style: TextStyle(
+              fontSize: fontSize,
+              decoration: TextDecoration.lineThrough,
+              height: 1.6,
+              color: context.appColors.textSecondary,
+            ),
+          ),
+        );
+      }
+      last = m.end;
+    }
+    if (last < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(last),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: 1.6,
+            color: context.appColors.textPrimary,
+          ),
+        ),
+      );
+    }
+    return RichText(text: TextSpan(children: spans));
   }
 }
 
