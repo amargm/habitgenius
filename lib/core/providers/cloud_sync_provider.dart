@@ -26,10 +26,15 @@ class CloudSyncState {
   final DateTime? lastSynced;
   final String? errorMessage;
 
+  /// True when the error was caused by the Drive OAuth scope being revoked.
+  /// The UI uses this to show a "Reconnect" button instead of "Retry".
+  final bool isAuthRevoked;
+
   const CloudSyncState({
     required this.status,
     this.lastSynced,
     this.errorMessage,
+    this.isAuthRevoked = false,
   });
 
   bool get isEnabled => status != SyncStatus.disabled;
@@ -38,10 +43,12 @@ class CloudSyncState {
     SyncStatus? status,
     DateTime? lastSynced,
     String? errorMessage,
+    bool? isAuthRevoked,
   }) => CloudSyncState(
     status: status ?? this.status,
     lastSynced: lastSynced ?? this.lastSynced,
-    errorMessage: errorMessage,
+    errorMessage: errorMessage, // intentionally resets to null if omitted
+    isAuthRevoked: isAuthRevoked ?? false, // resets to false if omitted
   );
 }
 
@@ -157,71 +164,109 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     final filePath = dataNotifier.filePath;
     if (filePath == null) return;
 
-    state = state.copyWith(status: SyncStatus.syncing, errorMessage: null);
+    // Clear any previous error/revoke flags before starting.
+    state = state.copyWith(
+      status: SyncStatus.syncing,
+      errorMessage: null,
+      isAuthRevoked: false,
+    );
 
     try {
-      await DriveService.instance.init(googleSignIn);
-
-      final remoteMeta = await DriveService.instance.getRemoteMetadata();
-
-      if (!uploadOnly && remoteMeta != null) {
-        // Compare timestamps to decide direction.
-        final localData = dataNotifier.state.valueOrNull;
-        final localModifiedStr = localData?.meta.lastModified;
-        final localModified =
-            localModifiedStr != null
-                ? DateTime.tryParse(localModifiedStr)?.toUtc()
-                : null;
-
-        final remoteModified = remoteMeta.modifiedTime;
-
-        if (localModified == null || remoteModified.isAfter(localModified)) {
-          // Remote is newer (or local timestamp unknown) → download and reload.
-          debugPrint('[CloudSync] Remote newer — downloading');
-          final json = await DriveService.instance.downloadFile(
-            remoteMeta.fileId,
-          );
-          await File(filePath).writeAsString(json, flush: true);
-          await dataNotifier.reload();
-          // After reloading, upload back to stamp drive's modifiedTime
-          // with the file we just wrote (avoids a re-download on next resume).
-          await DriveService.instance.uploadFile(
-            filePath,
-            existingFileId: remoteMeta.fileId,
-          );
-        } else {
-          // Local is newer (or equal) → upload.
-          debugPrint('[CloudSync] Local newer — uploading');
-          await DriveService.instance.uploadFile(
-            filePath,
-            existingFileId: remoteMeta.fileId,
-          );
-        }
-      } else {
-        // Upload only (post-save debounce) or no remote file yet.
-        debugPrint(
-          '[CloudSync] Uploading (${uploadOnly ? "debounced" : "first upload"})',
-        );
-        await DriveService.instance.uploadFile(
-          filePath,
-          existingFileId: remoteMeta?.fileId,
-        );
-      }
+      // Enforce a 30-second wall-clock timeout so the "Syncing…" UI never
+      // hangs indefinitely on a slow or unresponsive network.
+      await _runSync(
+        dataNotifier: dataNotifier,
+        googleSignIn: googleSignIn,
+        filePath: filePath,
+        uploadOnly: uploadOnly,
+      ).timeout(const Duration(seconds: 30));
 
       final now = DateTime.now().toUtc();
       await _prefs.setInt(_kLastSynced, now.millisecondsSinceEpoch);
       state = state.copyWith(status: SyncStatus.synced, lastSynced: now);
     } catch (e) {
       debugPrint('[CloudSync] Sync error: $e');
+      // Detect Drive OAuth scope revocation so the UI can show "Reconnect".
+      final isAuth =
+          e is DriveServiceException &&
+          (e.message.contains('authenticated') ||
+              e.message.contains('Not auth'));
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: _friendlyError(e),
+        isAuthRevoked: isAuth,
+      );
+    }
+  }
+
+  /// The actual Drive operations — extracted so `.timeout()` can be applied
+  /// cleanly to the whole network interaction.
+  Future<void> _runSync({
+    required DataNotifier dataNotifier,
+    required GoogleSignIn googleSignIn,
+    required String filePath,
+    bool uploadOnly = false,
+  }) async {
+    await DriveService.instance.init(googleSignIn);
+
+    final remoteMeta = await DriveService.instance.getRemoteMetadata();
+
+    if (!uploadOnly && remoteMeta != null) {
+      // Compare timestamps to decide direction.
+      final localData = dataNotifier.state.valueOrNull;
+      final localModifiedStr = localData?.meta.lastModified;
+      final localModified =
+          localModifiedStr != null
+              ? DateTime.tryParse(localModifiedStr)?.toUtc()
+              : null;
+
+      final remoteModified = remoteMeta.modifiedTime;
+
+      if (localModified == null || remoteModified.isAfter(localModified)) {
+        // Remote is newer (or local timestamp unknown) → download and reload.
+        debugPrint('[CloudSync] Remote newer — downloading');
+        final json = await DriveService.instance.downloadFile(
+          remoteMeta.fileId,
+        );
+        await File(filePath).writeAsString(json, flush: true);
+        await dataNotifier.reload();
+        // Re-upload to stamp Drive's modifiedTime with the file we just wrote
+        // (avoids a redundant re-download on the next resume from another device).
+        await DriveService.instance.uploadFile(
+          filePath,
+          existingFileId: remoteMeta.fileId,
+        );
+      } else {
+        // Local is newer (or equal) → upload.
+        debugPrint('[CloudSync] Local newer — uploading');
+        await DriveService.instance.uploadFile(
+          filePath,
+          existingFileId: remoteMeta.fileId,
+        );
+      }
+    } else {
+      // Upload only (post-save debounce) or no remote file yet.
+      debugPrint(
+        '[CloudSync] Uploading (${uploadOnly ? "debounced" : "first upload"})',
+      );
+      await DriveService.instance.uploadFile(
+        filePath,
+        existingFileId: remoteMeta?.fileId,
       );
     }
   }
 
   String _friendlyError(Object e) {
-    if (e is DriveServiceException) return e.message;
+    if (e is TimeoutException) {
+      return 'Sync timed out — will retry next time';
+    }
+    if (e is DriveServiceException) {
+      if (e.message.contains('authenticated') ||
+          e.message.contains('Not auth')) {
+        return 'Drive access revoked — tap Reconnect to restore';
+      }
+      return e.message;
+    }
     if (e is SocketException) return 'No internet connection';
     return 'Sync failed — please try again';
   }

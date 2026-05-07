@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
+
+    <!-- Habit icon (emoji text rendered by Kotlin) -->
+    <TextView
+        android:id="@+id/habit_icon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:gravity="center"
+        android:textSize="18sp" />
+
+    <!-- Habit name -->
+    <TextView
+        android:id="@+id/habit_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp" />
+
+    <!-- 7 day-cell ImageViews (Mon–Sun). Each is a Canvas-drawn Bitmap. -->
+    <ImageView android:id="@+id/day_0" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_1" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_2" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_3" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_4" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_5" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+    <ImageView android:id="@+id/day_6" android:layout_width="22dp" android:layout_height="22dp" android:layout_marginStart="1dp" />
+
+    <!-- Quick-log button (log today's habit from widget) -->
+    <ImageView
+        android:id="@+id/habit_log_btn"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="4dp"
+        android:scaleType="fitCenter" />
+
+</LinearLayout>

@@ -16,6 +16,7 @@ import '../models/account.dart';
 import '../models/transaction.dart';
 import '../services/data_service.dart';
 import '../services/sync_service.dart';
+import '../services/widget_sync_service.dart';
 import '../utils/habit_helpers.dart';
 import 'settings_provider.dart';
 
@@ -188,6 +189,8 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
       // does NOT trigger a spurious reload (the file mtime just changed but
       // the change originated from this app, not an external source).
       SyncService.instance.markUpdated();
+      // Push an updated snapshot to the home-screen widget (best-effort).
+      WidgetSyncService.instance.push(next, _filePath!).ignore();
     } catch (e) {
       // Roll back the optimistic state update so the UI stays consistent.
       state = AsyncValue.data(current);

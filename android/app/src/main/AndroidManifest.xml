@@ -72,6 +72,37 @@
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false" />
+
+        <!-- ── HabitGenius Home-Screen Widget ──────────────────────────── -->
+
+        <!-- Widget provider: renders the widget UI -->
+        <receiver
+            android:name=".HabitsWidgetProvider"
+            android:exported="true"
+            android:label="HabitGenius Habits">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_habits_info" />
+        </receiver>
+
+        <!-- RemoteViews service: feeds rows to the ListView -->
+        <service
+            android:name=".HabitsWidgetRemoteViewsService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Action receiver: handles quick-log taps from the widget -->
+        <receiver
+            android:name=".HabitsWidgetActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.habitgenius.WIDGET_ACTION" />
+            </intent-filter>
+        </receiver>
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

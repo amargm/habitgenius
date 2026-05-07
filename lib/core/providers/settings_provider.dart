@@ -31,6 +31,12 @@ class PrefKeys {
   /// Whether global daily reminders are enabled.
   static const notificationsEnabled = 'notifications_enabled';
 
+  /// Set to true once the app has asked the user for notification permission
+  /// (either via onboarding or the home-screen fallback). Prevents repeated
+  /// permission dialogs after the first ask.
+  static const hasAskedNotificationPermission =
+      'has_asked_notification_permission';
+
   /// Hour part of the global default reminder time (0-23).
   static const reminderHour = 'reminder_hour';
 

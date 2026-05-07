@@ -10,6 +10,7 @@ import '../../core/models/habit_log.dart';
 import '../../core/models/mood.dart';
 import '../../core/models/transaction.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/cloud_sync_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
@@ -34,12 +35,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final already = await PermissionService.instance.notificationsGranted;
-      if (already) return;
-      final data = ref.read(appDataProvider);
-      if (data.habits.isNotEmpty && mounted) {
-        await PermissionService.instance.requestAllRequired(context);
+      final prefs = ref.read(sharedPreferencesProvider);
+      // If the user was already asked (onboarding or a prior session) skip.
+      final alreadyAsked =
+          prefs.getBool(PrefKeys.hasAskedNotificationPermission) ?? false;
+      if (alreadyAsked) return;
+      // If the OS already granted the permission, mark as asked and skip.
+      final alreadyGranted =
+          await PermissionService.instance.notificationsGranted;
+      if (!mounted) return;
+      if (alreadyGranted) {
+        await prefs.setBool(PrefKeys.hasAskedNotificationPermission, true);
+        return;
       }
+      // Fallback: ask once for users who bypassed onboarding.
+      await PermissionService.instance.requestAllRequired(context);
+      if (!mounted) return;
+      await prefs.setBool(PrefKeys.hasAskedNotificationPermission, true);
     });
   }
 
@@ -345,6 +357,9 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
+        // Sync status badge (hidden for guests / when sync is off)
+        const _SyncBadge(),
+        const SizedBox(width: 8),
         // Avatar / settings
         GestureDetector(
           onTap: onSettings,
@@ -365,6 +380,81 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Sync status badge ─────────────────────────────────────
+
+/// Small cloud icon shown in the home header that reflects the current
+/// Drive sync state. Invisible when sync is disabled or the user is a guest.
+class _SyncBadge extends ConsumerStatefulWidget {
+  const _SyncBadge();
+
+  @override
+  ConsumerState<_SyncBadge> createState() => _SyncBadgeState();
+}
+
+class _SyncBadgeState extends ConsumerState<_SyncBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final syncState = ref.watch(cloudSyncProvider);
+    final auth = ref.watch(authNotifierProvider);
+
+    // Hide badge completely for guests or when sync is disabled.
+    if (auth.isGuest || !syncState.isEnabled) return const SizedBox.shrink();
+
+    final isSyncing = syncState.status == SyncStatus.syncing;
+    if (isSyncing) {
+      _spin.repeat();
+    } else {
+      _spin.stop();
+      _spin.value = 0;
+    }
+
+    final (icon, color, tooltip) = switch (syncState.status) {
+      SyncStatus.syncing => (
+        Icons.cloud_sync_rounded,
+        AppColors.textSecondary,
+        'Syncing…',
+      ),
+      SyncStatus.synced => (
+        Icons.cloud_done_rounded,
+        const Color(0xFF4CAF50),
+        'Synced',
+      ),
+      SyncStatus.error => (
+        Icons.cloud_off_rounded,
+        AppColors.warning,
+        syncState.errorMessage ?? 'Sync error',
+      ),
+      _ => (Icons.cloud_outlined, AppColors.textMuted, 'Not synced'),
+    };
+
+    return Tooltip(
+      message: tooltip,
+      child: RotationTransition(
+        turns: _spin,
+        child: Icon(icon, size: 20, color: color),
+      ),
     );
   }
 }

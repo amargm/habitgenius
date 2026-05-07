@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/permission_service.dart';
 
 /// 3-slide onboarding shown once to new registered/pro users.
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body:
           'Start free with core features. Upgrade to Pro for unlimited habits, themes, and more.',
     ),
+    _Slide(
+      icon: Icons.notifications_active_rounded,
+      title: 'Stay on track',
+      body:
+          'Enable reminders to get a daily nudge for your habits.\n\n'
+          'You can change this at any time in Settings.',
+    ),
   ];
 
   Future<void> _finish() async {
@@ -48,6 +56,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await ref
         .read(dataNotifierProvider.notifier)
         .load(isGuest: false, customDir: null);
+    if (!mounted) return;
+    // Request notification + exact-alarm permissions with a Play Store-compliant
+    // contextual rationale (shown after the "Stay on track" slide).
+    await PermissionService.instance.requestAllRequired(context);
+    // Mark that we've asked so the home-screen fallback doesn't ask again.
+    await prefs.setBool(PrefKeys.hasAskedNotificationPermission, true);
     if (mounted) context.go(AppRoutes.home);
   }
 

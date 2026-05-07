@@ -8,6 +8,7 @@ import 'core/providers/data_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/sync_service.dart';
+import 'core/services/widget_sync_service.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/utils/app_toast.dart';
 import 'features/focus/focus_screen.dart';
@@ -103,6 +104,9 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
       // Cloud sync: download-first check so any change made on another device
       // is reflected immediately when the user opens the app.
       _checkCloudSyncOnResume(notifier);
+      // Re-push widget data: catches any habit logs the widget wrote while
+      // the app was backgrounded, so the widget reflects the latest state.
+      _pushWidgetData();
     }
   }
 
@@ -126,6 +130,13 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
           dataNotifier: dataNotifier,
           googleSignIn: ref.read(authServiceProvider).googleSignIn,
         );
+  }
+
+  void _pushWidgetData() {
+    final data = ref.read(dataNotifierProvider).valueOrNull;
+    final path = ref.read(dataNotifierProvider.notifier).filePath;
+    if (data == null || path == null) return;
+    WidgetSyncService.instance.push(data, path).ignore();
   }
 
   /// Re-registers all habit reminders so they survive OS reboots and

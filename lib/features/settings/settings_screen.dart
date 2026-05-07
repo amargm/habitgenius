@@ -1097,6 +1097,23 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
         );
   }
 
+  /// Called when Drive access was revoked. Re-requests the scope and, if
+  /// granted, immediately triggers a full sync.
+  Future<void> _reconnectDrive() async {
+    final authService = ref.read(authServiceProvider);
+    final granted = await authService.requestDriveScope();
+    if (!mounted) return;
+    if (!granted) {
+      AppToast.show(
+        context,
+        'Google Drive access denied — Cloud Backup will not sync.',
+        type: ToastType.error,
+      );
+      return;
+    }
+    await _onSyncNow();
+  }
+
   String _lastSyncedLabel(DateTime? lastSynced) {
     if (lastSynced == null) return 'Not yet synced';
     final now = DateTime.now();
@@ -1215,10 +1232,14 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
                     ),
                   ],
                   const Spacer(),
-                  // Sync Now button
+                  // Show "Reconnect" when Drive access was revoked,
+                  // otherwise show the standard "Sync Now" button.
                   if (!isSyncing)
                     TextButton(
-                      onPressed: _onSyncNow,
+                      onPressed:
+                          syncState.isAuthRevoked
+                              ? _reconnectDrive
+                              : _onSyncNow,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -1228,7 +1249,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
-                        'Sync Now',
+                        syncState.isAuthRevoked ? 'Reconnect' : 'Sync Now',
                         style: TextStyle(fontSize: 12, color: primary),
                       ),
                     ),
@@ -1361,6 +1382,9 @@ class _AccountSection extends ConsumerWidget {
       // habits, journal entries and transactions are not accessible to
       // the next session while the sign-out completes.
       ref.read(dataNotifierProvider.notifier).reset();
+      // Disable cloud sync so the next user on this device doesn't inherit
+      // the signed-out user's sync state.
+      await ref.read(cloudSyncProvider.notifier).disableSync();
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) context.go(AppRoutes.welcome);
     }
@@ -1400,6 +1424,9 @@ class _AccountSection extends ConsumerWidget {
 
     // Cancel all scheduled notifications first.
     await NotificationService.cancelAll();
+    // Disable cloud sync before wiping data so no upload is attempted
+    // during or after the account deletion.
+    await ref.read(cloudSyncProvider.notifier).disableSync();
     // Wipe local data.
     await ref.read(dataNotifierProvider.notifier).clearAllData();
     ref.read(dataNotifierProvider.notifier).reset();
