@@ -251,8 +251,11 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
 
     /**
      * Mirrors the Dart HabitHelpers.isScheduledOn() logic.
-     * schedule: "daily" | "weekly" | "interval"
-     * scheduleDays: JSON array of weekday ints (1=Mon…7=Sun) or empty for daily/interval.
+     *
+     * schedule: "daily" | "weekly" | "specific" | "custom" | "monthly" | "interval"
+     * scheduleDays: JSON array of ints. For day-of-week schedules Flutter uses
+     *   0=Sun, 1=Mon … 6=Sat (date.weekday % 7 convention).
+     *   For monthly schedules it contains day-of-month values (1–31).
      */
     private fun isScheduledOn(
         habit: JSONObject,
@@ -265,17 +268,33 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
         }.getOrNull() ?: return false
 
         val cal = java.util.Calendar.getInstance(Locale.US).apply { time = date }
-        // Java: 1=Sun,2=Mon,…,7=Sat  →  convert to Dart/ISO: 1=Mon…7=Sun
+        // Java: 1=Sun,2=Mon,…,7=Sat  →  convert to ISO: 1=Mon…7=Sun
         val javaDow = cal.get(java.util.Calendar.DAY_OF_WEEK)
         val isoDow = if (javaDow == java.util.Calendar.SUNDAY) 7 else javaDow - 1
+        // Flutter stores scheduleDays with 0=Sun, 1=Mon … 6=Sat (weekday % 7).
+        // ISO Sunday is 7; map it to Flutter's 0. All other days match directly.
+        val flutterDow = if (isoDow == 7) 0 else isoDow
 
         return when (schedule) {
             "daily" -> true
-            "weekly" -> {
+            // "weekly"   = user-picked specific days of week
+            // "specific" = preset (Weekdays Mon–Fri, Weekends Sat–Sun)
+            // "custom"   = custom day-of-week selection
+            // All three store their selected days as Flutter 0=Sun…6=Sat ints.
+            "weekly", "specific", "custom" -> {
                 if (scheduleDaysArr == null || scheduleDaysArr.length() == 0) {
                     true
                 } else {
-                    (0 until scheduleDaysArr.length()).any { scheduleDaysArr.getInt(it) == isoDow }
+                    (0 until scheduleDaysArr.length()).any { scheduleDaysArr.getInt(it) == flutterDow }
+                }
+            }
+            // "monthly" stores day-of-month values (1–31).
+            "monthly" -> {
+                val dayOfMonth = cal.get(java.util.Calendar.DAY_OF_MONTH)
+                if (scheduleDaysArr == null || scheduleDaysArr.length() == 0) {
+                    true
+                } else {
+                    (0 until scheduleDaysArr.length()).any { scheduleDaysArr.getInt(it) == dayOfMonth }
                 }
             }
             "interval" -> {

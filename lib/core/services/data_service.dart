@@ -77,7 +77,14 @@ class DataService {
     // Write to a temp file first, then atomically rename.
     final tmp = File('$filePath.tmp');
     await tmp.writeAsString(json, flush: true);
-    await tmp.rename(filePath);
+    try {
+      await tmp.rename(filePath);
+    } on FileSystemException {
+      // rename() fails across filesystem boundaries (e.g. internal → SD card
+      // on some OEM devices). Fall back to copy + delete which always works.
+      await tmp.copy(filePath);
+      await tmp.delete();
+    }
   }
 
   /// Returns true if the data file exists at [filePath].

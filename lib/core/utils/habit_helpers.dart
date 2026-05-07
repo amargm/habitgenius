@@ -91,18 +91,17 @@ class HabitHelpers {
 
   // ── Weekly completion grid ────────────────────────────────
 
-  /// Returns 7 booleans [Sun…Sat] indicating completion for the week
-  /// containing [date].
+  /// Returns 7 booleans [Mon…Sun] indicating completion for the ISO week
+  /// containing [date]. Starts on Monday to match the widget's week display.
   static List<bool> weeklyCompletion(
     Habit habit,
     List<HabitLog> logs,
     DateTime date,
   ) {
-    // Find Sunday of this week.
-    final weekday = date.weekday % 7; // 0=Sun
-    final sunday = date.subtract(Duration(days: weekday));
+    // ISO week: weekday 1=Mon, 7=Sun.
+    final monday = date.subtract(Duration(days: date.weekday - 1));
     return List.generate(7, (i) {
-      final day = sunday.add(Duration(days: i));
+      final day = monday.add(Duration(days: i)); // Mon … Sun
       if (!isScheduledOn(habit, day)) return false;
       return isCompletedOn(habit, logs, _fmtDate(day));
     });

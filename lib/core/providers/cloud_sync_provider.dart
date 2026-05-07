@@ -64,6 +64,9 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
   final SharedPreferences _prefs;
 
   Timer? _debounceTimer;
+  // Guards against an in-flight _doSync completing after disableSync() was
+  // called and overwriting the `disabled` state with `synced`.
+  bool _syncCancelled = false;
 
   CloudSyncNotifier(this._prefs)
     : super(
@@ -100,6 +103,7 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
 
   /// Disables sync and cancels any pending debounce upload.
   Future<void> disableSync() async {
+    _syncCancelled = true;
     _debounceTimer?.cancel();
     _debounceTimer = null;
     await _prefs.setBool(_kSyncEnabled, false);
@@ -181,16 +185,16 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
         uploadOnly: uploadOnly,
       ).timeout(const Duration(seconds: 30));
 
+      // User may have turned sync off while this await was in progress.
+      if (_syncCancelled) { _syncCancelled = false; return; }
       final now = DateTime.now().toUtc();
       await _prefs.setInt(_kLastSynced, now.millisecondsSinceEpoch);
       state = state.copyWith(status: SyncStatus.synced, lastSynced: now);
     } catch (e) {
       debugPrint('[CloudSync] Sync error: $e');
       // Detect Drive OAuth scope revocation so the UI can show "Reconnect".
-      final isAuth =
-          e is DriveServiceException &&
-          (e.message.contains('authenticated') ||
-              e.message.contains('Not auth'));
+      final isAuth = _isAuthError(e);
+      if (_syncCancelled) { _syncCancelled = false; return; }
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: _friendlyError(e),
@@ -260,15 +264,30 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     if (e is TimeoutException) {
       return 'Sync timed out — will retry next time';
     }
-    if (e is DriveServiceException) {
-      if (e.message.contains('authenticated') ||
-          e.message.contains('Not auth')) {
-        return 'Drive access revoked — tap Reconnect to restore';
-      }
-      return e.message;
+    if (_isAuthError(e)) {
+      return 'Drive access revoked — tap Reconnect to restore';
     }
+    if (e is DriveServiceException) return e.message;
     if (e is SocketException) return 'No internet connection';
     return 'Sync failed — please try again';
+  }
+
+  /// Returns true when [e] indicates the Drive OAuth token has been revoked
+  /// or is otherwise invalid. Covers both DriveServiceException messages and
+  /// raw HTTP 401 / insufficient_scope / invalid_grant errors from googleapis.
+  bool _isAuthError(Object e) {
+    final s = e.toString().toLowerCase();
+    if (e is DriveServiceException) {
+      return s.contains('authenticated') ||
+          s.contains('not auth') ||
+          s.contains('401') ||
+          s.contains('scope') ||
+          s.contains('invalid_grant') ||
+          s.contains('token');
+    }
+    return s.contains('401') ||
+        s.contains('invalid_grant') ||
+        s.contains('insufficient_scope');
   }
 
   @override

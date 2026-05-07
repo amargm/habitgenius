@@ -142,10 +142,16 @@ class WidgetSyncService {
   // ── Focus stats JSON (static stats; runtime timer state managed by Kotlin) ─
 
   String _buildFocusStatsJson(AppData data) {
-    final todayStr = HabitHelpers.todayStr();
-    final todaySeconds = data.focusSessions
-        .where((s) => s.startedAt.startsWith(todayStr))
-        .fold<int>(0, (sum, s) => sum + s.actualDuration);
+    // Compare session start times in local time to avoid UTC/local boundary
+    // mismatches (e.g. a session at 11:30 PM local stored as a previous UTC date).
+    final today = DateTime.now();
+    final todaySeconds = data.focusSessions.where((s) {
+      final d = DateTime.tryParse(s.startedAt)?.toLocal();
+      return d != null &&
+          d.year == today.year &&
+          d.month == today.month &&
+          d.day == today.day;
+    }).fold<int>(0, (sum, s) => sum + s.actualDuration);
 
     return jsonEncode({
       'todayFocusSeconds': todaySeconds,

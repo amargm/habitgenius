@@ -14,6 +14,7 @@ import '../../core/providers/cloud_sync_provider.dart';
 import '../../core/providers/data_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/constants/app_limits.dart';
 import '../../core/utils/habit_helpers.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/services/permission_service.dart';
@@ -129,8 +130,12 @@ class _BodyState extends State<_Body> {
               (h) => HabitHelpers.isCompletedOn(h, data.habitLogs, todayStr),
             )
             .length;
-    final doneToday = habitsDoneToday + (todayMood != null ? 1 : 0);
-    final totalTodayActivities = todayHabits.length + 1; // habits + mood
+    // Guests cannot log mood; don't count it in their completion target.
+    final canLogMood = AppLimits.canAccessMood(auth.tier);
+    final doneToday =
+        habitsDoneToday + (canLogMood && todayMood != null ? 1 : 0);
+    final totalTodayActivities =
+        todayHabits.length + (canLogMood ? 1 : 0); // habits [+ mood]
     final todayMidnight = DateTime(today.year, today.month, today.day);
     final weekStart = todayMidnight.subtract(
       Duration(days: todayMidnight.weekday - 1),

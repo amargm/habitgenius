@@ -85,6 +85,9 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     state = const AsyncValue.loading();
     // Clear the sync timestamp so the next user's file is compared fresh.
     SyncService.instance.reset();
+    // Clear widget SharedPreferences so the previous user's data is not
+    // visible in widgets until the next user's data is pushed.
+    WidgetSyncService.instance.pushAll(AppData.empty()).ignore();
   }
 
   /// Erases all user content (habits, journal, moods, focus sessions,

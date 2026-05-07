@@ -20,7 +20,14 @@ class SyncService {
   /// Call after every successful in-app save so that a subsequent app-resume
   /// does NOT trigger a spurious reload.  The file mtime just changed because
   /// of this app's own write — not because of an external modification.
-  void markUpdated() => _lastKnownModified = DateTime.now();
+  void markUpdated() {
+    // Truncate to second precision so comparisons with filesystem mtime
+    // (which some Android OEM kernels round to the second) don't produce
+    // spurious reloads.
+    final n = DateTime.now();
+    _lastKnownModified =
+        DateTime(n.year, n.month, n.day, n.hour, n.minute, n.second);
+  }
 
   /// Checks whether the backing file was modified since we last read it.
   /// If so, triggers a [DataNotifier.reload]. Safe to call frequently.

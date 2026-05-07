@@ -31,6 +31,9 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   ProviderSubscription? _dataSub;
   // Auto-save guard for the focus timer.
   bool _focusAutoSaved = false;
+  // Hash of reminder-relevant habit fields — used to skip reschedule when
+  // nothing changed since the last time we scheduled notifications.
+  String? _lastReminderHash;
 
   @override
   void initState() {
@@ -56,6 +59,9 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     _dataSub = ref.listenManual(dataNotifierProvider, (prev, next) {
       if (next.hasValue && (prev == null || !prev.hasValue)) {
         _rescheduleHabitReminders();
+        // Push widget data immediately on the first successful data load so
+        // widgets are populated right after a cold start / process kill.
+        _pushWidgetData();
       }
       // After every mutation (value → value), schedule a debounced upload.
       if (prev?.hasValue == true && next.hasValue) {
@@ -143,6 +149,17 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   Future<void> _rescheduleHabitReminders() async {
     final data = ref.read(dataNotifierProvider).valueOrNull;
     if (data == null) return;
+    // Build a hash of reminder-relevant fields. Skip the expensive
+    // cancel+reschedule cycle if nothing has changed since the last run.
+    final hash = data.habits
+        .where((h) => h.reminderTime != null && h.archivedAt == null)
+        .map(
+          (h) =>
+              '${h.id}|${h.reminderTime}|${h.schedule.name}|${h.scheduleDays}',
+        )
+        .join(',');
+    if (hash == _lastReminderHash) return;
+    _lastReminderHash = hash;
     for (final habit in data.habits) {
       if (habit.reminderTime == null || habit.archivedAt != null) continue;
       final parts = habit.reminderTime!.split(':');

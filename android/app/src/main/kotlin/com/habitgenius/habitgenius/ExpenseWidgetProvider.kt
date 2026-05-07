@@ -9,6 +9,7 @@ import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -95,17 +96,29 @@ class ExpenseWidgetProvider : AppWidgetProvider() {
             val todayExpense = json.optDouble("todayExpense", 0.0)
             val monthExpense = json.optDouble("monthExpense", 0.0)
 
-            // Primary balance: first account.
+            // Total balance across all accounts (not just the first one).
             val balanceText = if (accounts != null && accounts.length() > 0) {
-                val acc = accounts.getJSONObject(0)
-                val bal = acc.optDouble("balance", 0.0)
-                val name = acc.optString("name", "Account")
-                "$name: $symbol${formatAmount(bal)}"
+                var total = 0.0
+                for (i in 0 until accounts.length()) {
+                    total += accounts.getJSONObject(i).optDouble("balance", 0.0)
+                }
+                val label = if (accounts.length() == 1) {
+                    accounts.getJSONObject(0).optString("name", "Account")
+                } else {
+                    "Net worth"
+                }
+                "$label: $symbol${formatAmount(total)}"
             } else {
                 "No accounts"
             }
             views.setTextViewText(R.id.expense_balance, balanceText)
-            views.setTextViewText(R.id.expense_today, "Today: -$symbol${formatAmount(todayExpense)}")
+            // Show "No expenses" instead of "-$0.00" when nothing was spent today.
+            val todayText = if (todayExpense > 0.001) {
+                "Today: -$symbol${formatAmount(todayExpense)}"
+            } else {
+                "Today: No expenses"
+            }
+            views.setTextViewText(R.id.expense_today, todayText)
             views.setTextViewText(R.id.expense_month, "Month: -$symbol${formatAmount(monthExpense)}")
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -114,9 +127,9 @@ class ExpenseWidgetProvider : AppWidgetProvider() {
         private fun formatAmount(amount: Double): String {
             val abs = abs(amount)
             return if (abs >= 10_000) {
-                "%.0f".format(abs)
+                String.format(Locale.US, "%.0f", abs)
             } else {
-                "%.2f".format(abs)
+                String.format(Locale.US, "%.2f", abs)
             }
         }
     }
