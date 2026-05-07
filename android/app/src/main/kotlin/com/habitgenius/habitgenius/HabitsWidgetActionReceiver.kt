@@ -117,7 +117,23 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
         val prefs: SharedPreferences = context.getSharedPreferences(
             "FlutterSharedPreferences", Context.MODE_PRIVATE,
         )
-        val widgetJson = buildWidgetJson(root)
+
+        // Preserve streak counts from the existing snapshot — streak recalculation
+        // happens in Flutter. We carry values forward so the Streak widget stays
+        // accurate between app opens.
+        val existingStreakMap = mutableMapOf<String, Int>()
+        prefs.getString("flutter.hw_widget_habits", null)?.let { existing ->
+            runCatching {
+                val existingRoot = JSONObject(existing)
+                val existingHabits = existingRoot.optJSONArray("habits") ?: return@let
+                for (i in 0 until existingHabits.length()) {
+                    val h = existingHabits.getJSONObject(i)
+                    existingStreakMap[h.optString("id")] = h.optInt("currentStreak", 0)
+                }
+            }
+        }
+
+        val widgetJson = buildWidgetJson(root, existingStreakMap)
         prefs.edit().putString("flutter.hw_widget_habits", widgetJson).apply()
 
         // Refresh widget.
@@ -136,13 +152,15 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     private fun isoNow(): String =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date())
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(Date())
 
     /**
      * Rebuilds the compact widget JSON from the full data root so the widget
      * rows refresh immediately without waiting for Flutter to wake up.
      */
-    private fun buildWidgetJson(root: JSONObject): String {
+    private fun buildWidgetJson(root: JSONObject, existingStreakMap: Map<String, Int> = emptyMap()): String {
         val habits = root.optJSONArray("habits") ?: JSONArray()
         val logs = root.optJSONArray("habitLogs") ?: JSONArray()
         val todayStr = todayStr()
@@ -210,7 +228,8 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
                     .put("scheduledToday", isScheduledOn(h, scheduleDays, schedule, todayStr))
                     .put("todayCompleted", isCompleted(pType, target, todayLog))
                     .put("todayValue", todayLog?.optInt("value", 0) ?: 0)
-                    .put("weekStatus", weekStatus),
+                    .put("weekStatus", weekStatus)
+                    .put("currentStreak", existingStreakMap[hId] ?: 0),
             )
         }
 

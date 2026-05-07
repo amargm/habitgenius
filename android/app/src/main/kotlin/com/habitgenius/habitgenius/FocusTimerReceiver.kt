@@ -240,8 +240,11 @@ class FocusTimerReceiver : BroadcastReceiver() {
             put("plannedDuration", durationSeconds)
             put("actualDuration", durationSeconds)
             put("completedCycles", 1)
-            put("startedAt", isoNow())
-            put("endedAt", isoNow())
+            // Compute accurate timestamps: end = now, start = end − duration.
+            val endTimeMs = System.currentTimeMillis()
+            val startTimeMs = endTimeMs - (durationSeconds * 1000L)
+            put("startedAt", isoFormat(startTimeMs))
+            put("endedAt", isoFormat(endTimeMs))
         }
 
         val sessions = root.optJSONArray("focusSessions") ?: JSONArray()
@@ -281,6 +284,10 @@ class FocusTimerReceiver : BroadcastReceiver() {
             JSONObject(prefs.getString("flutter.hw_focus", null) ?: return null)
         }.getOrNull()
 
-    private fun isoNow(): String =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date())
+    private fun isoNow(): String = isoFormat(System.currentTimeMillis())
+
+    private fun isoFormat(epochMs: Long): String =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(Date(epochMs))
 }

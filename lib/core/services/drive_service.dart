@@ -37,6 +37,12 @@ class DriveService {
   /// Must be called (and awaited) before any other method.
   /// Safe to call again after a token refresh — it simply rebuilds the client.
   Future<void> init(GoogleSignIn googleSignIn) async {
+    // If there is no current user (e.g. app was killed and restarted while
+    // sync was enabled, or the token was evicted from cache), attempt a silent
+    // sign-in to restore the session before building the HTTP client.
+    if (googleSignIn.currentUser == null) {
+      await googleSignIn.signInSilently();
+    }
     final client = await googleSignIn.authenticatedClient();
     if (client == null) {
       throw const DriveServiceException('Not authenticated');

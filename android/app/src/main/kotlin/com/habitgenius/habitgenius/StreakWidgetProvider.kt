@@ -164,13 +164,15 @@ class StreakWidgetProvider : AppWidgetProvider() {
                     views.setTextViewText(COUNT_IDS[row], countLabel)
                     views.setTextColor(COUNT_IDS[row], accentColor)
 
-                    // 5 dot bitmaps (last 5 days of weekly status Mon→Sun).
-                    val dots = habit.weekStatus.takeLast(5)
-                        .let { list ->
-                            // Pad with false on the left if fewer than 5 days available.
-                            val pad = 5 - list.size
-                            List(pad) { false } + list
-                        }
+                    // Show the 5 most recent days up to and including today.
+                    // weekStatus is Mon–Sun (7 items); compute today's 0-based index.
+                    val cal = java.util.Calendar.getInstance()
+                    val javaDow = cal.get(java.util.Calendar.DAY_OF_WEEK)
+                    val todayIdx = if (javaDow == java.util.Calendar.SUNDAY) 6 else javaDow - 2
+                    val dotsSource = habit.weekStatus
+                        .take(todayIdx + 1)   // days Mon..today
+                        .takeLast(5)          // at most 5
+                    val dots = List(5 - dotsSource.size) { false } + dotsSource
                     for (dot in 0..4) {
                         val completed = dots.getOrElse(dot) { false }
                         val dotBmp = drawDot(context, accentColor, completed)

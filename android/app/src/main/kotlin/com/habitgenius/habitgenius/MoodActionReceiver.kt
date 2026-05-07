@@ -133,5 +133,7 @@ class MoodActionReceiver : BroadcastReceiver() {
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     private fun isoNow(): String =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date())
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(Date())
 }

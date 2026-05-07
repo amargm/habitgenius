@@ -173,7 +173,9 @@ class FocusWidgetProvider : AppWidgetProvider() {
         // ── Ring bitmap ──────────────────────────────────────────────────────
 
         private fun drawRing(context: Context, progress: Float, state: String): Bitmap {
-            val size = 200
+            // Scale bitmap with screen density so the ring stays sharp on all displays.
+            val density = context.resources.displayMetrics.density
+            val size = (120 * density).toInt().coerceAtLeast(200)
             val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)

@@ -145,13 +145,21 @@ class AuthService {
   ///
   /// Only call this after the user has already signed in with Google.
   /// Returns true if the scope was granted, false if denied or not signed in.
+  ///
+  /// After granting the scope, performs a silent sign-in to force a token
+  /// refresh so [authenticatedClient()] picks up the new Drive scope.
   Future<bool> requestDriveScope() async {
     const driveAppDataScope = 'https://www.googleapis.com/auth/drive.appdata';
     try {
       final account = _googleSignIn.currentUser;
       if (account == null) return false;
       final granted = await _googleSignIn.requestScopes([driveAppDataScope]);
-      return granted;
+      if (!granted) return false;
+      // Force a silent sign-in so the OAuth token is refreshed to include
+      // the newly granted Drive scope. Without this, authenticatedClient()
+      // may still return a cached token that lacks Drive access.
+      await _googleSignIn.signInSilently();
+      return true;
     } catch (_) {
       return false;
     }
