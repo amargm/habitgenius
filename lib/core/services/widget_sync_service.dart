@@ -5,47 +5,45 @@ import 'package:flutter/services.dart';
 import '../models/app_data.dart';
 import '../models/habit.dart';
 import '../models/habit_log.dart';
+import '../models/transaction.dart';
 import '../utils/habit_helpers.dart';
 
-/// Pushes a compact snapshot of today's habit data into SharedPreferences so
-/// the native Android home-screen widget can read it without spinning up the
-/// Flutter engine.
+/// Pushes compact snapshots for all home-screen widgets into SharedPreferences
+/// via a single platform-channel call, then triggers a redraw for each widget
+/// provider.  All operations are best-effort — a failure never affects the app.
 ///
-/// The data is written under the key `"flutter.hw_widget_habits"` (the
-/// `"flutter."` prefix is added automatically by [SharedPreferences] on
-/// Android when the platform channel writes it; the Kotlin side reads the key
-/// `"hw_widget_habits"` from the Flutter-shared-preferences file).
-///
-/// After writing the prefs, a platform channel call fires
-/// `AppWidgetManager.updateAppWidget()` on the Android side so the widget
-/// refreshes immediately.
+/// SharedPreferences keys (Flutter prefix "flutter." applied by MainActivity):
+///   hw_widget_habits  — habits list + weekly status + streaks
+///   hw_mood           — today's mood + recent trend
+///   hw_focus_stats    — today's focus time (runtime state owned by Kotlin)
+///   hw_expenses       — account balances + today/month totals
 class WidgetSyncService {
   WidgetSyncService._();
   static final WidgetSyncService instance = WidgetSyncService._();
 
   static const _channel = MethodChannel('com.habitgenius/widget');
 
-  /// Serializes habit data for today + the surrounding 7-day week into
-  /// SharedPreferences and triggers a widget redraw.
-  ///
-  /// Safe to call without `await` (errors are swallowed so a widget-push
-  /// failure never disrupts the main app).
-  Future<void> push(AppData data, String filePath) async {
+  /// Pushes all four widget data payloads in one channel call.
+  /// Safe to call with `.ignore()` — swallows all errors.
+  Future<void> pushAll(AppData data) async {
     try {
-      final json = _buildWidgetJson(data);
-      await _channel.invokeMethod<void>('updateWidget', {'data': json});
+      await _channel.invokeMethod<void>('pushAll', {
+        'habits': _buildHabitsJson(data),
+        'mood': _buildMoodJson(data),
+        'focus': _buildFocusStatsJson(data),
+        'expenses': _buildExpensesJson(data),
+      });
     } catch (_) {
       // Widget push is best-effort — never crash the app.
     }
   }
 
-  // ── JSON builder ─────────────────────────────────────────
+  // ── Habits JSON (includes currentStreak for Streak widget) ───────────────
 
-  String _buildWidgetJson(AppData data) {
+  String _buildHabitsJson(AppData data) {
     final today = DateTime.now();
     final todayStr = HabitHelpers.todayStr();
 
-    // Build the 7-day window: Mon → Sun of the current ISO week.
     final weekday = today.weekday; // 1=Mon … 7=Sun
     final monday = today.subtract(Duration(days: weekday - 1));
     final weekDates = List.generate(7, (i) {
@@ -93,6 +91,7 @@ class WidgetSyncService {
             h.id,
             todayStr,
           );
+          final streak = HabitHelpers.currentStreak(h, data.habitLogs, today);
           return {
             'id': h.id,
             'name': h.name,
@@ -104,6 +103,7 @@ class WidgetSyncService {
             'scheduledToday': HabitHelpers.isScheduledOn(h, today),
             'todayCompleted': _isCompleted(h, todayLog),
             'todayValue': todayLog?.value ?? 0,
+            'currentStreak': streak,
             'weekStatus': weekStatus,
           };
         }).toList();
@@ -116,6 +116,122 @@ class WidgetSyncService {
     });
   }
 
+  // ── Mood JSON ─────────────────────────────────────────────────────────────
+
+  String _buildMoodJson(AppData data) {
+    final todayStr = HabitHelpers.todayStr();
+    final tier = data.settings.userTier.name; // guest | registered | pro
+
+    final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
+
+    // Up to 4 most-recent past moods for trend display.
+    final pastMoods =
+        data.moods.where((m) => m.date != todayStr).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    final recentLevels = pastMoods.take(4).map((m) => m.level).toList();
+
+    return jsonEncode({
+      'tier': tier,
+      'todayLogged': todayMood != null,
+      'todayLevel': todayMood?.level ?? 0,
+      'todayEmoji': todayMood?.emoji ?? '',
+      'recentLevels': recentLevels,
+    });
+  }
+
+  // ── Focus stats JSON (static stats; runtime timer state managed by Kotlin) ─
+
+  String _buildFocusStatsJson(AppData data) {
+    final todayStr = HabitHelpers.todayStr();
+    final todaySeconds = data.focusSessions
+        .where((s) => s.startedAt.startsWith(todayStr))
+        .fold<int>(0, (sum, s) => sum + s.actualDuration);
+
+    return jsonEncode({
+      'todayFocusSeconds': todaySeconds,
+      'tier': data.settings.userTier.name,
+    });
+  }
+
+  // ── Expenses JSON ─────────────────────────────────────────────────────────
+
+  String _buildExpensesJson(AppData data) {
+    final tier = data.settings.userTier.name;
+
+    if (tier == 'guest') {
+      return jsonEncode({
+        'tier': tier,
+        'accounts': [],
+        'todayExpense': 0,
+        'monthExpense': 0,
+        'monthIncome': 0,
+        'currency': 'USD',
+      });
+    }
+
+    final todayStr = HabitHelpers.todayStr();
+    final now = DateTime.now();
+    final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
+
+    // Compute current balance for each account from starting balance +
+    // all transactions.
+    final accountBalances =
+        data.accounts.map((acc) {
+          double balance = acc.startingBalance;
+          for (final t in data.transactions) {
+            if (t.type == TransactionType.expense && t.accountId == acc.id) {
+              balance -= t.amount;
+            } else if (t.type == TransactionType.income &&
+                t.accountId == acc.id) {
+              balance += t.amount;
+            } else if (t.type == TransactionType.transfer) {
+              if (t.accountId == acc.id) balance -= t.amount;
+              if (t.toAccountId == acc.id) balance += t.amount;
+            }
+          }
+          return {
+            'name': acc.name,
+            'balance': balance,
+            'currency': acc.currency,
+          };
+        }).toList();
+
+    final todayExpense = data.transactions
+        .where((t) => t.date == todayStr && t.type == TransactionType.expense)
+        .fold<double>(0, (s, t) => s + t.amount);
+
+    final monthExpense = data.transactions
+        .where(
+          (t) =>
+              t.date.compareTo(monthStart) >= 0 &&
+              t.type == TransactionType.expense,
+        )
+        .fold<double>(0, (s, t) => s + t.amount);
+
+    final monthIncome = data.transactions
+        .where(
+          (t) =>
+              t.date.compareTo(monthStart) >= 0 &&
+              t.type == TransactionType.income,
+        )
+        .fold<double>(0, (s, t) => s + t.amount);
+
+    final currency =
+        data.accounts.isNotEmpty ? data.accounts.first.currency : 'USD';
+
+    return jsonEncode({
+      'tier': tier,
+      'accounts': accountBalances,
+      'todayExpense': todayExpense,
+      'monthExpense': monthExpense,
+      'monthIncome': monthIncome,
+      'currency': currency,
+      'currencySymbol': data.settings.currencySymbol,
+    });
+  }
+
+  // ── Shared helpers ────────────────────────────────────────────────────────
+
   static bool _isCompleted(Habit h, HabitLog? log) {
     if (log == null) return false;
     if (h.progressType == HabitProgressType.checkbox ||
@@ -127,5 +243,6 @@ class WidgetSyncService {
   }
 
   static String _fmtDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }

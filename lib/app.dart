@@ -134,9 +134,8 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
 
   void _pushWidgetData() {
     final data = ref.read(dataNotifierProvider).valueOrNull;
-    final path = ref.read(dataNotifierProvider.notifier).filePath;
-    if (data == null || path == null) return;
-    WidgetSyncService.instance.push(data, path).ignore();
+    if (data == null) return;
+    WidgetSyncService.instance.pushAll(data).ignore();
   }
 
   /// Re-registers all habit reminders so they survive OS reboots and

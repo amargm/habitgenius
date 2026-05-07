@@ -15,23 +15,56 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+
+                    // Legacy single-widget update (habits only) — kept for safety.
                     "updateWidget" -> {
-                        // The Flutter side may pass the new JSON via the "data" argument.
-                        // Write it to SharedPreferences before triggering the redraw so
-                        // the widget always reads the freshest snapshot.
                         val data = call.argument<String>("data")
                         if (!data.isNullOrBlank()) {
-                            applicationContext
-                                .getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                                .edit()
-                                .putString("flutter.hw_widget_habits", data)
-                                .apply()
+                            writePrefs("flutter.hw_widget_habits", data)
                         }
                         HabitsWidgetProvider.triggerUpdate(applicationContext)
                         result.success(null)
                     }
+
+                    // Pushes all four widget payloads in one call.
+                    "pushAll" -> {
+                        val habitsData   = call.argument<String>("habits")
+                        val moodData     = call.argument<String>("mood")
+                        val focusData    = call.argument<String>("focus")
+                        val expensesData = call.argument<String>("expenses")
+
+                        val prefs = applicationContext.getSharedPreferences(
+                            "FlutterSharedPreferences", MODE_PRIVATE,
+                        )
+                        prefs.edit().apply {
+                            if (!habitsData.isNullOrBlank())
+                                putString("flutter.hw_widget_habits", habitsData)
+                            if (!moodData.isNullOrBlank())
+                                putString("flutter.hw_mood", moodData)
+                            if (!focusData.isNullOrBlank())
+                                putString("flutter.hw_focus_stats", focusData)
+                            if (!expensesData.isNullOrBlank())
+                                putString("flutter.hw_expenses", expensesData)
+                            apply()
+                        }
+
+                        HabitsWidgetProvider.triggerUpdate(applicationContext)
+                        MoodWidgetProvider.triggerUpdate(applicationContext)
+                        FocusWidgetProvider.triggerUpdate(applicationContext)
+                        ExpenseWidgetProvider.triggerUpdate(applicationContext)
+                        StreakWidgetProvider.triggerUpdate(applicationContext)
+
+                        result.success(null)
+                    }
+
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun writePrefs(key: String, value: String) {
+        applicationContext
+            .getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .edit().putString(key, value).apply()
     }
 }

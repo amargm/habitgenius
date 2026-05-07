@@ -103,6 +103,84 @@
             </intent-filter>
         </receiver>
 
+        <!-- ── Focus Timer Widget ──────────────────────────────────────── -->
+
+        <receiver
+            android:name=".FocusWidgetProvider"
+            android:exported="true"
+            android:label="HabitGenius Focus Timer">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_focus_info" />
+        </receiver>
+
+        <!-- Handles ▶/⏸/↺ button taps and the 60s tick alarm -->
+        <receiver
+            android:name=".FocusTimerReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.habitgenius.FOCUS_START" />
+                <action android:name="com.habitgenius.FOCUS_PAUSE" />
+                <action android:name="com.habitgenius.FOCUS_RESUME" />
+                <action android:name="com.habitgenius.FOCUS_RESET" />
+                <action android:name="com.habitgenius.FOCUS_TICK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ── Mood Check-In Widget ────────────────────────────────────── -->
+
+        <receiver
+            android:name=".MoodWidgetProvider"
+            android:exported="true"
+            android:label="HabitGenius Mood">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_mood_info" />
+        </receiver>
+
+        <!-- Handles emoji tap (log mood from widget) -->
+        <receiver
+            android:name=".MoodActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.habitgenius.LOG_MOOD" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ── Expense Balance Widget ──────────────────────────────────── -->
+
+        <receiver
+            android:name=".ExpenseWidgetProvider"
+            android:exported="true"
+            android:label="HabitGenius Finances">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_expenses_info" />
+        </receiver>
+
+        <!-- ── Streak Showcase Widget ──────────────────────────────────── -->
+
+        <receiver
+            android:name=".StreakWidgetProvider"
+            android:exported="true"
+            android:label="HabitGenius Streaks">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_streak_info" />
+        </receiver>
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

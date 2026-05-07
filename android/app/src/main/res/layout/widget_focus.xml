@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Focus Timer Widget  2×2
+  Sections:
+    1. Header row  – title + open-app button
+    2. Ring area   – Canvas-drawn progress ring (ImageView) + time overlay (TextView)
+    3. Status label – "Pomodoro · Deep Work" / "Break" etc.
+    4. Action row  – primary action (▶/⏸/↺) + reset
+    5. Footer      – "Today: X min" stat
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/widget_bg">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Focus"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <ImageButton
+            android:id="@+id/focus_open_app"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_view"
+            android:contentDescription="Open HabitGenius" />
+
+    </LinearLayout>
+
+    <!-- Ring + time overlay -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center">
+
+        <!-- Canvas-drawn progress ring; updated on every tick -->
+        <ImageView
+            android:id="@+id/focus_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:contentDescription="Timer ring" />
+
+        <!-- Remaining time (e.g. "24:32") – drawn over the ring -->
+        <TextView
+            android:id="@+id/focus_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="25:00"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:fontFamily="monospace" />
+
+    </FrameLayout>
+
+    <!-- Mode / category label -->
+    <TextView
+        android:id="@+id/focus_status_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Pomodoro"
+        android:textSize="10sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:paddingBottom="4dp" />
+
+    <!-- Action buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingBottom="4dp">
+
+        <!-- Primary action: ▶ Start / ⏸ Pause / ▶ Resume / ↺ New Session -->
+        <ImageButton
+            android:id="@+id/focus_btn_primary"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_play"
+            android:contentDescription="Start" />
+
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+
+        <!-- Reset button -->
+        <ImageButton
+            android:id="@+id/focus_btn_reset"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_revert"
+            android:contentDescription="Reset" />
+
+    </LinearLayout>
+
+    <!-- Today's focus time -->
+    <TextView
+        android:id="@+id/focus_today_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Today: 0 min"
+        android:textSize="10sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+</LinearLayout>

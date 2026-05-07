@@ -189,8 +189,8 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
       // does NOT trigger a spurious reload (the file mtime just changed but
       // the change originated from this app, not an external source).
       SyncService.instance.markUpdated();
-      // Push an updated snapshot to the home-screen widget (best-effort).
-      WidgetSyncService.instance.push(next, _filePath!).ignore();
+      // Push updated snapshots to all home-screen widgets (best-effort).
+      WidgetSyncService.instance.pushAll(next).ignore();
     } catch (e) {
       // Roll back the optimistic state update so the UI stays consistent.
       state = AsyncValue.data(current);

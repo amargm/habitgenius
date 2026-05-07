@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mood Check-In Widget  2×1
+  Two mutually exclusive content panels toggled via setViewVisibility:
+    - mood_panel_prompt : shown when no mood logged today (5 emoji tap buttons)
+    - mood_panel_logged : shown when mood already logged (big emoji + label + trend)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/widget_bg">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/mood_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="How do you feel?"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <ImageButton
+            android:id="@+id/mood_open_app"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_view"
+            android:contentDescription="Open HabitGenius" />
+
+    </LinearLayout>
+
+    <!-- Panel A: prompt (5 emoji buttons) – shown when no mood logged today -->
+    <LinearLayout
+        android:id="@+id/mood_panel_prompt"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:visibility="visible">
+
+        <!-- Each ImageView is a Canvas-drawn Bitmap: emoji circle, level-specific bg color -->
+        <ImageView android:id="@+id/mood_btn_1" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginEnd="4dp" android:contentDescription="Awful" />
+        <ImageView android:id="@+id/mood_btn_2" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginEnd="4dp" android:contentDescription="Bad" />
+        <ImageView android:id="@+id/mood_btn_3" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginEnd="4dp" android:contentDescription="Okay" />
+        <ImageView android:id="@+id/mood_btn_4" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginEnd="4dp" android:contentDescription="Good" />
+        <ImageView android:id="@+id/mood_btn_5" android:layout_width="36dp" android:layout_height="36dp" android:contentDescription="Great" />
+
+    </LinearLayout>
+
+    <!-- Panel B: already logged – shown when mood has been recorded today -->
+    <LinearLayout
+        android:id="@+id/mood_panel_logged"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <!-- Large emoji (Canvas bitmap with colored circle bg) -->
+        <ImageView
+            android:id="@+id/mood_logged_icon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="Today's mood" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:id="@+id/mood_logged_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Good"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <!-- Trend: 4 small dots representing recent moods -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="2dp">
+                <ImageView android:id="@+id/mood_trend_0" android:layout_width="10dp" android:layout_height="10dp" android:layout_marginEnd="3dp" />
+                <ImageView android:id="@+id/mood_trend_1" android:layout_width="10dp" android:layout_height="10dp" android:layout_marginEnd="3dp" />
+                <ImageView android:id="@+id/mood_trend_2" android:layout_width="10dp" android:layout_height="10dp" android:layout_marginEnd="3dp" />
+                <ImageView android:id="@+id/mood_trend_3" android:layout_width="10dp" android:layout_height="10dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Guest / locked state -->
+    <TextView
+        android:id="@+id/mood_locked_text"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Sign in to track mood"
+        android:textSize="11sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:visibility="gone" />
+
+</LinearLayout>
