@@ -17,7 +17,8 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 }
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  bool _signingIn = false;
+  bool _signingInGoogle = false;
+  bool _signingInGuest = false;
 
   Future<void> _onGoogleSignIn() async {
     // If guest data exists, warn that it won't carry over.
@@ -35,7 +36,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       if (!confirmed || !mounted) return;
     }
 
-    setState(() => _signingIn = true);
+    setState(() => _signingInGoogle = true);
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
       if (!mounted) return;
@@ -68,7 +69,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       }
       AppToast.show(context, msg, type: ToastType.error);
     } finally {
-      if (mounted) setState(() => _signingIn = false);
+      if (mounted) setState(() => _signingInGoogle = false);
     }
   }
 
@@ -99,7 +100,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   }
 
   Future<void> _onContinueAsGuest() async {
-    setState(() => _signingIn = true);
+    setState(() => _signingInGuest = true);
     try {
       await ref.read(authNotifierProvider.notifier).continueAsGuest();
       await ref
@@ -114,7 +115,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         type: ToastType.error,
       );
     } finally {
-      if (mounted) setState(() => _signingIn = false);
+      if (mounted) setState(() => _signingInGuest = false);
     }
   }
 
@@ -175,30 +176,51 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ),
               const Spacer(flex: 3),
               // Google Sign-In
-              _GoogleSignInButton(
-                onTap: _signingIn ? null : _onGoogleSignIn,
-                isLoading: _signingIn,
+              Opacity(
+                opacity: _signingInGuest ? 0.4 : 1.0,
+                child: _GoogleSignInButton(
+                  onTap:
+                      (_signingInGoogle || _signingInGuest)
+                          ? null
+                          : _onGoogleSignIn,
+                  isLoading: _signingInGoogle,
+                ),
               ),
               const SizedBox(height: 14),
               // Continue as Guest
-              OutlinedButton(
-                onPressed: _signingIn ? null : _onContinueAsGuest,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              Opacity(
+                opacity: _signingInGoogle ? 0.4 : 1.0,
+                child: OutlinedButton(
+                  onPressed:
+                      (_signingInGoogle || _signingInGuest)
+                          ? null
+                          : _onContinueAsGuest,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                ),
-                child: Text(
-                  'Continue as Guest',
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  child:
+                      _signingInGuest
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : Text(
+                            'Continue as Guest',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                 ),
               ),
               const SizedBox(height: 16),

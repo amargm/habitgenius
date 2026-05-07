@@ -572,7 +572,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                   '${_scheduleDays.first} days.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
               ],

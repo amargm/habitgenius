@@ -156,17 +156,9 @@ class MainShell extends ConsumerWidget {
                           children: [
                             focusRunning && tab.route == AppRoutes.focus
                                 ? Badge(
-                                    backgroundColor: Colors.redAccent,
-                                    smallSize: 8,
-                                    child: Icon(
-                                      tab.icon,
-                                      size: 22,
-                                      color: isActive
-                                          ? Colors.white
-                                          : context.appColors.textMuted,
-                                    ),
-                                  )
-                                : Icon(
+                                  backgroundColor: Colors.redAccent,
+                                  smallSize: 8,
+                                  child: Icon(
                                     tab.icon,
                                     size: 22,
                                     color:
@@ -174,6 +166,15 @@ class MainShell extends ConsumerWidget {
                                             ? Colors.white
                                             : context.appColors.textMuted,
                                   ),
+                                )
+                                : Icon(
+                                  tab.icon,
+                                  size: 22,
+                                  color:
+                                      isActive
+                                          ? Colors.white
+                                          : context.appColors.textMuted,
+                                ),
                             if (isActive) ...[
                               const SizedBox(width: 7),
                               Text(

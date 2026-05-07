@@ -266,6 +266,19 @@ class _TransactionsTab extends StatelessWidget {
     final monthIncomeTxs = transactions.where(
       (t) => t.date.startsWith(monthStr) && t.type == TransactionType.income,
     );
+
+    // Group by currency for per-currency sub-totals
+    final Map<String, double> expByCurrency = {};
+    final Map<String, double> incByCurrency = {};
+    for (final t in monthExpenseTxs) {
+      expByCurrency[t.currency] = (expByCurrency[t.currency] ?? 0) + t.amount;
+    }
+    for (final t in monthIncomeTxs) {
+      incByCurrency[t.currency] = (incByCurrency[t.currency] ?? 0) + t.amount;
+    }
+    final allCurrencies =
+        {...expByCurrency.keys, ...incByCurrency.keys}.toList()..sort();
+
     final monthExpenses =
         monthExpenseTxs.isEmpty
             ? 0.0
@@ -305,14 +318,26 @@ class _TransactionsTab extends StatelessWidget {
             ),
           ),
         if (transactions.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: _SummaryCard(
-              monthExpenses: monthExpenses,
-              monthIncome: monthIncome,
-              currency: summaryCurrency,
+          if (allCurrencies.length > 1)
+            ...allCurrencies.map(
+              (cur) => Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: _SummaryCard(
+                  monthExpenses: expByCurrency[cur] ?? 0,
+                  monthIncome: incByCurrency[cur] ?? 0,
+                  currency: cur,
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: _SummaryCard(
+                monthExpenses: monthExpenses,
+                monthIncome: monthIncome,
+                currency: summaryCurrency,
+              ),
             ),
-          ),
         if (monthExpenseTxs.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),

@@ -35,6 +35,8 @@ class AppToast {
     messenger.showSnackBar(
       SnackBar(
         duration: const Duration(milliseconds: 1800),
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 92),
+        behavior: SnackBarBehavior.floating,
         content: Row(
           children: [
             Icon(icon, color: iconColor, size: 18),

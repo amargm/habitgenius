@@ -978,6 +978,68 @@ class _DataSection extends ConsumerWidget {
     }
   }
 
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final appData = ref.read(appDataProvider);
+    try {
+      final buf = StringBuffer();
+
+      // Habits
+      buf.writeln('=== HABITS ===');
+      buf.writeln('Name,Icon,Color,Schedule,Created');
+      for (final h in appData.habits) {
+        buf.writeln(
+          '"${h.name.replaceAll('"', '""')}","${h.icon}","${h.colorHex}",'
+          '"${h.schedule.name}","${h.createdAt}"',
+        );
+      }
+      buf.writeln();
+
+      // Transactions
+      buf.writeln('=== TRANSACTIONS ===');
+      buf.writeln('Date,Type,Category,Amount,Currency,Note');
+      for (final t in appData.transactions) {
+        final note = (t.note ?? '').replaceAll('"', '""');
+        final cat = t.category.replaceAll('"', '""');
+        buf.writeln(
+          '"${t.date}","${t.type.name}","$cat",'
+          '"${t.amount.toStringAsFixed(2)}","${t.currency}","$note"',
+        );
+      }
+      buf.writeln();
+
+      // Journal
+      buf.writeln('=== JOURNAL ===');
+      buf.writeln('Date,Title,Content');
+      for (final e in appData.journal) {
+        final title = (e.title ?? '').replaceAll('"', '""');
+        final body = e.body.replaceAll('"', '""').replaceAll('\n', ' ');
+        buf.writeln('"${e.createdAt}","$title","$body"');
+      }
+      buf.writeln();
+
+      // Moods
+      buf.writeln('=== MOODS ===');
+      buf.writeln('Date,Level,Tags,Note');
+      for (final m in appData.moods) {
+        final note = (m.note ?? '').replaceAll('"', '""');
+        final tags = m.tags.join('; ');
+        buf.writeln('"${m.date}","${m.level}","$tags","$note"');
+      }
+
+      final bytes = buf.toString().codeUnits;
+      final xFile = XFile.fromData(
+        Uint8List.fromList(bytes),
+        mimeType: 'text/csv',
+        name: 'habitgenius_export.csv',
+      );
+      await Share.shareXFiles([xFile], subject: 'HabitGenius CSV export');
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(context, 'Could not export CSV.', type: ToastType.error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appData = ref.watch(appDataProvider);
@@ -1000,6 +1062,12 @@ class _DataSection extends ConsumerWidget {
             icon: Icons.download_rounded,
             label: 'Export backup (JSON)',
             onTap: () => _exportBackup(context, ref),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          _ActionRow(
+            icon: Icons.table_chart_outlined,
+            label: 'Export as CSV',
+            onTap: () => _exportCsv(context, ref),
           ),
         ],
       ),

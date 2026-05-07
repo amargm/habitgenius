@@ -196,6 +196,59 @@ class _BodyState extends State<_Body> {
                   const SizedBox(height: 28),
                 ],
 
+                // ── Perfect day banner ─────────────────────────────
+                if (totalTodayActivities > 0 &&
+                    doneToday == totalTodayActivities)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primary.withValues(alpha: 0.18),
+                            primary.withValues(alpha: 0.08),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primary.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('🎉', style: TextStyle(fontSize: 22)),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Perfect day!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: primary,
+                                ),
+                              ),
+                              Text(
+                                'All tasks completed today',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: primary.withValues(alpha: 0.75),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 _SectionHeader(label: 'This Week', trailing: const SizedBox()),
                 const SizedBox(height: 14),
                 _WeeklyOverview(
@@ -244,6 +297,7 @@ class _TimeOfDayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = _tint(hour);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       decoration: BoxDecoration(
@@ -252,13 +306,16 @@ class _TimeOfDayCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            tint.withValues(alpha: 0.12),
-            tint.withValues(alpha: 0.04),
+            tint.withValues(alpha: isDark ? 0.12 : 0.20),
+            tint.withValues(alpha: isDark ? 0.04 : 0.10),
             Colors.transparent,
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
-        border: Border.all(color: tint.withValues(alpha: 0.15), width: 1),
+        border: Border.all(
+          color: tint.withValues(alpha: isDark ? 0.15 : 0.22),
+          width: 1,
+        ),
       ),
       child: child,
     );
@@ -454,11 +511,28 @@ class _SyncBadgeState extends ConsumerState<_SyncBadge>
       _ => (Icons.cloud_outlined, AppColors.textMuted, 'Not synced'),
     };
 
+    final isError = syncState.status == SyncStatus.error;
+    final effectiveTooltip = isError ? 'Tap to retry sync' : tooltip;
+
     return Tooltip(
-      message: tooltip,
-      child: RotationTransition(
-        turns: _spin,
-        child: Icon(icon, size: 20, color: color),
+      message: effectiveTooltip,
+      child: GestureDetector(
+        onTap:
+            isError
+                ? () {
+                  ref
+                      .read(cloudSyncProvider.notifier)
+                      .scheduleUpload(
+                        dataNotifier: ref.read(dataNotifierProvider.notifier),
+                        googleSignIn:
+                            ref.read(authServiceProvider).googleSignIn,
+                      );
+                }
+                : null,
+        child: RotationTransition(
+          turns: _spin,
+          child: Icon(icon, size: 20, color: color),
+        ),
       ),
     );
   }

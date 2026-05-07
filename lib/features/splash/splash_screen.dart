@@ -59,7 +59,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       // Run the minimum splash delay and session restore concurrently.
       await Future.wait([
-        Future<void>.delayed(const Duration(milliseconds: 1800)),
+        Future<void>.delayed(const Duration(milliseconds: 800)),
         ref.read(authNotifierProvider.notifier).restore(),
       ]);
 

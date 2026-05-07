@@ -210,6 +210,7 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
   final _noteCtrl = TextEditingController();
   final _customTagCtrl = TextEditingController();
   bool _saving = false;
+  bool _showCustomTagInput = false;
 
   @override
   void initState() {
@@ -321,9 +322,14 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
                           ),
                           child: Column(
                             children: [
-                              Text(
-                                ml.emoji,
-                                style: TextStyle(fontSize: sel ? 36 : 28),
+                              AnimatedScale(
+                                scale: sel ? 1.25 : 1.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOutBack,
+                                child: Text(
+                                  ml.emoji,
+                                  style: const TextStyle(fontSize: 28),
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -437,48 +443,92 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
                     ),
                   )),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _customTagCtrl,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        hintText: 'Add custom tag…',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
+              if (_showCustomTagInput)
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _customTagCtrl,
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          hintText: 'Add custom tag…',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: context.appColors.textMuted,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        onSubmitted: (_) {
+                          _addCustomTag();
+                          setState(() => _showCustomTagInput = false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _addCustomTag();
+                        setState(() => _showCustomTagInput = false);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                GestureDetector(
+                  onTap: () => setState(() => _showCustomTagInput = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.appColors.bgElevated,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: context.appColors.border,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.add_rounded,
+                          size: 14,
                           color: context.appColors.textMuted,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                        const SizedBox(width: 4),
+                        Text(
+                          'Add tag',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.appColors.textMuted,
+                          ),
                         ),
-                        isDense: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      onSubmitted: (_) => _addCustomTag(),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _addCustomTag,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
         ),
@@ -495,6 +545,21 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
           ),
         ),
         const SizedBox(height: 20),
+
+        // ── Save nudge ───────────────────────────────────
+        if (_selectedLevel == null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Select how you\'re feeling to save',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.appColors.textMuted,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
 
         // ── Save button ───────────────────────────────────
         ElevatedButton(

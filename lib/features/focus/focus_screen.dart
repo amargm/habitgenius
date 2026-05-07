@@ -116,6 +116,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
               ),
               const SizedBox(height: 20),
 
+              // Divider between Mode and Category
+              const Divider(height: 1, thickness: 1),
+              const SizedBox(height: 16),
+
               // Category chips
               _SectionLabel(label: 'Category'),
               const SizedBox(height: 8),
@@ -308,7 +312,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
 
   Future<void> _onReset(FocusSessionService svc) async {
     // Ask for confirmation if a meaningful session is in progress.
-    if ((svc.isRunning || svc.isPaused) && svc.elapsed > 10) {
+    if ((svc.isRunning || svc.isPaused) && svc.elapsed > 60) {
       if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
@@ -489,20 +493,29 @@ class _TimerRing extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              if (mode == FocusMode.pomodoro && cycles > 0)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    cycles,
-                    (_) => Container(
-                      width: 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+              if (mode == FocusMode.pomodoro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(4, (i) {
+                      final done =
+                          i < (cycles % 4 == 0 && cycles > 0 ? 4 : cycles % 4);
+                      return Container(
+                        width: 7,
+                        height: 7,
+                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                        decoration: BoxDecoration(
+                          color:
+                              done ? primary : primary.withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: primary.withValues(alpha: done ? 0.0 : 0.5),
+                            width: done ? 0 : 1,
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ),
             ],

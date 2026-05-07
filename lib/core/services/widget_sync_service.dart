@@ -158,12 +158,14 @@ class WidgetSyncService {
     return jsonEncode({
       'todayFocusSeconds': todaySeconds,
       'tier': data.settings.userTier.name,
-      'lastCategory': data.focusSessions.isNotEmpty
-          ? data.focusSessions.last.category
-          : 'Deep Work',
-      'lastMode': data.focusSessions.isNotEmpty
-          ? data.focusSessions.last.mode.name
-          : 'pomodoro',
+      'lastCategory':
+          data.focusSessions.isNotEmpty
+              ? data.focusSessions.last.category
+              : 'Deep Work',
+      'lastMode':
+          data.focusSessions.isNotEmpty
+              ? data.focusSessions.last.mode.name
+              : 'pomodoro',
     });
   }
 
