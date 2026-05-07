@@ -86,10 +86,12 @@ class FocusTimerReceiver : BroadcastReceiver() {
         if (currentState == "running" || currentState == "paused") return
 
         val now = System.currentTimeMillis()
+        val lastMode = prefs.getString("flutter.hw_last_mode", "Pomodoro") ?: "Pomodoro"
+        val lastCategory = prefs.getString("flutter.hw_last_category", "Deep Work") ?: "Deep Work"
         val timerState = JSONObject().apply {
             put("state", "running")
-            put("mode", "Pomodoro")
-            put("category", "Deep Work")
+            put("mode", lastMode)
+            put("category", lastCategory)
             put("targetSeconds", DEFAULT_TARGET_SECONDS)
             put("startedAt", now)
             put("pausedElapsed", 0L)

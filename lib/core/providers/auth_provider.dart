@@ -79,11 +79,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _service.signInWithGoogle();
       // After a fresh sign-in always check the server — the user may have
       // purchased Pro on another device or after a reinstall.
+      final localIsPro = PurchaseService.instance.isPro;
       final serverIsPro = await EntitlementService.instance.checkPro();
-      if (serverIsPro) {
+      final isPro = serverIsPro || localIsPro; // never downgrade local Pro
+      if (serverIsPro && !localIsPro) {
         await PurchaseService.instance.syncProFromServer(isPro: true);
       }
-      state = AuthState(user: user, isPro: serverIsPro);
+      state = AuthState(user: user, isPro: isPro);
       return user;
     } catch (e) {
       state = AuthState(error: e.toString());

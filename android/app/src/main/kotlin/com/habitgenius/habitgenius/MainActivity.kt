@@ -41,8 +41,18 @@ class MainActivity : FlutterActivity() {
                                 putString("flutter.hw_widget_habits", habitsData)
                             if (!moodData.isNullOrBlank())
                                 putString("flutter.hw_mood", moodData)
-                            if (!focusData.isNullOrBlank())
+                            if (!focusData.isNullOrBlank()) {
                                 putString("flutter.hw_focus_stats", focusData)
+                                // Persist last category/mode so FocusTimerReceiver
+                                // can use them when starting a session from the widget.
+                                runCatching {
+                                    val focusJson = org.json.JSONObject(focusData)
+                                    focusJson.optString("lastCategory", "").takeIf { it.isNotEmpty() }
+                                        ?.let { putString("flutter.hw_last_category", it) }
+                                    focusJson.optString("lastMode", "").takeIf { it.isNotEmpty() }
+                                        ?.let { putString("flutter.hw_last_mode", it) }
+                                }
+                            }
                             if (!expensesData.isNullOrBlank())
                                 putString("flutter.hw_expenses", expensesData)
                             apply()

@@ -39,16 +39,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
       if (!mounted) return;
-      // New registered user: check if they've set up a data folder.
+      // Route based on whether onboarding has been seen before.
       final prefs = ref.read(sharedPreferencesProvider);
-      final dataDir = prefs.getString(PrefKeys.dataFilePath);
-      if (dataDir == null || dataDir.isEmpty) {
-        context.go(AppRoutes.onboarding);
-      } else {
+      final hasSeenOnboarding =
+          prefs.getBool(PrefKeys.hasSeenOnboarding) ?? false;
+      if (hasSeenOnboarding) {
         await ref
             .read(dataNotifierProvider.notifier)
-            .load(isGuest: false, customDir: dataDir);
+            .load(isGuest: false, customDir: null);
         if (mounted) context.go(AppRoutes.home);
+      } else {
+        context.go(AppRoutes.onboarding);
       }
     } catch (e) {
       if (!mounted) return;

@@ -186,7 +186,10 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
       ).timeout(const Duration(seconds: 30));
 
       // User may have turned sync off while this await was in progress.
-      if (_syncCancelled) { _syncCancelled = false; return; }
+      if (_syncCancelled) {
+        _syncCancelled = false;
+        return;
+      }
       final now = DateTime.now().toUtc();
       await _prefs.setInt(_kLastSynced, now.millisecondsSinceEpoch);
       state = state.copyWith(status: SyncStatus.synced, lastSynced: now);
@@ -194,7 +197,10 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
       debugPrint('[CloudSync] Sync error: $e');
       // Detect Drive OAuth scope revocation so the UI can show "Reconnect".
       final isAuth = _isAuthError(e);
-      if (_syncCancelled) { _syncCancelled = false; return; }
+      if (_syncCancelled) {
+        _syncCancelled = false;
+        return;
+      }
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: _friendlyError(e),

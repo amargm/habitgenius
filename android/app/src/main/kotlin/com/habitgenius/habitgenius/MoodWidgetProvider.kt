@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -193,6 +194,7 @@ class MoodWidgetProvider : AppWidgetProvider() {
             val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = px * 0.48f
                 textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT
             }
             val emoji = MOOD_EMOJIS[level - 1]
             val textY = cx - (textPaint.descent() + textPaint.ascent()) / 2f

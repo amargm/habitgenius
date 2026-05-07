@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/auth/welcome_screen.dart';
-import '../../features/auth/file_setup_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../core/models/habit.dart';
@@ -19,7 +18,6 @@ import '../shell/main_shell.dart';
 class AppRoutes {
   static const splash = '/';
   static const welcome = '/welcome';
-  static const fileSetup = '/file-setup';
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const habits = '/habits';
@@ -98,12 +96,6 @@ final appRouter = GoRouter(
       path: AppRoutes.welcome,
       pageBuilder:
           (context, state) => _fadePage(context, state, const WelcomeScreen()),
-    ),
-    GoRoute(
-      path: AppRoutes.fileSetup,
-      pageBuilder:
-          (context, state) =>
-              _fadePage(context, state, const FileSetupScreen()),
     ),
     GoRoute(
       path: AppRoutes.onboarding,

@@ -191,7 +191,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
     List<Account> accounts,
   ) {
     if (accounts.isEmpty) {
-      AppToast.show(context, 'Add an account first.');
+      _tabs.animateTo(1);
+      AppToast.show(context, 'Add an account first, then log transactions.');
       return;
     }
     final today = _todayStr();
@@ -279,8 +280,30 @@ class _TransactionsTab extends StatelessWidget {
             ? monthExpenseTxs.first.currency
             : (transactions.isNotEmpty ? transactions.first.currency : 'USD');
 
+    // Today's transaction count (for limit indicator on non-Pro tier).
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayCount = transactions.where((t) => t.date == todayStr).length;
+    final maxToday = AppLimits.maxTransactionsPerDay(tier);
+
     return Column(
       children: [
+        if (tier != UserTier.pro)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  '$todayCount/$maxToday transactions today',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (transactions.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),

@@ -145,17 +145,25 @@ class WidgetSyncService {
     // Compare session start times in local time to avoid UTC/local boundary
     // mismatches (e.g. a session at 11:30 PM local stored as a previous UTC date).
     final today = DateTime.now();
-    final todaySeconds = data.focusSessions.where((s) {
-      final d = DateTime.tryParse(s.startedAt)?.toLocal();
-      return d != null &&
-          d.year == today.year &&
-          d.month == today.month &&
-          d.day == today.day;
-    }).fold<int>(0, (sum, s) => sum + s.actualDuration);
+    final todaySeconds = data.focusSessions
+        .where((s) {
+          final d = DateTime.tryParse(s.startedAt)?.toLocal();
+          return d != null &&
+              d.year == today.year &&
+              d.month == today.month &&
+              d.day == today.day;
+        })
+        .fold<int>(0, (sum, s) => sum + s.actualDuration);
 
     return jsonEncode({
       'todayFocusSeconds': todaySeconds,
       'tier': data.settings.userTier.name,
+      'lastCategory': data.focusSessions.isNotEmpty
+          ? data.focusSessions.last.category
+          : 'Deep Work',
+      'lastMode': data.focusSessions.isNotEmpty
+          ? data.focusSessions.last.mode.name
+          : 'pomodoro',
     });
   }
 

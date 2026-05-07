@@ -106,7 +106,7 @@ class NotificationService {
 
     if (scheduleDays.isEmpty || schedule == HabitSchedule.daily) {
       // ── Daily ──────────────────────────────────────────────────────────
-      final id = habitId.hashCode.abs() % 100000;
+      final id = habitId.hashCode.abs() % 1000000;
       final scheduledDate = _nextInstanceOfTime(timeOfDay, null);
       try {
         await _plugin.zonedSchedule(
@@ -182,7 +182,7 @@ class NotificationService {
     final base = habitId.hashCode.abs();
     // Daily ID.
     try {
-      await _plugin.cancel(base % 100000);
+      await _plugin.cancel(base % 1000000);
     } catch (_) {}
     // Per-weekday IDs: scheduleDays values are 0=Sun..6=Sat.
     for (int d = 0; d <= 6; d++) {

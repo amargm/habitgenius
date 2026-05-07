@@ -565,6 +565,17 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 selected: _scheduleDays.isNotEmpty ? _scheduleDays.first : 1,
                 onChanged: (d) => setState(() => _scheduleDays = [d]),
               ),
+              if (_scheduleDays.isNotEmpty && _scheduleDays.first >= 29) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Note: reminder will be skipped in months shorter than '
+                  '${_scheduleDays.first} days.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: 24),
 

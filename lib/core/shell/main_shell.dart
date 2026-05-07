@@ -5,6 +5,7 @@ import '../constants/app_colors.dart';
 import '../theme/app_theme_extension.dart';
 import '../providers/auth_provider.dart';
 import '../router/app_router.dart';
+import '../../features/focus/focus_screen.dart';
 
 /// The main navigation shell that wraps all tab screens with the
 /// floating bottom navigation bar that matches the prototype design.
@@ -62,6 +63,7 @@ class MainShell extends ConsumerWidget {
     final currentRoute = _currentRoute(context);
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+    final focusRunning = ref.watch(focusSvcProvider).isRunning;
 
     final visibleTabs =
         _tabs
@@ -152,14 +154,26 @@ class MainShell extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              tab.icon,
-                              size: 22,
-                              color:
-                                  isActive
-                                      ? Colors.white
-                                      : context.appColors.textMuted,
-                            ),
+                            focusRunning && tab.route == AppRoutes.focus
+                                ? Badge(
+                                    backgroundColor: Colors.redAccent,
+                                    smallSize: 8,
+                                    child: Icon(
+                                      tab.icon,
+                                      size: 22,
+                                      color: isActive
+                                          ? Colors.white
+                                          : context.appColors.textMuted,
+                                    ),
+                                  )
+                                : Icon(
+                                    tab.icon,
+                                    size: 22,
+                                    color:
+                                        isActive
+                                            ? Colors.white
+                                            : context.appColors.textMuted,
+                                  ),
                             if (isActive) ...[
                               const SizedBox(width: 7),
                               Text(

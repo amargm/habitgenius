@@ -438,6 +438,18 @@ class _CounterControl extends StatelessWidget {
             size: 22,
           ),
         ),
+        if (current > target)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              '+${current - target}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
       ],
     );
   }

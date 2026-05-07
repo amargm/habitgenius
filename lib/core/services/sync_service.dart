@@ -25,8 +25,14 @@ class SyncService {
     // (which some Android OEM kernels round to the second) don't produce
     // spurious reloads.
     final n = DateTime.now();
-    _lastKnownModified =
-        DateTime(n.year, n.month, n.day, n.hour, n.minute, n.second);
+    _lastKnownModified = DateTime(
+      n.year,
+      n.month,
+      n.day,
+      n.hour,
+      n.minute,
+      n.second,
+    );
   }
 
   /// Checks whether the backing file was modified since we last read it.
