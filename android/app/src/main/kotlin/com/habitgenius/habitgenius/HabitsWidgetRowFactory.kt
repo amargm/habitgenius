@@ -21,7 +21,7 @@ import kotlin.math.min
  */
 class HabitsWidgetRowFactory(
     private val context: Context,
-    private val widgetDataJson: String,
+    widgetDataJson: String,
 ) : RemoteViewsService.RemoteViewsFactory {
 
     private data class HabitRow(
@@ -49,7 +49,13 @@ class HabitsWidgetRowFactory(
     // RemoteViewsFactory lifecycle ──────────────────────────────────────────
 
     override fun onCreate() = reload()
-    override fun onDataSetChanged() = reload()
+
+    override fun onDataSetChanged() {
+        // Read the LATEST data from SharedPreferences instead of the stale
+        // intent extra so refreshes after pushAll() always reflect new data.
+        reload()
+    }
+
     override fun onDestroy() {}
 
     override fun getCount(): Int = rows.size
@@ -108,7 +114,11 @@ class HabitsWidgetRowFactory(
     // ── Data loading ────────────────────────────────────────────────────────
 
     private fun reload() {
-        rows = runCatching { parseRows(widgetDataJson) }.getOrElse { emptyList() }
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE,
+        )
+        val fresh = prefs.getString("flutter.hw_widget_habits", "") ?: ""
+        rows = runCatching { parseRows(fresh) }.getOrElse { emptyList() }
     }
 
     private fun parseRows(json: String): List<HabitRow> {

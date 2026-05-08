@@ -102,11 +102,25 @@ class MoodWidgetProvider : AppWidgetProvider() {
 
             val tier = json?.optString("tier", "guest") ?: "guest"
 
-            if (tier == "guest") {
-                // Show locked state.
+            if (json == null) {
+                // No data has been pushed from the app yet — show a neutral
+                // loading state (NOT the "sign in" copy, which only applies
+                // to confirmed guests).
                 views.setViewVisibility(R.id.mood_panel_prompt, View.GONE)
                 views.setViewVisibility(R.id.mood_panel_logged, View.GONE)
                 views.setViewVisibility(R.id.mood_locked_text, View.VISIBLE)
+                views.setTextViewText(R.id.mood_locked_text, "Open app to load data")
+                views.setTextViewText(R.id.mood_title, "Mood")
+                appWidgetManager.updateAppWidget(widgetId, views)
+                return
+            }
+
+            if (tier == "guest") {
+                // Confirmed guest — show the sign-in prompt.
+                views.setViewVisibility(R.id.mood_panel_prompt, View.GONE)
+                views.setViewVisibility(R.id.mood_panel_logged, View.GONE)
+                views.setViewVisibility(R.id.mood_locked_text, View.VISIBLE)
+                views.setTextViewText(R.id.mood_locked_text, "Sign in for mood tracking")
                 views.setTextViewText(R.id.mood_title, "Mood")
                 appWidgetManager.updateAppWidget(widgetId, views)
                 return

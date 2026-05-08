@@ -48,9 +48,12 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     // Global focus auto-save: fires regardless of which screen is active.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(focusSvcProvider).addListener(_onFocusSvcChange);
-      // If data is already loaded (e.g. hot restart), reschedule now.
+      // If data is already loaded (e.g. hot restart), push widget data and
+      // reschedule reminders now — the _dataSub listener won't fire for
+      // an already-loaded state.
       if (ref.read(dataNotifierProvider).hasValue) {
         _rescheduleHabitReminders();
+        _pushWidgetData();
       }
     });
     // Subscribe to the data provider so we reschedule notifications as soon
@@ -107,12 +110,14 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
       final notifier = ref.read(dataNotifierProvider.notifier);
       SyncService.instance.checkAndReload(notifier);
       _rescheduleHabitReminders();
-      // Cloud sync: download-first check so any change made on another device
-      // is reflected immediately when the user opens the app.
+      // Abort any hung sync, then do a fresh download-first check.
+      ref.read(cloudSyncProvider.notifier).abortIfHanging();
       _checkCloudSyncOnResume(notifier);
-      // Re-push widget data: catches any habit logs the widget wrote while
-      // the app was backgrounded, so the widget reflects the latest state.
       _pushWidgetData();
+    } else if (state == AppLifecycleState.paused) {
+      // App is going to background — flush any pending debounced upload
+      // immediately so data isn't lost if the process is killed.
+      _flushCloudSync();
     }
   }
 
@@ -125,6 +130,16 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
           dataNotifier: ref.read(dataNotifierProvider.notifier),
           googleSignIn: ref.read(authServiceProvider).googleSignIn,
         );
+  }
+
+  /// Flushes any pending debounced upload immediately (called on app pause).
+  void _flushCloudSync() {
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isGuest) return;
+    ref
+        .read(cloudSyncProvider.notifier)
+        .flushPendingUpload()
+        .ignore();
   }
 
   void _checkCloudSyncOnResume(DataNotifier dataNotifier) {
@@ -141,7 +156,10 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   void _pushWidgetData() {
     final data = ref.read(dataNotifierProvider).valueOrNull;
     if (data == null) return;
-    WidgetSyncService.instance.pushAll(data).ignore();
+    // Use the RUNTIME auth tier so widgets correctly show registered vs guest
+    // state (data.settings.userTier defaults to guest for non-Pro users).
+    final tier = ref.read(authNotifierProvider).tier;
+    WidgetSyncService.instance.pushAll(data, tier: tier).ignore();
   }
 
   /// Re-registers all habit reminders so they survive OS reboots and

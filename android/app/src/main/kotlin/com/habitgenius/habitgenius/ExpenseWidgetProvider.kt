@@ -77,11 +77,24 @@ class ExpenseWidgetProvider : AppWidgetProvider() {
 
             val tier = json?.optString("tier", "guest") ?: "guest"
 
-            if (tier == "guest" || json == null) {
+            if (json == null) {
+                // No data pushed from the app yet — neutral loading state.
                 views.setViewVisibility(R.id.expense_balance, View.GONE)
                 views.setViewVisibility(R.id.expense_today, View.GONE)
                 views.setViewVisibility(R.id.expense_month, View.GONE)
                 views.setViewVisibility(R.id.expense_locked_text, View.VISIBLE)
+                views.setTextViewText(R.id.expense_locked_text, "Open app to load data")
+                appWidgetManager.updateAppWidget(widgetId, views)
+                return
+            }
+
+            if (tier == "guest") {
+                // Confirmed guest — show sign-in prompt.
+                views.setViewVisibility(R.id.expense_balance, View.GONE)
+                views.setViewVisibility(R.id.expense_today, View.GONE)
+                views.setViewVisibility(R.id.expense_month, View.GONE)
+                views.setViewVisibility(R.id.expense_locked_text, View.VISIBLE)
+                views.setTextViewText(R.id.expense_locked_text, "Sign in to track finances")
                 appWidgetManager.updateAppWidget(widgetId, views)
                 return
             }

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../constants/app_colors.dart';
 import '../models/app_data.dart';
 import '../models/habit.dart';
 import '../models/habit_log.dart';
@@ -24,14 +25,16 @@ class WidgetSyncService {
   static const _channel = MethodChannel('com.habitgenius/widget');
 
   /// Pushes all four widget data payloads in one channel call.
+  /// [tier] is the RUNTIME auth tier (from AuthState.tier), not the stored
+  /// data.settings.userTier which defaults to guest for all non-Pro users.
   /// Safe to call with `.ignore()` — swallows all errors.
-  Future<void> pushAll(AppData data) async {
+  Future<void> pushAll(AppData data, {UserTier tier = UserTier.guest}) async {
     try {
       await _channel.invokeMethod<void>('pushAll', {
         'habits': _buildHabitsJson(data),
-        'mood': _buildMoodJson(data),
+        'mood': _buildMoodJson(data, tier: tier),
         'focus': _buildFocusStatsJson(data),
-        'expenses': _buildExpensesJson(data),
+        'expenses': _buildExpensesJson(data, tier: tier),
       });
     } catch (_) {
       // Widget push is best-effort — never crash the app.
@@ -118,9 +121,12 @@ class WidgetSyncService {
 
   // ── Mood JSON ─────────────────────────────────────────────────────────────
 
-  String _buildMoodJson(AppData data) {
+  String _buildMoodJson(AppData data, {required UserTier tier}) {
     final todayStr = HabitHelpers.todayStr();
-    final tier = data.settings.userTier.name; // guest | registered | pro
+    // Use the RUNTIME auth tier (passed from AuthState) so registered users
+    // aren't shown the "Sign in" locked state (data.settings.userTier
+    // defaults to guest for all non-Pro users).
+    final tierName = tier.name; // 'guest' | 'registered' | 'pro'
 
     final todayMood = data.moods.where((m) => m.date == todayStr).firstOrNull;
 
@@ -131,7 +137,7 @@ class WidgetSyncService {
     final recentLevels = pastMoods.take(4).map((m) => m.level).toList();
 
     return jsonEncode({
-      'tier': tier,
+      'tier': tierName,
       'todayLogged': todayMood != null,
       'todayLevel': todayMood?.level ?? 0,
       'todayEmoji': todayMood?.emoji ?? '',
@@ -157,7 +163,6 @@ class WidgetSyncService {
 
     return jsonEncode({
       'todayFocusSeconds': todaySeconds,
-      'tier': data.settings.userTier.name,
       'lastCategory':
           data.focusSessions.isNotEmpty
               ? data.focusSessions.last.category
@@ -171,12 +176,12 @@ class WidgetSyncService {
 
   // ── Expenses JSON ─────────────────────────────────────────────────────────
 
-  String _buildExpensesJson(AppData data) {
-    final tier = data.settings.userTier.name;
+  String _buildExpensesJson(AppData data, {required UserTier tier}) {
+    final tierName = tier.name; // Use RUNTIME auth tier, not data.settings.userTier
 
-    if (tier == 'guest') {
+    if (tier == UserTier.guest) {
       return jsonEncode({
-        'tier': tier,
+        'tier': tierName,
         'accounts': [],
         'todayExpense': 0,
         'monthExpense': 0,
@@ -236,7 +241,7 @@ class WidgetSyncService {
         data.accounts.isNotEmpty ? data.accounts.first.currency : 'USD';
 
     return jsonEncode({
-      'tier': tier,
+      'tier': tierName,
       'accounts': accountBalances,
       'todayExpense': todayExpense,
       'monthExpense': monthExpense,

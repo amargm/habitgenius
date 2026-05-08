@@ -14,6 +14,9 @@ import 'settings_provider.dart';
 
 const _kSyncEnabled = 'cloud_sync_enabled';
 const _kLastSynced = 'cloud_sync_last_synced_ms';
+// Persisted across process restarts so "sync failed" survives app kill/reopen.
+const _kLastSyncStatus = 'cloud_sync_last_status'; // 'idle'|'synced'|'error'
+const _kLastSyncError = 'cloud_sync_last_error';
 
 // ── Status enum ───────────────────────────────────────────
 
@@ -64,20 +67,30 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
   final SharedPreferences _prefs;
 
   Timer? _debounceTimer;
-  // Guards against an in-flight _doSync completing after disableSync() was
-  // called and overwriting the `disabled` state with `synced`.
   bool _syncCancelled = false;
+  // Tracks when the current sync started so we can detect hangs.
+  DateTime? _syncStartedAt;
+  // Stored args for flush-on-background immediate upload.
+  DataNotifier? _pendingDataNotifier;
+  GoogleSignIn? _pendingGoogleSignIn;
 
   CloudSyncNotifier(this._prefs)
     : super(
         CloudSyncState(
-          status:
-              (_prefs.getBool(_kSyncEnabled) ?? false)
-                  ? SyncStatus.idle
-                  : SyncStatus.disabled,
+          // Restore persisted error so the user sees "sync failed" after reopening.
+          status: _readInitialStatus(_prefs),
           lastSynced: _readLastSynced(_prefs),
+          errorMessage: _prefs.getString(_kLastSyncError),
         ),
       );
+
+  static SyncStatus _readInitialStatus(SharedPreferences prefs) {
+    if (!(prefs.getBool(_kSyncEnabled) ?? false)) return SyncStatus.disabled;
+    final s = prefs.getString(_kLastSyncStatus);
+    if (s == 'error') return SyncStatus.error;
+    if (s == 'synced') return SyncStatus.synced;
+    return SyncStatus.idle;
+  }
 
   static DateTime? _readLastSynced(SharedPreferences prefs) {
     final ms = prefs.getInt(_kLastSynced);
@@ -106,7 +119,11 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     _syncCancelled = true;
     _debounceTimer?.cancel();
     _debounceTimer = null;
+    _pendingDataNotifier = null;
+    _pendingGoogleSignIn = null;
     await _prefs.setBool(_kSyncEnabled, false);
+    await _prefs.remove(_kLastSyncStatus);
+    await _prefs.remove(_kLastSyncError);
     state = CloudSyncState(
       status: SyncStatus.disabled,
       lastSynced: state.lastSynced,
@@ -123,14 +140,57 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
   }) {
     if (!state.isEnabled) return;
     if (googleSignIn == null) return;
+    // Cache args so flushPendingUpload() can use them.
+    _pendingDataNotifier = dataNotifier;
+    _pendingGoogleSignIn = googleSignIn;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(seconds: 5), () {
+      _pendingDataNotifier = null;
+      _pendingGoogleSignIn = null;
       _doSync(
         dataNotifier: dataNotifier,
         googleSignIn: googleSignIn,
         uploadOnly: true,
       ).ignore();
     });
+  }
+
+  /// Cancels the debounce timer and immediately triggers an upload.
+  /// Call this when the app goes to background so data is synced before
+  /// the process might be killed.
+  Future<void> flushPendingUpload() async {
+    final dn = _pendingDataNotifier;
+    final gs = _pendingGoogleSignIn;
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _pendingDataNotifier = null;
+    _pendingGoogleSignIn = null;
+    if (!state.isEnabled || dn == null || gs == null) return;
+    await _doSync(dataNotifier: dn, googleSignIn: gs, uploadOnly: true);
+  }
+
+  /// If a sync has been running for more than 20 seconds,
+  /// resets the state to error so the UI doesn't show "Syncing…" forever.
+  /// Returns true if the hang was detected and state was reset.
+  bool abortIfHanging() {
+    if (state.status != SyncStatus.syncing) return false;
+    const hangThresholdSeconds = 20;
+    final started = _syncStartedAt;
+    if (started != null &&
+        DateTime.now().difference(started).inSeconds > hangThresholdSeconds) {
+      _syncCancelled = true; // stop any in-flight _doSync from overwriting state
+      const msg = 'Sync timed out — will retry next time';
+      state = state.copyWith(
+        status: SyncStatus.error,
+        errorMessage: msg,
+      );
+      _prefs.setString(_kLastSyncStatus, 'error').ignore();
+      _prefs.setString(_kLastSyncError, msg).ignore();
+      // Reset flag after a tick so a fresh _doSync can be started.
+      Future.microtask(() => _syncCancelled = false);
+      return true;
+    }
+    return false;
   }
 
   /// Checks for remote changes on app resume. Download-first: if the remote
@@ -141,6 +201,8 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
   }) async {
     if (!state.isEnabled) return;
     if (googleSignIn == null) return;
+    // If a previous sync is stuck (hung in background), abort it first.
+    abortIfHanging();
     if (state.status == SyncStatus.syncing) return;
     await _doSync(dataNotifier: dataNotifier, googleSignIn: googleSignIn);
   }
@@ -168,7 +230,8 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     final filePath = dataNotifier.filePath;
     if (filePath == null) return;
 
-    // Clear any previous error/revoke flags before starting.
+    _syncCancelled = false;
+    _syncStartedAt = DateTime.now();
     state = state.copyWith(
       status: SyncStatus.syncing,
       errorMessage: null,
@@ -176,34 +239,39 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     );
 
     try {
-      // Enforce a 30-second wall-clock timeout so the "Syncing…" UI never
-      // hangs indefinitely on a slow or unresponsive network.
+      // 15-second timeout so the UI never hangs indefinitely.
       await _runSync(
         dataNotifier: dataNotifier,
         googleSignIn: googleSignIn,
         filePath: filePath,
         uploadOnly: uploadOnly,
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 15));
 
-      // User may have turned sync off while this await was in progress.
       if (_syncCancelled) {
         _syncCancelled = false;
         return;
       }
+      _syncStartedAt = null;
       final now = DateTime.now().toUtc();
       await _prefs.setInt(_kLastSynced, now.millisecondsSinceEpoch);
+      await _prefs.setString(_kLastSyncStatus, 'synced');
+      await _prefs.remove(_kLastSyncError);
       state = state.copyWith(status: SyncStatus.synced, lastSynced: now);
     } catch (e) {
       debugPrint('[CloudSync] Sync error: $e');
-      // Detect Drive OAuth scope revocation so the UI can show "Reconnect".
       final isAuth = _isAuthError(e);
       if (_syncCancelled) {
         _syncCancelled = false;
         return;
       }
+      _syncStartedAt = null;
+      final msg = _friendlyError(e);
+      // Persist error so the user sees it after reopening the app.
+      await _prefs.setString(_kLastSyncStatus, 'error');
+      await _prefs.setString(_kLastSyncError, msg);
       state = state.copyWith(
         status: SyncStatus.error,
-        errorMessage: _friendlyError(e),
+        errorMessage: msg,
         isAuthRevoked: isAuth,
       );
     }
