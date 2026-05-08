@@ -49,6 +49,21 @@ class AppSettings {
   final bool notificationsEnabled;
   final bool cloudSyncEnabled;
 
+  /// Daily focus goal in minutes.  0 = no goal.
+  final int dailyFocusGoalMinutes;
+
+  /// Monthly spending budget cap per category (category name → amount).
+  final Map<String, double> categoryBudgets;
+
+  /// Base currency code used for net-worth conversion (e.g. 'USD').
+  final String baseCurrency;
+
+  /// Exchange rates relative to [baseCurrency]:
+  ///   key = currency code, value = how many units of key equal 1 unit of base.
+  ///   e.g. if base='USD' and USD/EUR rate is 0.92: {'EUR': 0.92}
+  ///   Currencies not listed are treated as 1:1 with base.
+  final Map<String, double> exchangeRates;
+
   const AppSettings({
     required this.userTier,
     this.displayName,
@@ -61,6 +76,10 @@ class AppSettings {
     this.dataFilePath,
     required this.notificationsEnabled,
     this.cloudSyncEnabled = false,
+    this.dailyFocusGoalMinutes = 0,
+    this.categoryBudgets = const {},
+    this.baseCurrency = 'USD',
+    this.exchangeRates = const {},
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -72,6 +91,10 @@ class AppSettings {
     locale: 'en_US',
     notificationsEnabled: true,
     cloudSyncEnabled: false,
+    dailyFocusGoalMinutes: 0,
+    categoryBudgets: {},
+    baseCurrency: 'USD',
+    exchangeRates: {},
   );
 
   factory AppSettings.fromJson(Map<String, dynamic> json) =>
@@ -91,6 +114,10 @@ class AppSettings {
     String? dataFilePath,
     bool? notificationsEnabled,
     bool? cloudSyncEnabled,
+    int? dailyFocusGoalMinutes,
+    Map<String, double>? categoryBudgets,
+    String? baseCurrency,
+    Map<String, double>? exchangeRates,
   }) => AppSettings(
     userTier: userTier ?? this.userTier,
     displayName: displayName ?? this.displayName,
@@ -103,5 +130,9 @@ class AppSettings {
     dataFilePath: dataFilePath ?? this.dataFilePath,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
+    dailyFocusGoalMinutes: dailyFocusGoalMinutes ?? this.dailyFocusGoalMinutes,
+    categoryBudgets: categoryBudgets ?? this.categoryBudgets,
+    baseCurrency: baseCurrency ?? this.baseCurrency,
+    exchangeRates: exchangeRates ?? this.exchangeRates,
   );
 }

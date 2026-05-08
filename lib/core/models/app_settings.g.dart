@@ -18,6 +18,18 @@ AppSettings _$AppSettingsFromJson(Map<String, dynamic> json) => AppSettings(
   dataFilePath: json['dataFilePath'] as String?,
   notificationsEnabled: json['notificationsEnabled'] as bool,
   cloudSyncEnabled: json['cloudSyncEnabled'] as bool? ?? false,
+  dailyFocusGoalMinutes: json['dailyFocusGoalMinutes'] as int? ?? 0,
+  categoryBudgets:
+      (json['categoryBudgets'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toDouble()),
+      ) ??
+      const {},
+  baseCurrency: json['baseCurrency'] as String? ?? 'USD',
+  exchangeRates:
+      (json['exchangeRates'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toDouble()),
+      ) ??
+      const {},
 );
 
 Map<String, dynamic> _$AppSettingsToJson(
@@ -34,4 +46,11 @@ Map<String, dynamic> _$AppSettingsToJson(
   if (instance.dataFilePath case final value?) 'dataFilePath': value,
   'notificationsEnabled': instance.notificationsEnabled,
   if (instance.cloudSyncEnabled) 'cloudSyncEnabled': instance.cloudSyncEnabled,
+  if (instance.dailyFocusGoalMinutes != 0)
+    'dailyFocusGoalMinutes': instance.dailyFocusGoalMinutes,
+  if (instance.categoryBudgets.isNotEmpty)
+    'categoryBudgets': instance.categoryBudgets,
+  if (instance.baseCurrency != 'USD') 'baseCurrency': instance.baseCurrency,
+  if (instance.exchangeRates.isNotEmpty)
+    'exchangeRates': instance.exchangeRates,
 };

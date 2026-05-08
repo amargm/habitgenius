@@ -401,6 +401,84 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
       transactions: d.transactions.where((t) => t.id != txId).toList(),
     ),
   );
+
+  /// Checks all recurring transactions and inserts a new occurrence if the
+  /// next due date has passed and no duplicate already exists for that date.
+  /// Safe to call on every cold-start — idempotent.
+  Future<void> applyRecurringTransactions() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+
+    final recurring = current.transactions.where((t) => t.recurring).toList();
+    if (recurring.isEmpty) return;
+
+    final toAdd = <Transaction>[];
+    for (final t in recurring) {
+      final lastDate = DateTime.tryParse(t.date);
+      if (lastDate == null) continue;
+
+      // Calculate the next due date based on the interval.
+      DateTime nextDue;
+      switch (t.recurringInterval) {
+        case RecurringInterval.daily:
+          nextDue = lastDate.add(const Duration(days: 1));
+        case RecurringInterval.weekly:
+          nextDue = lastDate.add(const Duration(days: 7));
+        case RecurringInterval.monthly:
+          final nm = lastDate.month + 1;
+          nextDue = DateTime(
+            lastDate.year + (nm > 12 ? 1 : 0),
+            nm > 12 ? nm - 12 : nm,
+            lastDate.day,
+          );
+        case null:
+          continue;
+      }
+
+      // Only insert if due date is today or earlier (catch-up).
+      if (!nextDue.isBefore(today.add(const Duration(days: 1)))) continue;
+      if (nextDue.isAfter(today)) continue;
+
+      final nextStr =
+          '${nextDue.year}-${nextDue.month.toString().padLeft(2, '0')}-'
+          '${nextDue.day.toString().padLeft(2, '0')}';
+
+      // Skip if a transaction with the same origin already exists for nextStr.
+      final alreadyExists = current.transactions.any(
+        (x) =>
+            x.accountId == t.accountId &&
+            x.category == t.category &&
+            x.amount == t.amount &&
+            x.date == nextStr,
+      );
+      if (alreadyExists) continue;
+
+      toAdd.add(
+        Transaction(
+          id: const Uuid().v4(),
+          type: t.type,
+          amount: t.amount,
+          currency: t.currency,
+          category: t.category,
+          accountId: t.accountId,
+          toAccountId: t.toAccountId,
+          note: t.note,
+          recurring: true,
+          recurringInterval: t.recurringInterval,
+          date: nextStr == todayStr ? todayStr : nextStr,
+          createdAt: DateTime.now().toUtc().toIso8601String(),
+        ),
+      );
+    }
+
+    if (toAdd.isEmpty) return;
+    await _save((d) => d.copyWith(transactions: [...d.transactions, ...toAdd]));
+  }
 }
 
 // ── Provider ──────────────────────────────────────────────

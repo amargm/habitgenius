@@ -75,6 +75,11 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         // Push widget data immediately on the first successful data load so
         // widgets are populated right after a cold start / process kill.
         _pushWidgetData();
+        // Auto-populate any recurring transactions that are due today.
+        ref
+            .read(dataNotifierProvider.notifier)
+            .applyRecurringTransactions()
+            .ignore();
       }
       // After a user mutation (meta.lastModified changed), schedule a
       // debounced upload AND refresh widgets immediately. Guard against

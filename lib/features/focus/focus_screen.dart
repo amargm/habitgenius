@@ -65,6 +65,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
     final tier = ref.watch(authNotifierProvider).tier;
     final svc = ref.watch(focusSvcProvider);
     final sessions = ref.watch(appDataProvider).focusSessions;
+    final settings = ref.watch(appDataProvider).settings;
+    final goalMinutes = settings.dailyFocusGoalMinutes;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
@@ -92,6 +94,85 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
               _FocusStatsRow(sessions: sessions),
               const SizedBox(height: 10),
               _FocusCategoryRow(sessions: sessions),
+            ],
+
+            // Daily goal progress
+            if (goalMinutes > 0) ...[
+              const SizedBox(height: 14),
+              Builder(
+                builder: (context) {
+                  final now = DateTime.now();
+                  final todayStart = DateTime(now.year, now.month, now.day);
+                  final todayEnd = todayStart.add(const Duration(days: 1));
+                  final todayMinutes = sessions.where((s) {
+                    try {
+                      final start = DateTime.parse(s.startedAt);
+                      return start.isAfter(todayStart) && start.isBefore(todayEnd);
+                    } catch (_) {
+                      return false;
+                    }
+                  }).fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
+                  final progress = (todayMinutes / goalMinutes).clamp(0.0, 1.0);
+                  final done = todayMinutes >= goalMinutes;
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: context.appColors.bgCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.appColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'DAILY GOAL',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                                color: context.appColors.textMuted,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (done)
+                              Text(
+                                '🎯 Goal reached!',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: primary,
+                                ),
+                              )
+                            else
+                              Text(
+                                '$todayMinutes / $goalMinutes min',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.appColors.textPrimary,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor: primary.withValues(alpha: 0.12),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              done ? Colors.green : primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ],
             const SizedBox(height: 24),
 

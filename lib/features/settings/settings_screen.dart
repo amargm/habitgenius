@@ -108,6 +108,10 @@ class SettingsScreen extends ConsumerWidget {
             _SectionHeader(label: 'Account'),
             const SizedBox(height: 12),
             _AccountSection(authState: authState),
+            const SizedBox(height: 24),
+
+            // ── Danger Zone ───────────────────────────────
+            const _DangerZoneSection(),
             const SizedBox(height: 32),
 
             // ── Version footer ────────────────────────────
@@ -1945,6 +1949,64 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
     setState(() => _currency = picked);
   }
 
+  Future<void> _pickFocusGoal() async {
+    const options = [0, 15, 30, 45, 60, 90, 120];
+    final currentGoal = ref.read(appDataProvider).settings.dailyFocusGoalMinutes;
+    final picked = await showDialog<int>(
+      context: context,
+      builder:
+          (ctx) => SimpleDialog(
+            title: const Text('Daily focus goal'),
+            children: [
+              ...options.map(
+                (min) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, min),
+                  child: Row(
+                    children: [
+                      Text(min == 0 ? 'Off (no goal)' : '$min minutes'),
+                      const Spacer(),
+                      if (currentGoal == min)
+                        Icon(
+                          Icons.check_rounded,
+                          color: Theme.of(ctx).colorScheme.primary,
+                          size: 18,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+    if (picked == null) return;
+    final settings = ref.read(appDataProvider).settings;
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .updateSettings(settings.copyWith(dailyFocusGoalMinutes: picked));
+  }
+
+  Future<void> _openCategoryBudgets(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CategoryBudgetsSheet(),
+    );
+  }
+
+  Future<void> _openExchangeRates(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ExchangeRatesSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_loaded) return const SizedBox.shrink();
@@ -1998,9 +2060,6 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
           const Divider(height: 1, indent: 16, endIndent: 16),
           InkWell(
             onTap: _pickCurrency,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(16),
-            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -2030,6 +2089,119 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
                   ),
                   const SizedBox(width: 4),
                   const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Daily focus goal
+          InkWell(
+            onTap: _pickFocusGoal,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.timer_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Daily focus goal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Builder(
+                    builder: (ctx) {
+                      final goal = ref
+                          .watch(appDataProvider)
+                          .settings
+                          .dailyFocusGoalMinutes;
+                      return Text(
+                        goal == 0 ? 'Off' : '$goal min',
+                        style: TextStyle(
+                          color: primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Category budgets
+          InkWell(
+            onTap: () => _openCategoryBudgets(context),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.pie_chart_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Category budgets',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Exchange rates
+          InkWell(
+            onTap: () => _openExchangeRates(context),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.currency_exchange_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Exchange rates',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Icon(
                     Icons.chevron_right_rounded,
                     color: AppColors.textMuted,
                     size: 18,
@@ -2265,5 +2437,423 @@ class _AboutRow extends StatelessWidget {
         if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
       ],
     );
+  }
+}
+
+// ── Category Budgets sheet ────────────────────────────────
+
+class _CategoryBudgetsSheet extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_CategoryBudgetsSheet> createState() =>
+      _CategoryBudgetsSheetState();
+}
+
+class _CategoryBudgetsSheetState
+    extends ConsumerState<_CategoryBudgetsSheet> {
+  late Map<String, TextEditingController> _ctrls;
+  bool _saving = false;
+
+  static const _categories = [
+    'Food & Dining',
+    'Shopping',
+    'Transport',
+    'Housing',
+    'Health',
+    'Entertainment',
+    'Education',
+    'Travel',
+    'Subscriptions',
+    'Personal Care',
+    'Gifts',
+    'Utilities',
+    'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final budgets =
+        ref.read(appDataProvider).settings.categoryBudgets;
+    _ctrls = {
+      for (final c in _categories)
+        c: TextEditingController(
+          text:
+              budgets.containsKey(c)
+                  ? budgets[c]!.toStringAsFixed(0)
+                  : '',
+        ),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _ctrls.values) { c.dispose(); }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final newBudgets = <String, double>{};
+    for (final entry in _ctrls.entries) {
+      final val = double.tryParse(entry.value.text);
+      if (val != null && val > 0) newBudgets[entry.key] = val;
+    }
+    final settings = ref.read(appDataProvider).settings;
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .updateSettings(settings.copyWith(categoryBudgets: newBudgets));
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        top: 20,
+        left: 20,
+        right: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Category Budgets',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Set a monthly cap per category (leave blank to disable).',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.55,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final cat = _categories[i];
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        cat,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 110,
+                      child: TextField(
+                        controller: _ctrls[cat],
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: 'No limit',
+                          hintStyle: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Exchange Rates sheet ──────────────────────────────────
+
+class _ExchangeRatesSheet extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_ExchangeRatesSheet> createState() =>
+      _ExchangeRatesSheetState();
+}
+
+class _ExchangeRatesSheetState extends ConsumerState<_ExchangeRatesSheet> {
+  late Map<String, TextEditingController> _ctrls;
+  String _base = 'USD';
+  bool _saving = false;
+
+  List<String> _accountCurrencies() {
+    final accounts = ref.read(appDataProvider).accounts;
+    return accounts.map((a) => a.currency).toSet().toList()..sort();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(appDataProvider).settings;
+    _base = settings.baseCurrency;
+    final rates = settings.exchangeRates;
+    final currencies = _accountCurrencies();
+    _ctrls = {
+      for (final c in currencies)
+        c: TextEditingController(
+          text: rates.containsKey(c) ? rates[c]!.toString() : '',
+        ),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _ctrls.values) { c.dispose(); }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final newRates = <String, double>{};
+    for (final entry in _ctrls.entries) {
+      final val = double.tryParse(entry.value.text);
+      if (val != null && val > 0) newRates[entry.key] = val;
+    }
+    final settings = ref.read(appDataProvider).settings;
+    await ref
+        .read(dataNotifierProvider.notifier)
+        .updateSettings(
+          settings.copyWith(exchangeRates: newRates, baseCurrency: _base),
+        );
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencies = _accountCurrencies();
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        top: 20,
+        left: 20,
+        right: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Exchange Rates',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Rates relative to base currency ($_base). '
+            'E.g. EUR=0.92 means 1 $_base = 0.92 EUR.',
+            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 14),
+          if (currencies.isEmpty)
+            const Text(
+              'No accounts with currencies found. Add accounts first.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+            )
+          else
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: currencies.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) {
+                  final cur = currencies[i];
+                  if (cur == _base) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            cur,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Base currency',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          cur,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 110,
+                        child: TextField(
+                          controller: _ctrls[cur],
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: '1 $_base = ? $cur',
+                            hintStyle: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Danger Zone section ───────────────────────────────────
+
+class _DangerZoneSection extends ConsumerWidget {
+  const _DangerZoneSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(label: 'Danger Zone'),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.danger.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            leading: const Icon(
+              Icons.delete_forever_rounded,
+              color: AppColors.danger,
+            ),
+            title: const Text(
+              'Reset all data',
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            subtitle: const Text(
+              'Permanently delete all habits, transactions, journal entries, and focus sessions.',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.danger,
+            ),
+            onTap: () => _confirmReset(context, ref),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Reset all data?'),
+            content: const Text(
+              'This will permanently delete all your habits, transactions, journal entries, mood logs, and focus sessions. Your settings will be preserved. This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete Everything'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(dataNotifierProvider.notifier).clearAllData();
+      if (context.mounted) {
+        AppToast.show(context, 'All data has been reset.');
+      }
+    }
   }
 }
