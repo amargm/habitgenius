@@ -17,6 +17,17 @@ class DriveFileMeta {
   const DriveFileMeta({required this.fileId, required this.modifiedTime});
 }
 
+/// Result of a successful upload operation.
+class DriveUploadResult {
+  final String fileId;
+
+  /// Drive's server-side modifiedTime for the uploaded file.
+  /// Null when the API response omits the field (should not happen in practice).
+  final DateTime? modifiedTime;
+
+  const DriveUploadResult({required this.fileId, required this.modifiedTime});
+}
+
 /// Thin wrapper around the Google Drive v3 API, scoped to the App Data folder.
 ///
 /// The App Data folder (`appDataFolder`) is:
@@ -80,8 +91,12 @@ class DriveService {
   ///
   /// If [existingFileId] is provided, the existing file is patched (updated).
   /// Otherwise a new file is created.
-  /// Returns the Drive file ID of the uploaded file.
-  Future<String> uploadFile(String localPath, {String? existingFileId}) async {
+  /// Returns a [DriveUploadResult] containing the file ID and Drive's
+  /// server-side modifiedTime (used for accurate conflict resolution).
+  Future<DriveUploadResult> uploadFile(
+    String localPath, {
+    String? existingFileId,
+  }) async {
     final bytes = await File(localPath).readAsBytes();
     final media = drive.Media(
       Stream.value(bytes),
@@ -94,16 +109,19 @@ class DriveService {
         drive.File(),
         existingFileId,
         uploadMedia: media,
-        $fields: 'id',
+        $fields: 'id,modifiedTime',
       );
-      return updated.id ?? existingFileId;
+      return DriveUploadResult(
+        fileId: updated.id ?? existingFileId,
+        modifiedTime: updated.modifiedTime?.toUtc(),
+      );
     } else {
       final created = await _requireApi.files.create(
         drive.File()
           ..name = _kDriveFileName
           ..parents = ['appDataFolder'],
         uploadMedia: media,
-        $fields: 'id',
+        $fields: 'id,modifiedTime',
       );
       final id = created.id;
       if (id == null) {
@@ -111,7 +129,10 @@ class DriveService {
           'Upload succeeded but no file ID returned',
         );
       }
-      return id;
+      return DriveUploadResult(
+        fileId: id,
+        modifiedTime: created.modifiedTime?.toUtc(),
+      );
     }
   }
 

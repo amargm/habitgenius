@@ -66,9 +66,15 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         // widgets are populated right after a cold start / process kill.
         _pushWidgetData();
       }
-      // After every mutation (value → value), schedule a debounced upload.
+      // After a user mutation (meta.lastModified changed), schedule a
+      // debounced upload. Guard against sync reloads (which reload the same
+      // data) to avoid re-uploading data we just downloaded from Drive.
       if (prev?.hasValue == true && next.hasValue) {
-        _scheduleCloudUpload();
+        final prevModified = prev?.value?.meta.lastModified;
+        final nextModified = next.value?.meta.lastModified;
+        if (nextModified != null && nextModified != prevModified) {
+          _scheduleCloudUpload();
+        }
       }
     });
   }
@@ -136,10 +142,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   void _flushCloudSync() {
     final authState = ref.read(authNotifierProvider);
     if (authState.isGuest) return;
-    ref
-        .read(cloudSyncProvider.notifier)
-        .flushPendingUpload()
-        .ignore();
+    ref.read(cloudSyncProvider.notifier).flushPendingUpload().ignore();
   }
 
   void _checkCloudSyncOnResume(DataNotifier dataNotifier) {

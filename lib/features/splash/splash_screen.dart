@@ -87,15 +87,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       await notifier.load(isGuest: false, customDir: null);
       await SyncService.instance.seedTimestamp(notifier.filePath);
 
-      // Cloud sync: download-first sync on launch so the latest data from
-      // another device is available before the home screen is shown.
+      // Cloud sync: kick off a background download-first sync so the latest
+      // data from another device is fetched. NOT awaited — the user sees the
+      // home screen immediately and the sync indicator updates in real time.
       if (!auth.isGuest) {
-        await ref
+        ref
             .read(cloudSyncProvider.notifier)
             .syncOnLaunch(
               dataNotifier: notifier,
               googleSignIn: ref.read(authServiceProvider).googleSignIn,
-            );
+            )
+            .ignore();
       }
 
       if (!mounted) return;

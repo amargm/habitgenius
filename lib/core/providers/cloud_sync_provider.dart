@@ -17,6 +17,12 @@ const _kLastSynced = 'cloud_sync_last_synced_ms';
 // Persisted across process restarts so "sync failed" survives app kill/reopen.
 const _kLastSyncStatus = 'cloud_sync_last_status'; // 'idle'|'synced'|'error'
 const _kLastSyncError = 'cloud_sync_last_error';
+// Accurate conflict resolution: cache Drive's modifiedTime (ms UTC) and
+// the local data.meta.lastModified string after every successful sync.
+// Comparing Drive timestamps to each other avoids the bug where
+// Drive's upload time is always later than the mutation time it carries.
+const _kLastKnownDriveMs = 'cloud_sync_last_known_drive_ms';
+const _kLastSyncedLocalModified = 'cloud_sync_last_synced_local_modified';
 
 // ── Status enum ───────────────────────────────────────────
 
@@ -124,6 +130,9 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     await _prefs.setBool(_kSyncEnabled, false);
     await _prefs.remove(_kLastSyncStatus);
     await _prefs.remove(_kLastSyncError);
+    // Clear cached Drive timestamps so the next user/re-enable starts fresh.
+    await _prefs.remove(_kLastKnownDriveMs);
+    await _prefs.remove(_kLastSyncedLocalModified);
     state = CloudSyncState(
       status: SyncStatus.disabled,
       lastSynced: state.lastSynced,
@@ -178,12 +187,10 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     final started = _syncStartedAt;
     if (started != null &&
         DateTime.now().difference(started).inSeconds > hangThresholdSeconds) {
-      _syncCancelled = true; // stop any in-flight _doSync from overwriting state
+      _syncCancelled =
+          true; // stop any in-flight _doSync from overwriting state
       const msg = 'Sync timed out — will retry next time';
-      state = state.copyWith(
-        status: SyncStatus.error,
-        errorMessage: msg,
-      );
+      state = state.copyWith(status: SyncStatus.error, errorMessage: msg);
       _prefs.setString(_kLastSyncStatus, 'error').ignore();
       _prefs.setString(_kLastSyncError, msg).ignore();
       // Reset flag after a tick so a fresh _doSync can be started.
@@ -279,6 +286,20 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
 
   /// The actual Drive operations — extracted so `.timeout()` can be applied
   /// cleanly to the whole network interaction.
+  ///
+  /// Conflict resolution strategy:
+  ///   Full sync: compare Drive modifiedTime AGAINST our cached last-known
+  ///   Drive timestamp (not against the local mutation time, which is always
+  ///   earlier than the upload time that carries it — that was the bug).
+  ///   - Remote changed since last sync  → DOWNLOAD
+  ///   - Local changed since last sync   → UPLOAD
+  ///   - Both unchanged                  → NO-OP (nothing to do)
+  ///
+  ///   Upload-only (debounce/flush): blind upload; this device just saved, it wins.
+  ///
+  ///   Bootstrap (no cached Drive ts, e.g. fresh install or upgrade from old
+  ///   build that never wrote this key): fall back to comparing Drive's
+  ///   modifiedTime against data.meta.lastModified as a one-time heuristic.
   Future<void> _runSync({
     required DataNotifier dataNotifier,
     required GoogleSignIn googleSignIn,
@@ -289,48 +310,125 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
 
     final remoteMeta = await DriveService.instance.getRemoteMetadata();
 
-    if (!uploadOnly && remoteMeta != null) {
-      // Compare timestamps to decide direction.
-      final localData = dataNotifier.state.valueOrNull;
-      final localModifiedStr = localData?.meta.lastModified;
-      final localModified =
-          localModifiedStr != null
-              ? DateTime.tryParse(localModifiedStr)?.toUtc()
-              : null;
-
-      final remoteModified = remoteMeta.modifiedTime;
-
-      if (localModified == null || remoteModified.isAfter(localModified)) {
-        // Remote is newer (or local timestamp unknown) → download and reload.
-        debugPrint('[CloudSync] Remote newer — downloading');
-        final json = await DriveService.instance.downloadFile(
-          remoteMeta.fileId,
-        );
-        await File(filePath).writeAsString(json, flush: true);
-        await dataNotifier.reload();
-        // Re-upload to stamp Drive's modifiedTime with the file we just wrote
-        // (avoids a redundant re-download on the next resume from another device).
-        await DriveService.instance.uploadFile(
-          filePath,
-          existingFileId: remoteMeta.fileId,
-        );
-      } else {
-        // Local is newer (or equal) → upload.
-        debugPrint('[CloudSync] Local newer — uploading');
-        await DriveService.instance.uploadFile(
-          filePath,
-          existingFileId: remoteMeta.fileId,
-        );
-      }
-    } else {
-      // Upload only (post-save debounce) or no remote file yet.
-      debugPrint(
-        '[CloudSync] Uploading (${uploadOnly ? "debounced" : "first upload"})',
-      );
-      await DriveService.instance.uploadFile(
+    if (uploadOnly) {
+      // This device just saved — unconditionally upload.
+      debugPrint('[CloudSync] Uploading (debounced / flush)');
+      final result = await DriveService.instance.uploadFile(
         filePath,
         existingFileId: remoteMeta?.fileId,
       );
+      _cacheSyncResult(
+        driveModifiedTime: result.modifiedTime,
+        localModified: dataNotifier.state.valueOrNull?.meta.lastModified,
+      );
+      return;
+    }
+
+    if (remoteMeta == null) {
+      // No remote file yet (first-ever sync for this account).
+      debugPrint('[CloudSync] No remote file — uploading baseline');
+      final result = await DriveService.instance.uploadFile(filePath);
+      _cacheSyncResult(
+        driveModifiedTime: result.modifiedTime,
+        localModified: dataNotifier.state.valueOrNull?.meta.lastModified,
+      );
+      return;
+    }
+
+    // ── Full sync with remote file present ────────────────────────────
+    final cachedDriveMs = _prefs.getInt(_kLastKnownDriveMs);
+    final cachedLocalModified = _prefs.getString(_kLastSyncedLocalModified);
+    final remoteModifiedMs = remoteMeta.modifiedTime.millisecondsSinceEpoch;
+
+    if (cachedDriveMs == null) {
+      // Bootstrap: no cache yet (fresh install or upgrade from old version).
+      // Use the old heuristic as a one-time fallback.
+      final localData = dataNotifier.state.valueOrNull;
+      final localModified =
+          localData?.meta.lastModified != null
+              ? DateTime.tryParse(localData!.meta.lastModified)?.toUtc()
+              : null;
+      if (localModified == null ||
+          remoteMeta.modifiedTime.isAfter(localModified)) {
+        debugPrint('[CloudSync] Bootstrap — remote newer, downloading');
+        await _downloadAndReload(dataNotifier, filePath, remoteMeta);
+      } else {
+        debugPrint('[CloudSync] Bootstrap — local newer, uploading');
+        final result = await DriveService.instance.uploadFile(
+          filePath,
+          existingFileId: remoteMeta.fileId,
+        );
+        _cacheSyncResult(
+          driveModifiedTime: result.modifiedTime,
+          localModified: localData?.meta.lastModified,
+        );
+      }
+      return;
+    }
+
+    // Normal path: compare Drive timestamps to each other.
+    final remoteChangedSinceLastSync = remoteModifiedMs > cachedDriveMs;
+    final localData = dataNotifier.state.valueOrNull;
+    final currentLocalModified = localData?.meta.lastModified;
+    final localChangedSinceLastSync =
+        currentLocalModified != null &&
+        currentLocalModified != cachedLocalModified;
+
+    if (remoteChangedSinceLastSync) {
+      // Remote changed on another device since our last sync → download.
+      debugPrint('[CloudSync] Remote changed — downloading');
+      await _downloadAndReload(dataNotifier, filePath, remoteMeta);
+    } else if (localChangedSinceLastSync) {
+      // Local changed on this device since last sync → upload.
+      debugPrint('[CloudSync] Local changed — uploading');
+      final result = await DriveService.instance.uploadFile(
+        filePath,
+        existingFileId: remoteMeta.fileId,
+      );
+      _cacheSyncResult(
+        driveModifiedTime: result.modifiedTime,
+        localModified: currentLocalModified,
+      );
+    } else {
+      // Both remote and local unchanged since last sync — nothing to do.
+      debugPrint('[CloudSync] Already in sync — no-op');
+      // Still update the "last synced" UI timestamp so the user sees a
+      // reassuring timestamp without triggering any Drive requests.
+    }
+  }
+
+  /// Downloads the remote file, writes it to disk, and reloads in-memory data.
+  /// Does NOT re-upload after downloading — that was the bug (it stamped a
+  /// new Drive modifiedTime that confused the other device's next sync).
+  Future<void> _downloadAndReload(
+    DataNotifier dataNotifier,
+    String filePath,
+    DriveFileMeta remoteMeta,
+  ) async {
+    final json = await DriveService.instance.downloadFile(remoteMeta.fileId);
+    await File(filePath).writeAsString(json, flush: true);
+    await dataNotifier.reload();
+    // Cache the Drive timestamp we just downloaded so the next full sync
+    // won't re-download the same data.
+    _cacheSyncResult(
+      driveModifiedTime: remoteMeta.modifiedTime,
+      localModified: dataNotifier.state.valueOrNull?.meta.lastModified,
+    );
+  }
+
+  /// Persists the Drive modifiedTime and local lastModified after a successful
+  /// sync direction so the next sync can compare correctly.
+  void _cacheSyncResult({
+    required DateTime? driveModifiedTime,
+    required String? localModified,
+  }) {
+    if (driveModifiedTime != null) {
+      _prefs
+          .setInt(_kLastKnownDriveMs, driveModifiedTime.millisecondsSinceEpoch)
+          .ignore();
+    }
+    if (localModified != null) {
+      _prefs.setString(_kLastSyncedLocalModified, localModified).ignore();
     }
   }
 
