@@ -1203,6 +1203,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
   }
 
   String _lastSyncedLabel(DateTime? lastSynced) {
+    if (lastSynced == null) return 'Never';
     final now = DateTime.now();
     final local = lastSynced.toLocal();
     final diff = now.difference(local);
