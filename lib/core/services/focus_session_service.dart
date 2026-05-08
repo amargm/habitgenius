@@ -16,6 +16,10 @@ class FocusSessionService extends ChangeNotifier {
   static const int preset45 = 45 * 60;
   static const int preset60 = 60 * 60;
 
+  // Break durations
+  static const int shortBreak = 5 * 60;
+  static const int longBreak = 15 * 60;
+
   // Current session configuration
   FocusMode _mode = FocusMode.pomodoro;
   String _category = 'Deep Work';
@@ -27,6 +31,11 @@ class FocusSessionService extends ChangeNotifier {
   int _elapsed = 0; // seconds elapsed (for stopwatch)
   int _completedCycles = 0;
   DateTime? _startedAt;
+
+  // Break state
+  bool _isOnBreak = false;
+  int _breakRemaining = 0;
+  int _currentBreakDuration = shortBreak;
 
   Timer? _timer;
 
@@ -44,6 +53,21 @@ class FocusSessionService extends ChangeNotifier {
   bool get isPaused => _state == TimerState.paused;
   bool get isFinished => _state == TimerState.finished;
   bool get isIdle => _state == TimerState.idle;
+
+  bool get isOnBreak => _isOnBreak;
+  int get breakRemaining => _breakRemaining;
+  int get currentBreakDuration => _currentBreakDuration;
+
+  double get breakProgress =>
+      _currentBreakDuration > 0
+          ? 1.0 - (_breakRemaining / _currentBreakDuration).clamp(0.0, 1.0)
+          : 0.0;
+
+  String get breakTimeLabel {
+    final m = _breakRemaining ~/ 60;
+    final s = _breakRemaining % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
 
   /// Progress 0.0 → 1.0  (for countdown/pomodoro)
   double get progress {
@@ -94,12 +118,23 @@ class FocusSessionService extends ChangeNotifier {
     _timer?.cancel();
     _startedAt = null;
     _completedCycles = 0;
+    _isOnBreak = false;
+    _breakRemaining = 0;
     _reset();
   }
 
-  /// Skip remaining time for Pomodoro → immediately finish cycle
+  /// Skip remaining time for Pomodoro → skip work cycle or active break
   void skipCycle() {
     if (_mode != FocusMode.pomodoro) return;
+    if (_isOnBreak) {
+      // Skip the break → return to idle for next work cycle
+      _isOnBreak = false;
+      _timer?.cancel();
+      _state = TimerState.idle;
+      _remaining = _plannedDuration;
+      notifyListeners();
+      return;
+    }
     _completedCycles++;
     // Credit the time elapsed so far for this cycle so buildSession()
     // doesn't return null (which happens when _elapsed == 0).
@@ -139,6 +174,22 @@ class FocusSessionService extends ChangeNotifier {
   }
 
   void _tick(Timer t) {
+    // ── Break countdown ───────────────────────────────────
+    if (_isOnBreak) {
+      if (_breakRemaining > 0) {
+        _breakRemaining--;
+        notifyListeners();
+      } else {
+        // Break finished → return to idle for next work cycle
+        _isOnBreak = false;
+        t.cancel();
+        _state = TimerState.idle;
+        _remaining = _plannedDuration;
+        notifyListeners();
+      }
+      return;
+    }
+
     if (_mode == FocusMode.stopwatch) {
       _elapsed++;
       notifyListeners();
@@ -150,9 +201,20 @@ class FocusSessionService extends ChangeNotifier {
       } else {
         // Countdown or Pomodoro reached zero
         _completedCycles++;
-        t.cancel();
-        _state = TimerState.finished;
-        notifyListeners();
+        if (_mode == FocusMode.pomodoro) {
+          // Auto-start a break: long break every 4 cycles, else short break
+          final isLongBreak = _completedCycles % 4 == 0;
+          _currentBreakDuration = isLongBreak ? longBreak : shortBreak;
+          _breakRemaining = _currentBreakDuration;
+          _isOnBreak = true;
+          _remaining = _plannedDuration;
+          _state = TimerState.running; // break timer auto-runs
+          notifyListeners();
+        } else {
+          t.cancel();
+          _state = TimerState.finished;
+          notifyListeners();
+        }
       }
     }
   }

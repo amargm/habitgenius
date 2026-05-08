@@ -179,6 +179,40 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ],
             const SizedBox(height: 24),
 
+            // Break banner (shown while Pomodoro break is running)
+            if (svc.isOnBreak)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('🎉', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Text(
+                      svc.completedCycles % 4 == 0
+                          ? 'Long break! You earned it.'
+                          : 'Break time! Great work.',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Mode selector + category/duration (only when not running)
             if (!svc.isRunning && !svc.isPaused) ...[
               _SectionLabel(label: 'Mode'),
@@ -198,6 +232,14 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                         },
                       );
                     }).toList(),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _modeDescription(_selectedMode),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.appColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -236,18 +278,35 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             ],
 
             // Timer ring
-            Center(
-              child: _TimerRing(
-                progress: svc.progress,
-                timeLabel: svc.timeLabel,
-                state: svc.state,
-                mode: svc.mode,
-                cycles: svc.completedCycles,
-                primary: primary,
-                isStopwatch: svc.mode == FocusMode.stopwatch,
-                remaining: svc.remaining,
-                plannedDuration: svc.plannedDuration,
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final ringSize = (constraints.maxWidth * 0.75).clamp(
+                  220.0,
+                  320.0,
+                );
+                final ringColor =
+                    svc.isOnBreak ? Colors.green.shade400 : primary;
+                return Center(
+                  child: _TimerRing(
+                    size: ringSize,
+                    progress: svc.isOnBreak ? svc.breakProgress : svc.progress,
+                    timeLabel:
+                        svc.isOnBreak ? svc.breakTimeLabel : svc.timeLabel,
+                    state: svc.state,
+                    mode: svc.mode,
+                    cycles: svc.completedCycles,
+                    primary: ringColor,
+                    isStopwatch: svc.mode == FocusMode.stopwatch,
+                    remaining:
+                        svc.isOnBreak ? svc.breakRemaining : svc.remaining,
+                    plannedDuration:
+                        svc.isOnBreak
+                            ? svc.currentBreakDuration
+                            : svc.plannedDuration,
+                    isOnBreak: svc.isOnBreak,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 32),
 
@@ -255,6 +314,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
             _Controls(
               state: svc.state,
               mode: svc.mode,
+              isOnBreak: svc.isOnBreak,
               onPlay: () {
                 HapticFeedback.mediumImpact();
                 svc.start();
@@ -373,6 +433,17 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
         return 'Timer';
       case FocusMode.stopwatch:
         return 'Stopwatch';
+    }
+  }
+
+  static String _modeDescription(FocusMode m) {
+    switch (m) {
+      case FocusMode.pomodoro:
+        return '25-min work blocks with 5-min breaks';
+      case FocusMode.countdown:
+        return 'Count down from a custom duration';
+      case FocusMode.stopwatch:
+        return 'Count up freely, save when done';
     }
   }
 
@@ -713,6 +784,7 @@ class _RingPainter extends CustomPainter {
 class _Controls extends StatelessWidget {
   final TimerState state;
   final FocusMode mode;
+  final bool isOnBreak;
   final VoidCallback onPlay;
   final VoidCallback onPause;
   final VoidCallback onReset;
@@ -722,6 +794,7 @@ class _Controls extends StatelessWidget {
   const _Controls({
     required this.state,
     required this.mode,
+    required this.isOnBreak,
     required this.onPlay,
     required this.onPause,
     required this.onReset,
@@ -732,6 +805,28 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+
+    // Break controls: save work + skip break
+    if (isOnBreak) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _ControlBtn(
+            icon: Icons.save_alt_rounded,
+            onTap: onSave,
+            label: 'Save',
+          ),
+          const SizedBox(width: 24),
+          _ControlBtn(
+            icon: Icons.skip_next_rounded,
+            onTap: onSkip,
+            label: 'Skip Break',
+            color: Colors.green.shade400,
+            large: true,
+          ),
+        ],
+      );
+    }
 
     if (state == TimerState.finished) {
       return Center(

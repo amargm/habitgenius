@@ -529,7 +529,6 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
-          // Preview / edit toggle
           IconButton(
             tooltip: _preview ? 'Edit' : 'Preview',
             onPressed: () => setState(() => _preview = !_preview),
@@ -538,22 +537,25 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
               size: 20,
             ),
           ),
-          TextButton(
+          FilledButton(
             onPressed: _saving ? null : _save,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              visualDensity: VisualDensity.compact,
+            ),
             child:
                 _saving
                     ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : Text(
-                      'Save',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: primary,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
                       ),
+                    )
+                    : const Text(
+                      'Save',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
           ),
           const SizedBox(width: 8),
@@ -582,33 +584,22 @@ class _JournalEntrySheetState extends ConsumerState<_JournalEntrySheet> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Title field
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.appColors.bgCard,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: context.appColors.border),
+                        // Title field — borderless, Bear/Notes style
+                        TextField(
+                          controller: _titleCtrl,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
+                          decoration: const InputDecoration(
+                            hintText: 'Title',
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
                           ),
-                          child: TextField(
-                            controller: _titleCtrl,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Title',
-                              filled: false,
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            textCapitalization: TextCapitalization.sentences,
-                          ),
+                          textCapitalization: TextCapitalization.sentences,
                         ),
 
                         // Body field

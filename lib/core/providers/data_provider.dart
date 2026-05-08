@@ -385,6 +385,15 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   Future<void> addAccount(Account account) =>
       _save((d) => d.copyWith(accounts: [...d.accounts, account]));
 
+  Future<void> updateAccount(Account updated) => _save(
+    (d) => d.copyWith(
+      accounts: [
+        for (final a in d.accounts)
+          if (a.id == updated.id) updated else a,
+      ],
+    ),
+  );
+
   Future<void> deleteAccount(String accountId) => _save(
     (d) => d.copyWith(
       accounts: d.accounts.where((a) => a.id != accountId).toList(),

@@ -43,6 +43,36 @@ const _kAccountTypeIcons = {
   AccountType.cash: '💵',
 };
 
+// ── Currency formatting ───────────────────────────────────
+
+const _kCurrencySymbols = <String, String>{
+  'USD': '\$',
+  'EUR': '€',
+  'GBP': '£',
+  'JPY': '¥',
+  'CAD': 'CA\$',
+  'AUD': 'A\$',
+  'INR': '₹',
+  'CHF': 'Fr',
+  'CNY': '¥',
+  'BRL': 'R\$',
+  'MXN': 'MX\$',
+  'SGD': 'S\$',
+  'HKD': 'HK\$',
+  'NOK': 'kr',
+  'SEK': 'kr',
+  'DKK': 'kr',
+  'NZD': 'NZ\$',
+  'ZAR': 'R',
+  'KRW': '₩',
+  'RUB': '₽',
+};
+
+String _formatCurrency(double amount, String currency) {
+  final symbol = _kCurrencySymbols[currency] ?? currency;
+  return '$symbol${amount.toStringAsFixed(2)}';
+}
+
 // ── Expenses screen ───────────────────────────────────────
 
 class ExpensesScreen extends ConsumerStatefulWidget {
@@ -175,7 +205,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
                       exchangeRates: settings.exchangeRates,
                       onAdd: () => _onAddAccount(context, tier, accounts),
                     ),
-                    _TimelineTab(transactions: transactions),
+                    _TimelineTab(
+                      transactions: transactions,
+                      onGoToTransactions: () => _tabs.animateTo(0),
+                    ),
                   ],
                 ),
               ),
@@ -690,6 +723,14 @@ class _TransactionsTabState extends State<_TransactionsTab> {
                                     accounts
                                         .where((a) => a.id == tx.accountId)
                                         .firstOrNull,
+                                toAccount:
+                                    tx.toAccountId != null
+                                        ? accounts
+                                            .where(
+                                              (a) => a.id == tx.toAccountId,
+                                            )
+                                            .firstOrNull
+                                        : null,
                               ),
                             ),
                           ],
@@ -918,7 +959,7 @@ class _AccountsTab extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '$baseCurrency ${netWorth.toStringAsFixed(2)}',
+                        '${netWorth < 0 ? '-' : ''}${_formatCurrency(netWorth.abs(), baseCurrency)}',
                         style: TextStyle(
                           color:
                               netWorth >= 0
@@ -952,6 +993,7 @@ class _AccountsTab extends ConsumerWidget {
           final bal = _balance(a);
           final icon = _kAccountTypeIcons[a.type] ?? '🏦';
           return GestureDetector(
+            onTap: () => _openEditAccount(context, ref, a),
             onLongPress: () => _confirmDeleteAccount(context, ref, a),
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -984,7 +1026,7 @@ class _AccountsTab extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '${bal >= 0 ? '+' : ''}${a.currency} ${bal.toStringAsFixed(2)}',
+                    '${bal >= 0 ? '+' : '-'}${_formatCurrency(bal.abs(), a.currency)}',
                     style: TextStyle(
                       color:
                           bal > 0
@@ -1002,6 +1044,15 @@ class _AccountsTab extends ConsumerWidget {
           );
         }),
       ],
+    );
+  }
+
+  void _openEditAccount(BuildContext context, WidgetRef ref, Account a) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AccountEditSheet(account: a),
     );
   }
 
@@ -1062,7 +1113,8 @@ enum _Period { week, month, quarter, year }
 
 class _TimelineTab extends StatefulWidget {
   final List<Transaction> transactions;
-  const _TimelineTab({required this.transactions});
+  final VoidCallback? onGoToTransactions;
+  const _TimelineTab({required this.transactions, this.onGoToTransactions});
 
   @override
   State<_TimelineTab> createState() => _TimelineTabState();
@@ -1215,10 +1267,12 @@ class _TimelineTabState extends State<_TimelineTab> {
   Widget build(BuildContext context) {
     final txs = widget.transactions;
     if (txs.isEmpty) {
-      return const EmptyStateWidget(
+      return EmptyStateWidget(
         icon: Icons.bar_chart_rounded,
         title: 'No transactions yet',
-        subtitle: 'Add transactions to see your monthly spending over time.',
+        subtitle: 'Add transactions to see your spending timeline.',
+        actionLabel: 'Add Transaction',
+        onAction: widget.onGoToTransactions,
       );
     }
 
@@ -1846,7 +1900,7 @@ class _CategoryBreakdownState extends State<_CategoryBreakdown> {
                           ),
                         ),
                         Text(
-                          '$pct%',
+                          '${_formatCurrency(e.value, widget.currency)}  $pct%',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -1896,7 +1950,7 @@ class _CategoryBreakdownState extends State<_CategoryBreakdown> {
                       ),
                     ),
                     Text(
-                      '${widget.currency} ${e.value.toStringAsFixed(0)}',
+                      _formatCurrency(e.value, widget.currency),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -1908,7 +1962,7 @@ class _CategoryBreakdownState extends State<_CategoryBreakdown> {
                       Padding(
                         padding: const EdgeInsets.only(left: 6),
                         child: Text(
-                          '/ ${widget.categoryBudgets[e.key]!.toStringAsFixed(0)}',
+                          '/ ${_formatCurrency(widget.categoryBudgets[e.key]!, widget.currency)}',
                           style: TextStyle(
                             fontSize: 11,
                             color:
@@ -1952,7 +2006,7 @@ class _CategoryBreakdownState extends State<_CategoryBreakdown> {
                     e.value > widget.categoryBudgets[e.key]!) ...[
                   const SizedBox(height: 3),
                   Text(
-                    'Over budget by ${widget.currency} ${(e.value - widget.categoryBudgets[e.key]!).toStringAsFixed(0)}',
+                    'Over budget by ${_formatCurrency(e.value - widget.categoryBudgets[e.key]!, widget.currency)}',
                     style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.danger,
@@ -2257,17 +2311,19 @@ class _DateHeader extends StatelessWidget {
 class _TxTile extends ConsumerWidget {
   final Transaction tx;
   final Account? account;
-  const _TxTile({required this.tx, required this.account});
+  final Account? toAccount;
+  const _TxTile({required this.tx, required this.account, this.toAccount});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isIncome = tx.type == TransactionType.income;
     final isTransfer = tx.type == TransactionType.transfer;
+    const transferBlue = Color(0xFF0984E3);
     final color =
         isIncome
             ? AppColors.success
             : isTransfer
-            ? AppColors.textSecondary
+            ? transferBlue
             : AppColors.danger;
 
     return GestureDetector(
@@ -2286,18 +2342,17 @@ class _TxTile extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: Text(
-                  isIncome
-                      ? '↑'
-                      : isTransfer
-                      ? '⇄'
-                      : '↓',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child:
+                    isTransfer
+                        ? Icon(Icons.swap_horiz_rounded, color: color, size: 20)
+                        : Text(
+                          isIncome ? '↑' : '↓',
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
               ),
             ),
             const SizedBox(width: 12),
@@ -2312,7 +2367,16 @@ class _TxTile extends ConsumerWidget {
                       fontSize: 14,
                     ),
                   ),
-                  if (account != null)
+                  if (isTransfer && toAccount != null)
+                    Text(
+                      '→ ${toAccount!.name}',
+                      style: TextStyle(
+                        color: transferBlue.withValues(alpha: 0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  else if (account != null)
                     Text(
                       account!.name,
                       style: const TextStyle(
@@ -2331,7 +2395,7 @@ class _TxTile extends ConsumerWidget {
                       ? '+'
                       : isTransfer
                       ? ''
-                      : '-'}${tx.currency} ${tx.amount.toStringAsFixed(2)}',
+                      : '-'}${_formatCurrency(tx.amount, tx.currency)}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w700,
@@ -3023,6 +3087,202 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                       ),
                       const SizedBox(height: 16),
 
+                      TextField(
+                        controller: _balCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Starting balance',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+}
+
+// ── Edit account sheet ────────────────────────────────────
+
+class _AccountEditSheet extends ConsumerStatefulWidget {
+  final Account account;
+  const _AccountEditSheet({required this.account});
+
+  @override
+  ConsumerState<_AccountEditSheet> createState() => _AccountEditSheetState();
+}
+
+class _AccountEditSheetState extends ConsumerState<_AccountEditSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _balCtrl;
+  late AccountType _type;
+  late String _currency;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.account.name);
+    _balCtrl = TextEditingController(
+      text: widget.account.startingBalance.toStringAsFixed(2),
+    );
+    _type = widget.account.type;
+    _currency = widget.account.currency;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _balCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_nameCtrl.text.trim().isEmpty) return;
+    final bal = double.tryParse(_balCtrl.text) ?? widget.account.startingBalance;
+    setState(() => _saving = true);
+    try {
+      final updated = widget.account.copyWith(
+        name: _nameCtrl.text.trim(),
+        type: _type,
+        startingBalance: bal,
+        currency: _currency,
+      );
+      await ref.read(dataNotifierProvider.notifier).updateAccount(updated);
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          'Could not update account. Please try again.',
+          type: ToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      builder:
+          (_, scrollCtrl) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Edit Account',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _saving ? null : _save,
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                    children: [
+                      TextField(
+                        controller: _nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Account name',
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        autofocus: true,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<AccountType>(
+                        value: _type,
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        items:
+                            AccountType.values
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(
+                                      '${_kAccountTypeIcons[t]} ${t.name}',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _type = v);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _currency,
+                        decoration:
+                            const InputDecoration(labelText: 'Currency'),
+                        items:
+                            [
+                                  'USD',
+                                  'EUR',
+                                  'GBP',
+                                  'JPY',
+                                  'CAD',
+                                  'AUD',
+                                  'INR',
+                                  'CHF',
+                                  'CNY',
+                                  'BRL',
+                                ]
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _currency = v);
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: _balCtrl,
                         keyboardType: const TextInputType.numberWithOptions(
