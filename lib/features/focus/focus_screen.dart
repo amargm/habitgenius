@@ -596,6 +596,8 @@ class _TimerRing extends StatelessWidget {
   final bool isStopwatch;
   final int remaining;
   final int plannedDuration;
+  final bool isOnBreak;
+  final double size;
 
   const _TimerRing({
     required this.progress,
@@ -607,18 +609,20 @@ class _TimerRing extends StatelessWidget {
     required this.isStopwatch,
     this.remaining = 0,
     this.plannedDuration = 0,
+    this.isOnBreak = false,
+    this.size = 220,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 220,
-      height: 220,
+      width: size,
+      height: size,
       child: Stack(
         alignment: Alignment.center,
         children: [
           CustomPaint(
-            size: const Size(220, 220),
+            size: Size(size, size),
             painter: _RingPainter(
               progress: isStopwatch ? 0 : progress,
               remaining: remaining,
@@ -634,13 +638,25 @@ class _TimerRing extends StatelessWidget {
               Text(
                 timeLabel,
                 style: TextStyle(
-                  fontSize: 48,
+                  fontSize: size * 0.218,
                   fontWeight: FontWeight.w200,
                   letterSpacing: 2,
-                  color: state == TimerState.finished ? primary : null,
+                  color:
+                      (state == TimerState.finished || isOnBreak)
+                          ? primary
+                          : null,
                 ),
               ),
-              if (state == TimerState.finished)
+              if (isOnBreak)
+                Text(
+                  'Break',
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else if (state == TimerState.finished)
                 Text(
                   'Session Complete',
                   style: TextStyle(
@@ -649,7 +665,7 @@ class _TimerRing extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              if (mode == FocusMode.pomodoro)
+              if (mode == FocusMode.pomodoro && !isOnBreak)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(

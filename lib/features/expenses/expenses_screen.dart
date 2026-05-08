@@ -2676,7 +2676,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                       // Destination account (only for transfers)
                       if (_type == TransactionType.transfer) ...[
                         DropdownButtonFormField<Account>(
-                          value: _toAccount,
+                          initialValue: _toAccount,
                           decoration: const InputDecoration(
                             labelText: 'To Account',
                           ),
@@ -2711,7 +2711,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
 
                       // Account picker
                       DropdownButtonFormField<Account>(
-                        value: _account,
+                        initialValue: _account,
                         decoration: const InputDecoration(labelText: 'Account'),
                         items:
                             widget.accounts
@@ -3032,7 +3032,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
 
                       // Account type
                       DropdownButtonFormField<AccountType>(
-                        value: _type,
+                        initialValue: _type,
                         decoration: const InputDecoration(labelText: 'Type'),
                         items:
                             AccountType.values
@@ -3055,7 +3055,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
 
                       // Currency
                       DropdownButtonFormField<String>(
-                        value: _currency,
+                        initialValue: _currency,
                         decoration: const InputDecoration(
                           labelText: 'Currency',
                         ),
@@ -3143,7 +3143,8 @@ class _AccountEditSheetState extends ConsumerState<_AccountEditSheet> {
 
   Future<void> _save() async {
     if (_nameCtrl.text.trim().isEmpty) return;
-    final bal = double.tryParse(_balCtrl.text) ?? widget.account.startingBalance;
+    final bal =
+        double.tryParse(_balCtrl.text) ?? widget.account.startingBalance;
     setState(() => _saving = true);
     try {
       final updated = widget.account.copyWith(
@@ -3236,7 +3237,7 @@ class _AccountEditSheetState extends ConsumerState<_AccountEditSheet> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<AccountType>(
-                        value: _type,
+                        initialValue: _type,
                         decoration: const InputDecoration(labelText: 'Type'),
                         items:
                             AccountType.values
@@ -3255,9 +3256,10 @@ class _AccountEditSheetState extends ConsumerState<_AccountEditSheet> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _currency,
-                        decoration:
-                            const InputDecoration(labelText: 'Currency'),
+                        initialValue: _currency,
+                        decoration: const InputDecoration(
+                          labelText: 'Currency',
+                        ),
                         items:
                             [
                                   'USD',

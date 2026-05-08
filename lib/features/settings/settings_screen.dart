@@ -1259,7 +1259,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
                       value: syncState.isEnabled,
                       onChanged:
                           _toggling ? null : (v) => _onToggle(v, syncState),
-                      activeColor: primary,
+                      activeThumbColor: primary,
                     ),
               ],
             ),
@@ -1711,7 +1711,7 @@ class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
                 Switch(
                   value: _enabled,
                   onChanged: isPermanentlyDenied ? null : _setEnabled,
-                  activeColor: primary,
+                  activeThumbColor: primary,
                 ),
               ],
             ),
