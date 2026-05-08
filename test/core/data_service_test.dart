@@ -69,11 +69,13 @@ void main() {
       );
     });
 
-    test('loadData returns empty on corrupted JSON', () async {
+    test('loadData throws DataCorruptedException on corrupted JSON', () async {
       await File(tempPath).writeAsString('{ invalid json %%% }');
-      final data = await service.loadData(tempPath);
 
-      expect(data.habits, isEmpty);
+      expect(
+        () => service.loadData(tempPath),
+        throwsA(isA<DataCorruptedException>()),
+      );
     });
 
     test('fileExists returns false for non-existent path', () async {

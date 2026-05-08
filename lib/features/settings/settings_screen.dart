@@ -1006,7 +1006,7 @@ class _DataSection extends ConsumerWidget {
         final cat = t.category.replaceAll('"', '""');
         buf.writeln(
           '"${t.date}","${t.type.name}","$cat",'
-          '"${t.amount.toStringAsFixed(2)}","${t.currency}","$note"',
+          '"${t.displayAmount.toStringAsFixed(2)}","${t.currency}","$note"',
         );
       }
       buf.writeln();

@@ -12,7 +12,15 @@ enum RecurringInterval { daily, weekly, monthly }
 class Transaction {
   final String id;
   final TransactionType type;
-  final double amount;
+
+  /// Amount stored as integer cents (e.g. $12.50 → 1250).
+  /// Use [displayAmount] to get the dollar-fraction value for display.
+  final int amount;
+
+  /// Dollar-fraction value derived from [amount] for display and arithmetic.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  double get displayAmount => amount / 100.0;
+
   final String currency;
   final String category;
   final String accountId;
@@ -46,7 +54,7 @@ class Transaction {
   Transaction copyWith({
     String? id,
     TransactionType? type,
-    double? amount,
+    int? amount,
     String? currency,
     String? category,
     String? accountId,

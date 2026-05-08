@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -87,11 +88,13 @@ class DriveService {
   /// Lists the App Data folder and returns the metadata for [_kDriveFileName],
   /// or null if the file does not exist yet.
   Future<DriveFileMeta?> getRemoteMetadata() async {
-    final result = await _requireApi.files.list(
-      spaces: 'appDataFolder',
-      q: "name = '$_kDriveFileName'",
-      $fields: 'files(id,modifiedTime)',
-      pageSize: 1,
+    final result = await _withRetry(
+      () => _requireApi.files.list(
+        spaces: 'appDataFolder',
+        q: "name = '$_kDriveFileName'",
+        $fields: 'files(id,modifiedTime)',
+        pageSize: 1,
+      ),
     );
     final files = result.files;
     if (files == null || files.isEmpty) return null;
@@ -120,23 +123,27 @@ class DriveService {
     );
 
     if (existingFileId != null) {
-      final updated = await _requireApi.files.update(
-        drive.File(),
-        existingFileId,
-        uploadMedia: media,
-        $fields: 'id,modifiedTime',
+      final updated = await _withRetry(
+        () => _requireApi.files.update(
+          drive.File(),
+          existingFileId,
+          uploadMedia: media,
+          $fields: 'id,modifiedTime',
+        ),
       );
       return DriveUploadResult(
         fileId: updated.id ?? existingFileId,
         modifiedTime: updated.modifiedTime?.toUtc(),
       );
     } else {
-      final created = await _requireApi.files.create(
-        drive.File()
-          ..name = _kDriveFileName
-          ..parents = ['appDataFolder'],
-        uploadMedia: media,
-        $fields: 'id,modifiedTime',
+      final created = await _withRetry(
+        () => _requireApi.files.create(
+          drive.File()
+            ..name = _kDriveFileName
+            ..parents = ['appDataFolder'],
+          uploadMedia: media,
+          $fields: 'id,modifiedTime',
+        ),
       );
       final id = created.id;
       if (id == null) {
@@ -153,12 +160,14 @@ class DriveService {
 
   /// Downloads the file with [fileId] and returns its contents as a JSON string.
   Future<String> downloadFile(String fileId) async {
-    final media =
-        await _requireApi.files.get(
-              fileId,
-              downloadOptions: drive.DownloadOptions.fullMedia,
-            )
-            as drive.Media;
+    final media = await _withRetry(
+          () async =>
+              await _requireApi.files.get(
+                    fileId,
+                    downloadOptions: drive.DownloadOptions.fullMedia,
+                  )
+                  as drive.Media,
+        );
 
     final bytes = await _collectStream(media.stream);
     return utf8.decode(bytes);
@@ -170,6 +179,36 @@ class DriveService {
       buffer.addAll(chunk);
     }
     return buffer;
+  }
+
+  /// Retries [fn] up to [maxAttempts] times using exponential backoff.
+  ///
+  /// Retries only on transient HTTP errors (429 Too Many Requests, 503 Service
+  /// Unavailable) and [SocketException] (network unreachable).  All other
+  /// errors are rethrown immediately.
+  ///
+  /// Delays: 1 s, 2 s, 4 s, … (capped at 30 s).
+  static Future<T> _withRetry<T>(
+    Future<T> Function() fn, {
+    int maxAttempts = 3,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } on drive.DetailedApiRequestError catch (e) {
+        final retryable = e.status == 429 || e.status == 503;
+        attempt++;
+        if (!retryable || attempt >= maxAttempts) rethrow;
+        final delay = Duration(seconds: (1 << (attempt - 1)).clamp(1, 30));
+        await Future<void>.delayed(delay);
+      } on SocketException {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        final delay = Duration(seconds: (1 << (attempt - 1)).clamp(1, 30));
+        await Future<void>.delayed(delay);
+      }
+    }
   }
 }
 

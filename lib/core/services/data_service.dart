@@ -20,6 +20,16 @@ class DataCorruptedException implements Exception {
 class DataService {
   static const _kFileName = 'habitgenius_data.json';
 
+  /// Current schema version produced by this build.
+  static const int _kCurrentVersion = 2;
+
+  /// App version string set by [setAppVersion] at startup.
+  /// Stamped into [AppMeta.appVersion] on every save.
+  static String _appVersion = '1.0.0';
+
+  /// Called from `main.dart` after [PackageInfo] is resolved.
+  static void setAppVersion(String version) => _appVersion = version;
+
   /// Returns the full path to the data file inside the app's internal
   /// documents directory. All users (guest, registered, pro) share the same
   /// storage location — data never leaves the device.
@@ -49,7 +59,8 @@ class DataService {
       rethrow; // storage permission / I-O error — let DataNotifier set error state
     }
     try {
-      final map = jsonDecode(contents) as Map<String, dynamic>;
+      var map = jsonDecode(contents) as Map<String, dynamic>;
+      map = _runMigrations(map);
       return AppData.fromJson(map);
     } on FormatException {
       throw const DataCorruptedException();
@@ -58,6 +69,55 @@ class DataService {
     } catch (_) {
       throw const DataCorruptedException();
     }
+  }
+
+  // ── Schema migrations ─────────────────────────────────────
+
+  /// Runs all pending migrations on [data] (raw JSON map) and returns the
+  /// migrated map.  Migrations are applied sequentially from the stored
+  /// version up to [_kCurrentVersion].
+  Map<String, dynamic> _runMigrations(Map<String, dynamic> data) {
+    final meta = data['meta'] as Map<String, dynamic>? ?? {};
+    var version = (meta['version'] as int?) ?? 1;
+    var current = data;
+
+    if (version < 2) {
+      current = _migrateV1ToV2(current);
+      version = 2;
+    }
+
+    return current;
+  }
+
+  /// v1 → v2: convert [Transaction.amount] from fractional dollars (double)
+  /// to integer cents so all arithmetic is exact.
+  Map<String, dynamic> _migrateV1ToV2(Map<String, dynamic> data) {
+    final txList = (data['transactions'] as List<dynamic>?) ?? const [];
+    final migratedTxs = txList.map((raw) {
+      final tx = Map<String, dynamic>.from(raw as Map<String, dynamic>);
+      final amount = tx['amount'];
+      if (amount is double) {
+        // Convert dollar-fraction to cents, rounding to avoid IEEE 754 drift.
+        tx['amount'] = (amount * 100).round();
+      } else if (amount is int && amount > 0 && amount < 10000000) {
+        // Heuristic: amounts stored as small ints are likely already in dollars
+        // (e.g. someone stored 50 meaning $50.00). Convert to cents.
+        // Amounts already in cents (>= 10,000,000 = $100,000) are left as-is.
+        tx['amount'] = amount * 100;
+      }
+      return tx;
+    }).toList();
+
+    final meta = Map<String, dynamic>.from(
+      data['meta'] as Map<String, dynamic>? ?? {},
+    );
+    meta['version'] = 2;
+
+    return {
+      ...data,
+      'meta': meta,
+      'transactions': migratedTxs,
+    };
   }
 
   /// Writes [data] to [filePath], stamping [AppMeta.lastModified] first.
@@ -71,6 +131,8 @@ class DataService {
     final updated = data.copyWith(
       meta: data.meta.copyWith(
         lastModified: DateTime.now().toUtc().toIso8601String(),
+        appVersion: _appVersion,
+        version: _kCurrentVersion,
       ),
     );
     final json = const JsonEncoder.withIndent('  ').convert(updated.toJson());

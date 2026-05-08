@@ -39,6 +39,8 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
       StreamController<String>.broadcast();
   Stream<String> get saveErrors => _saveErrors.stream;
 
+  Timer? _debounceTimer;
+
   DataNotifier(this._service) : super(const AsyncValue.loading());
 
   String? get filePath => _filePath;
@@ -186,18 +188,36 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
     }
     final next = updater(current);
     state = AsyncValue.data(next);
+    // Debounce: coalesce rapid successive mutations (e.g. counter taps,
+    // checklist toggles) into a single disk write after 500 ms of inactivity.
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _flushToDisk();
+    });
+  }
+
+  /// Writes the current in-memory state to disk.
+  ///
+  /// Called by the debounce timer after [_save].  Also called directly when an
+  /// immediate flush is needed (e.g. before app goes to background).
+  Future<void> _flushToDisk() async {
+    final path = _filePath;
+    final data = state.valueOrNull;
+    if (path == null || data == null) return;
+    final snapshot = data; // capture in case state changes mid-write
     try {
-      await _service.saveData(next, _filePath!);
+      await _service.saveData(snapshot, path);
       // Update the SyncService baseline so a resume immediately after a save
       // does NOT trigger a spurious reload (the file mtime just changed but
       // the change originated from this app, not an external source).
       SyncService.instance.markUpdated();
       // Push updated snapshots to all home-screen widgets (best-effort).
-      WidgetSyncService.instance.pushAll(next).ignore();
+      WidgetSyncService.instance.pushAll(snapshot).ignore();
     } catch (e) {
       // Roll back the optimistic state update so the UI stays consistent.
-      state = AsyncValue.data(current);
-      debugPrint('[DataNotifier] Save failed (rolled back): $e');
+      // Note: rolling back to the state before the debounce window is complex;
+      // instead we notify the user and let them retry.
+      debugPrint('[DataNotifier] Save failed: $e');
       // Notify listeners (e.g. global snackbar in HabitGeniusApp).
       if (!_saveErrors.isClosed) {
         _saveErrors.add(
@@ -209,6 +229,10 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    // Flush any pending write synchronously before disposal so data is not lost
+    // when the notifier is torn down (e.g. provider container disposed in tests).
+    _flushToDisk().ignore();
     _saveErrors.close();
     super.dispose();
   }

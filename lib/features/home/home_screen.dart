@@ -1935,7 +1935,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
             final ds = _fmt(day);
             return data.transactions
                 .where((t) => t.date == ds && t.type == TransactionType.expense)
-                .fold<double>(0, (s, t) => s + t.amount);
+                .fold<double>(0, (s, t) => s + t.displayAmount);
           }).toList();
       totalSpend = daySpend
           .where((s) => s != null)
@@ -2028,7 +2028,7 @@ class _WeeklyOverviewState extends State<_WeeklyOverview> {
         return sum +
             data.transactions
                 .where((t) => t.date == ds && t.type == TransactionType.expense)
-                .fold<double>(0, (s, t) => s + t.amount);
+                .fold<double>(0, (s, t) => s + t.displayAmount);
       });
     }
     final fw4SpendLabel = fw4Spend == 0 ? '--' : _smartMoney(fw4Spend);

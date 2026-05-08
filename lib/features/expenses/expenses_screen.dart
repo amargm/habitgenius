@@ -326,10 +326,10 @@ class _TransactionsTabState extends State<_TransactionsTab> {
       list = list.where((t) => t.date.compareTo(toStr) <= 0).toList();
     }
     if (_filterMinAmount != null) {
-      list = list.where((t) => t.amount >= _filterMinAmount!).toList();
+      list = list.where((t) => t.displayAmount >= _filterMinAmount!).toList();
     }
     if (_filterMaxAmount != null) {
-      list = list.where((t) => t.amount <= _filterMaxAmount!).toList();
+      list = list.where((t) => t.displayAmount <= _filterMaxAmount!).toList();
     }
     return list;
   }
@@ -398,22 +398,18 @@ class _TransactionsTabState extends State<_TransactionsTab> {
     final Map<String, double> expByCurrency = {};
     final Map<String, double> incByCurrency = {};
     for (final t in monthExpenseTxs) {
-      expByCurrency[t.currency] = (expByCurrency[t.currency] ?? 0) + t.amount;
+      expByCurrency[t.currency] = (expByCurrency[t.currency] ?? 0) + t.displayAmount;
     }
     for (final t in monthIncomeTxs) {
-      incByCurrency[t.currency] = (incByCurrency[t.currency] ?? 0) + t.amount;
+      incByCurrency[t.currency] = (incByCurrency[t.currency] ?? 0) + t.displayAmount;
     }
     final allCurrencies =
         {...expByCurrency.keys, ...incByCurrency.keys}.toList()..sort();
 
     final monthExpenses =
-        monthExpenseTxs.isEmpty
-            ? 0.0
-            : monthExpenseTxs.map((t) => t.amount).reduce((a, b) => a + b);
+        monthExpenseTxs.fold<double>(0.0, (s, t) => s + t.displayAmount);
     final monthIncome =
-        monthIncomeTxs.isEmpty
-            ? 0.0
-            : monthIncomeTxs.map((t) => t.amount).reduce((a, b) => a + b);
+        monthIncomeTxs.fold<double>(0.0, (s, t) => s + t.displayAmount);
     final summaryCurrency =
         monthExpenseTxs.isNotEmpty
             ? monthExpenseTxs.first.currency
@@ -885,17 +881,17 @@ class _AccountsTab extends ConsumerWidget {
     for (final tx in transactions) {
       if (tx.accountId == a.id) {
         if (tx.type == TransactionType.income) {
-          bal += tx.amount;
+          bal += tx.displayAmount;
         } else if (tx.type == TransactionType.expense) {
-          bal -= tx.amount;
+          bal -= tx.displayAmount;
         } else if (tx.type == TransactionType.transfer) {
-          bal -= tx.amount;
+          bal -= tx.displayAmount;
         }
       }
       if (tx.type == TransactionType.transfer &&
           tx.toAccountId == a.id &&
           tx.toAccountId != tx.accountId) {
-        bal += tx.amount;
+        bal += tx.displayAmount;
       }
     }
     return bal;
@@ -1164,12 +1160,12 @@ class _TimelineTabState extends State<_TimelineTab> {
           exp.add(
             txs
                 .where((t) => t.date == ds && t.type == TransactionType.expense)
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
           inc.add(
             txs
                 .where((t) => t.date == ds && t.type == TransactionType.income)
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
         }
         return (labels: labels, exp: exp, inc: inc);
@@ -1191,10 +1187,10 @@ class _TimelineTabState extends State<_TimelineTab> {
                 '${now.year}-${now.month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
             e += txs
                 .where((t) => t.date == ds && t.type == TransactionType.expense)
-                .fold(0.0, (s, t) => s + t.amount);
+                .fold(0.0, (s, t) => s + t.displayAmount);
             i2 += txs
                 .where((t) => t.date == ds && t.type == TransactionType.income)
-                .fold(0.0, (s, t) => s + t.amount);
+                .fold(0.0, (s, t) => s + t.displayAmount);
           }
           exp.add(e);
           inc.add(i2);
@@ -1219,7 +1215,7 @@ class _TimelineTabState extends State<_TimelineTab> {
                       t.date.startsWith(ym) &&
                       t.type == TransactionType.expense,
                 )
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
           inc.add(
             txs
@@ -1227,7 +1223,7 @@ class _TimelineTabState extends State<_TimelineTab> {
                   (t) =>
                       t.date.startsWith(ym) && t.type == TransactionType.income,
                 )
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
         }
         return (labels: labels, exp: exp, inc: inc);
@@ -1248,7 +1244,7 @@ class _TimelineTabState extends State<_TimelineTab> {
                       t.date.startsWith(ym) &&
                       t.type == TransactionType.expense,
                 )
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
           inc.add(
             txs
@@ -1256,7 +1252,7 @@ class _TimelineTabState extends State<_TimelineTab> {
                   (t) =>
                       t.date.startsWith(ym) && t.type == TransactionType.income,
                 )
-                .fold(0.0, (s, t) => s + t.amount),
+                .fold(0.0, (s, t) => s + t.displayAmount),
           );
         }
         return (labels: labels, exp: exp, inc: inc);
@@ -1285,10 +1281,10 @@ class _TimelineTabState extends State<_TimelineTab> {
     for (final tx in txs) {
       final month = tx.date.substring(0, 7);
       if (tx.type == TransactionType.expense) {
-        monthExpense[month] = (monthExpense[month] ?? 0) + tx.amount;
+        monthExpense[month] = (monthExpense[month] ?? 0) + tx.displayAmount;
         currency ??= tx.currency;
       } else {
-        monthIncome[month] = (monthIncome[month] ?? 0) + tx.amount;
+        monthIncome[month] = (monthIncome[month] ?? 0) + tx.displayAmount;
         currency ??= tx.currency;
       }
     }
@@ -1814,7 +1810,7 @@ class _CategoryBreakdownState extends State<_CategoryBreakdown> {
     // Aggregate by category
     final Map<String, double> totals = {};
     for (final tx in widget.transactions) {
-      totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
+      totals[tx.category] = (totals[tx.category] ?? 0) + tx.displayAmount;
     }
     final sorted =
         totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
@@ -2395,7 +2391,7 @@ class _TxTile extends ConsumerWidget {
                       ? '+'
                       : isTransfer
                       ? ''
-                      : '-'}${_formatCurrency(tx.amount, tx.currency)}',
+                      : '-'}${_formatCurrency(tx.displayAmount, tx.currency)}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w700,
@@ -2506,7 +2502,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       final tx = Transaction(
         id: const Uuid().v4(),
         type: _type,
-        amount: amount,
+        amount: (amount * 100).round(),
         currency: _account!.currency,
         category: _category,
         accountId: _account!.id,

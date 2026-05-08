@@ -42,7 +42,7 @@ class AppData {
     final now = DateTime.now().toUtc().toIso8601String();
     return AppData(
       meta: AppMeta(
-        version: 1,
+        version: 2,
         appVersion: '1.0.0',
         createdAt: now,
         lastModified: now,

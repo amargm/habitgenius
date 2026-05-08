@@ -36,6 +36,7 @@ dependencies:
   googleapis: ^13.0.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.12
   share_plus: ^10.0.0
+  package_info_plus: ^8.1.2
 
 dev_dependencies:
   flutter_test:

@@ -9,7 +9,7 @@ part of 'transaction.dart';
 Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
   id: json['id'] as String,
   type: $enumDecode(_$TransactionTypeEnumMap, json['type']),
-  amount: (json['amount'] as num).toDouble(),
+  amount: (json['amount'] as num).toInt(),
   currency: json['currency'] as String,
   category: json['category'] as String,
   accountId: json['accountId'] as String,

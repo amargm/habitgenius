@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/providers/settings_provider.dart';
+import 'core/services/data_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/purchase_service.dart';
 
@@ -25,6 +27,14 @@ void main() async {
   };
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Resolve and stamp the real app version so AppMeta.appVersion is accurate.
+  try {
+    final info = await PackageInfo.fromPlatform();
+    DataService.setAppVersion(info.version);
+  } catch (e) {
+    debugPrint('[Startup] PackageInfo.fromPlatform failed: $e');
+  }
 
   // Initialize Firebase — reads configuration from google-services.json
   // which is processed at build time by the Google Services Gradle plugin.
