@@ -60,6 +60,23 @@ class FocusWidgetProvider : AppWidgetProvider() {
             context: Context,
             appWidgetManager: AppWidgetManager,
             widgetId: Int,
+        ) = try {
+            updateWidgetInternal(context, appWidgetManager, widgetId)
+        } catch (e: Exception) {
+            // Fallback: show the initial layout so the widget is never blank.
+            android.util.Log.e("FocusWidgetProvider", "updateWidget failed", e)
+            runCatching {
+                appWidgetManager.updateAppWidget(
+                    widgetId,
+                    RemoteViews(context.packageName, R.layout.widget_focus),
+                )
+            }
+        }
+
+        private fun updateWidgetInternal(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            widgetId: Int,
         ) {
             val prefs = context.getSharedPreferences(
                 "FlutterSharedPreferences", Context.MODE_PRIVATE,
@@ -174,8 +191,10 @@ class FocusWidgetProvider : AppWidgetProvider() {
 
         private fun drawRing(context: Context, progress: Float, state: String): Bitmap {
             // Scale bitmap with screen density so the ring stays sharp on all displays.
+            // Cap at 320px: at XXXHDPI a 120dp ring would be 480px (~900 KB) which
+            // exceeds the ~1 MB Binder limit for RemoteViews → TransactionTooLargeException.
             val density = context.resources.displayMetrics.density
-            val size = (120 * density).toInt().coerceAtLeast(200)
+            val size = (120 * density).toInt().coerceIn(200, 320)
             val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -183,10 +202,10 @@ class FocusWidgetProvider : AppWidgetProvider() {
             val strokeW = size * 0.1f
             val r = cx - strokeW
 
-            // Track (background ring).
+            // Track (background ring). Use alpha 90 so it stays visible on dark wallpapers.
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = strokeW
-            paint.color = Color.argb(50, 150, 150, 150)
+            paint.color = Color.argb(90, 150, 150, 150)
             canvas.drawCircle(cx, cx, r, paint)
 
             // Progress arc.

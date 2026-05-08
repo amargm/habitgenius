@@ -524,8 +524,11 @@ class _SyncBadgeState extends ConsumerState<_SyncBadge>
                       .read(cloudSyncProvider.notifier)
                       .scheduleUpload(
                         dataNotifier: ref.read(dataNotifierProvider.notifier),
+                        // Must use driveGoogleSignIn — the plain googleSignIn
+                        // instance only has email/profile scopes; its token
+                        // lacks drive.appdata and causes a 403 → auth error.
                         googleSignIn:
-                            ref.read(authServiceProvider).googleSignIn,
+                            ref.read(authServiceProvider).driveGoogleSignIn,
                       );
                 }
                 : null,

@@ -50,6 +50,22 @@ class HabitsWidgetProvider : AppWidgetProvider() {
             context: Context,
             appWidgetManager: AppWidgetManager,
             widgetId: Int,
+        ) = try {
+            updateWidgetInternal(context, appWidgetManager, widgetId)
+        } catch (e: Exception) {
+            android.util.Log.e("HabitsWidgetProvider", "updateWidget failed", e)
+            runCatching {
+                appWidgetManager.updateAppWidget(
+                    widgetId,
+                    RemoteViews(context.packageName, R.layout.widget_habits),
+                )
+            }
+        }
+
+        private fun updateWidgetInternal(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            widgetId: Int,
         ) {
             val prefs = context.getSharedPreferences(
                 "FlutterSharedPreferences",
@@ -103,7 +119,10 @@ class HabitsWidgetProvider : AppWidgetProvider() {
 
             // ── ListView with RemoteViewsService adapter ──────────────────
             views.setViewVisibility(R.id.widget_habit_list, android.view.View.VISIBLE)
-            views.setViewVisibility(R.id.widget_empty_text, android.view.View.GONE)
+            // Do NOT explicitly hide widget_empty_text here — let setEmptyView
+            // manage its visibility based on the adapter item count.
+            // Explicitly setting GONE before setEmptyView causes Android to
+            // ignore the empty-view swap, leaving a blank widget on parse errors.
 
             val serviceIntent = Intent(context, HabitsWidgetRemoteViewsService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
@@ -115,7 +134,10 @@ class HabitsWidgetProvider : AppWidgetProvider() {
 
             // Template PendingIntent for list-item click actions.
             // HabitsWidgetRowFactory sets the fill-in intent per row.
-            val actionIntent = Intent(HabitsWidgetActionReceiver.ACTION_LOG_HABIT)
+            // setPackage() is required on API 26+ for implicit broadcast delivery.
+            val actionIntent = Intent(HabitsWidgetActionReceiver.ACTION_LOG_HABIT).apply {
+                setPackage(context.packageName)
+            }
             val templatePi = PendingIntent.getBroadcast(
                 context, widgetId, actionIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,

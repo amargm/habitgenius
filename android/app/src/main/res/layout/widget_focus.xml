@@ -98,7 +98,8 @@
             android:src="@android:drawable/ic_media_play"
             android:contentDescription="Start" />
 
-        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <!-- View is the correct spacer for RemoteViews; Space is not in the allowlist -->
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
 
         <!-- Reset button -->
         <ImageButton

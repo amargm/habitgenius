@@ -117,7 +117,10 @@ class HabitsWidgetRowFactory(
             "FlutterSharedPreferences", Context.MODE_PRIVATE,
         )
         val fresh = prefs.getString("flutter.hw_widget_habits", "") ?: ""
-        rows = runCatching { parseRows(fresh) }.getOrElse { emptyList() }
+        rows = runCatching { parseRows(fresh) }.getOrElse { e ->
+            android.util.Log.e("HabitsWidgetFactory", "parseRows failed — widget will show empty state", e)
+            emptyList()
+        }
     }
 
     private fun parseRows(json: String): List<HabitRow> {

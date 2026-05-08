@@ -173,10 +173,19 @@ class AuthService {
       if (account == null) return false;
       final granted = await _googleSignIn.requestScopes([_kDriveAppDataScope]);
       if (!granted) return false;
-      // Force a silent sign-in so the OAuth token is refreshed to include
-      // the newly granted Drive scope. Without this, authenticatedClient()
-      // may still return a cached token that lacks Drive access.
+      // Refresh _googleSignIn's token to include the newly granted Drive scope.
       await _googleSignIn.signInSilently();
+      // After a revocation + re-grant cycle, Google Play Services caches a
+      // stale "revoked" state for _driveGoogleSignIn. signOut() clears that
+      // cached state, and the subsequent signInSilently() fetches a fresh token
+      // with drive.appdata scope — so DriveService.init() succeeds immediately
+      // on the next sync attempt instead of hitting the stale cache.
+      try {
+        await _driveGoogleSignIn.signOut();
+      } catch (_) {}
+      try {
+        await _driveGoogleSignIn.signInSilently();
+      } catch (_) {}
       return true;
     } catch (_) {
       return false;
