@@ -1151,7 +1151,13 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
           .read(cloudSyncProvider.notifier)
           .enableSync(
             dataNotifier: ref.read(dataNotifierProvider.notifier),
-            googleSignIn: authService.driveGoogleSignIn,
+            // Use googleSignIn (not driveGoogleSignIn) for the first sync after
+            // scope grant. requestDriveScope() just added drive.appdata to
+            // _googleSignIn's token via requestScopes() + signInSilently().
+            // _driveGoogleSignIn may not yet have a valid token (currentUser
+            // could be null on a fresh or multi-account device), so using it
+            // here would immediately fail with "Not authenticated".
+            googleSignIn: authService.googleSignIn,
           );
       setState(() => _toggling = false);
     } else {
@@ -1183,11 +1189,20 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
       );
       return;
     }
-    await _onSyncNow();
+    // Use googleSignIn (not driveGoogleSignIn) for this sync. After
+    // requestDriveScope(), googleSignIn holds a fresh token that includes the
+    // just-granted drive.appdata scope. _driveGoogleSignIn may still have a
+    // null currentUser (especially on multi-account devices) because we no
+    // longer call signOut() on it — so using it here would fail.
+    await ref
+        .read(cloudSyncProvider.notifier)
+        .syncNow(
+          dataNotifier: ref.read(dataNotifierProvider.notifier),
+          googleSignIn: authService.googleSignIn,
+        );
   }
 
   String _lastSyncedLabel(DateTime? lastSynced) {
-    if (lastSynced == null) return 'Not yet synced';
     final now = DateTime.now();
     final local = lastSynced.toLocal();
     final diff = now.difference(local);

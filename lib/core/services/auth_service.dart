@@ -175,14 +175,13 @@ class AuthService {
       if (!granted) return false;
       // Refresh _googleSignIn's token to include the newly granted Drive scope.
       await _googleSignIn.signInSilently();
-      // After a revocation + re-grant cycle, Google Play Services caches a
-      // stale "revoked" state for _driveGoogleSignIn. signOut() clears that
-      // cached state, and the subsequent signInSilently() fetches a fresh token
-      // with drive.appdata scope — so DriveService.init() succeeds immediately
-      // on the next sync attempt instead of hitting the stale cache.
-      try {
-        await _driveGoogleSignIn.signOut();
-      } catch (_) {}
+      // Best-effort: refresh _driveGoogleSignIn's token so subsequent syncs
+      // (which use _driveGoogleSignIn) can pick up the new grant immediately.
+      // Do NOT call signOut() first — that clears the account reference, and
+      // signInSilently() then fails silently on multi-account devices (Google
+      // Play Services doesn't know which account to use without a prior
+      // interactive choice), leaving currentUser == null and breaking the
+      // very next sync call.
       try {
         await _driveGoogleSignIn.signInSilently();
       } catch (_) {}
