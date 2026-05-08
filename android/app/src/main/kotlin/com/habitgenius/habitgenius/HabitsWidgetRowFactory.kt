@@ -21,7 +21,6 @@ import kotlin.math.min
  */
 class HabitsWidgetRowFactory(
     private val context: Context,
-    widgetDataJson: String,
 ) : RemoteViewsService.RemoteViewsFactory {
 
     private data class HabitRow(

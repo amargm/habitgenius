@@ -9,7 +9,6 @@ import android.widget.RemoteViewsService
  */
 class HabitsWidgetRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
-        val widgetData = intent.getStringExtra("widget_data") ?: ""
-        return HabitsWidgetRowFactory(applicationContext, widgetData)
+        return HabitsWidgetRowFactory(applicationContext)
     }
 }

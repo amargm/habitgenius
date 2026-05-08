@@ -177,7 +177,8 @@ class WidgetSyncService {
   // ── Expenses JSON ─────────────────────────────────────────────────────────
 
   String _buildExpensesJson(AppData data, {required UserTier tier}) {
-    final tierName = tier.name; // Use RUNTIME auth tier, not data.settings.userTier
+    final tierName =
+        tier.name; // Use RUNTIME auth tier, not data.settings.userTier
 
     if (tier == UserTier.guest) {
       return jsonEncode({

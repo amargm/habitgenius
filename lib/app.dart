@@ -29,6 +29,9 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   // once the data provider finishes its initial async load.
   // ignore: cancel_subscriptions
   ProviderSubscription? _dataSub;
+  // Listens for auth tier changes so widgets reflect sign-in/out immediately.
+  // ignore: cancel_subscriptions
+  ProviderSubscription? _authSub;
   // Auto-save guard for the focus timer.
   bool _focusAutoSaved = false;
   // Hash of reminder-relevant habit fields — used to skip reschedule when
@@ -56,6 +59,13 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         _pushWidgetData();
       }
     });
+    // Subscribe to auth state changes so widgets refresh when the user signs
+    // in, signs out, or Pro entitlement loads.
+    _authSub = ref.listenManual(authNotifierProvider, (prev, next) {
+      if (prev?.tier != next.tier) {
+        _pushWidgetData();
+      }
+    });
     // Subscribe to the data provider so we reschedule notifications as soon
     // as habits finish loading on a cold start (avoids the race condition
     // where valueOrNull is null during the first postFrameCallback).
@@ -67,13 +77,15 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         _pushWidgetData();
       }
       // After a user mutation (meta.lastModified changed), schedule a
-      // debounced upload. Guard against sync reloads (which reload the same
-      // data) to avoid re-uploading data we just downloaded from Drive.
+      // debounced upload AND refresh widgets immediately. Guard against
+      // sync reloads (which reload the same data) to avoid re-uploading
+      // data we just downloaded from Drive.
       if (prev?.hasValue == true && next.hasValue) {
         final prevModified = prev?.value?.meta.lastModified;
         final nextModified = next.value?.meta.lastModified;
         if (nextModified != null && nextModified != prevModified) {
           _scheduleCloudUpload();
+          _pushWidgetData();
         }
       }
     });
@@ -83,6 +95,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
   void dispose() {
     _saveErrorSub?.cancel();
     _dataSub?.close();
+    _authSub?.close();
     ref.read(focusSvcProvider).removeListener(_onFocusSvcChange);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

@@ -107,8 +107,8 @@ class HabitsWidgetProvider : AppWidgetProvider() {
 
             val serviceIntent = Intent(context, HabitsWidgetRemoteViewsService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                // Pass the raw JSON through the intent so the factory can read it.
-                putExtra("widget_data", raw)
+                // Note: the factory reads data directly from SharedPreferences
+                // in onDataSetChanged(), so no need to pass JSON via intent.
             }
             views.setRemoteAdapter(R.id.widget_habit_list, serviceIntent)
             views.setEmptyView(R.id.widget_habit_list, R.id.widget_empty_text)
