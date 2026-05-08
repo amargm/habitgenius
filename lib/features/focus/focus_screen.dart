@@ -15,9 +15,10 @@ import '../../shared/widgets/upgrade_prompt_sheet.dart';
 
 // ── Focus session service provider (keepAlive so timer runs app-wide) ──────
 
-final focusSvcProvider = ChangeNotifierProvider<FocusSessionService>(
-  (ref) => FocusSessionService(),
-);
+final focusSvcProvider = ChangeNotifierProvider<FocusSessionService>((ref) {
+  ref.keepAlive(); // Timer must survive screen navigation — never auto-dispose
+  return FocusSessionService();
+});
 
 // ── Category constants ────────────────────────────────────
 
