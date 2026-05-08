@@ -1151,7 +1151,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
           .read(cloudSyncProvider.notifier)
           .enableSync(
             dataNotifier: ref.read(dataNotifierProvider.notifier),
-            googleSignIn: authService.googleSignIn,
+            googleSignIn: authService.driveGoogleSignIn,
           );
       setState(() => _toggling = false);
     } else {
@@ -1165,7 +1165,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
         .read(cloudSyncProvider.notifier)
         .syncNow(
           dataNotifier: ref.read(dataNotifierProvider.notifier),
-          googleSignIn: authService.googleSignIn,
+          googleSignIn: authService.driveGoogleSignIn,
         );
   }
 
@@ -1951,7 +1951,8 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
 
   Future<void> _pickFocusGoal() async {
     const options = [0, 15, 30, 45, 60, 90, 120];
-    final currentGoal = ref.read(appDataProvider).settings.dailyFocusGoalMinutes;
+    final currentGoal =
+        ref.read(appDataProvider).settings.dailyFocusGoalMinutes;
     final picked = await showDialog<int>(
       context: context,
       builder:
@@ -2122,10 +2123,11 @@ class _GeneralSectionState extends ConsumerState<_GeneralSection> {
                   ),
                   Builder(
                     builder: (ctx) {
-                      final goal = ref
-                          .watch(appDataProvider)
-                          .settings
-                          .dailyFocusGoalMinutes;
+                      final goal =
+                          ref
+                              .watch(appDataProvider)
+                              .settings
+                              .dailyFocusGoalMinutes;
                       return Text(
                         goal == 0 ? 'Off' : '$goal min',
                         style: TextStyle(
@@ -2448,8 +2450,7 @@ class _CategoryBudgetsSheet extends ConsumerStatefulWidget {
       _CategoryBudgetsSheetState();
 }
 
-class _CategoryBudgetsSheetState
-    extends ConsumerState<_CategoryBudgetsSheet> {
+class _CategoryBudgetsSheetState extends ConsumerState<_CategoryBudgetsSheet> {
   late Map<String, TextEditingController> _ctrls;
   bool _saving = false;
 
@@ -2472,22 +2473,20 @@ class _CategoryBudgetsSheetState
   @override
   void initState() {
     super.initState();
-    final budgets =
-        ref.read(appDataProvider).settings.categoryBudgets;
+    final budgets = ref.read(appDataProvider).settings.categoryBudgets;
     _ctrls = {
       for (final c in _categories)
         c: TextEditingController(
-          text:
-              budgets.containsKey(c)
-                  ? budgets[c]!.toStringAsFixed(0)
-                  : '',
+          text: budgets.containsKey(c) ? budgets[c]!.toStringAsFixed(0) : '',
         ),
     };
   }
 
   @override
   void dispose() {
-    for (final c in _ctrls.values) { c.dispose(); }
+    for (final c in _ctrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -2527,13 +2526,14 @@ class _CategoryBudgetsSheetState
               const Spacer(),
               TextButton(
                 onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
+                child:
+                    _saving
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text('Save'),
               ),
             ],
           ),
@@ -2631,7 +2631,9 @@ class _ExchangeRatesSheetState extends ConsumerState<_ExchangeRatesSheet> {
 
   @override
   void dispose() {
-    for (final c in _ctrls.values) { c.dispose(); }
+    for (final c in _ctrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -2674,13 +2676,14 @@ class _ExchangeRatesSheetState extends ConsumerState<_ExchangeRatesSheet> {
               const Spacer(),
               TextButton(
                 onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
+                child:
+                    _saving
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text('Save'),
               ),
             ],
           ),

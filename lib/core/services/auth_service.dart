@@ -53,11 +53,24 @@ class AuthService {
   // from FirebaseAuth.currentUser which Firebase refreshes automatically.
   static const _kIsGuest = 'auth_is_guest';
 
+  /// The Drive App Data scope used for cloud backup.
+  static const _kDriveAppDataScope =
+      'https://www.googleapis.com/auth/drive.appdata';
+
   final SharedPreferences _prefs;
   // Lazy getters — avoids a constructor crash if Firebase.initializeApp()
   // failed before this service is first used.
   FirebaseAuth get _auth => FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+
+  /// Dedicated [GoogleSignIn] instance that includes the Drive App Data scope
+  /// in its configuration.  Used for token refresh in [DriveService.init] so
+  /// that [signInSilently] returns an access token that covers drive.appdata —
+  /// the main [_googleSignIn] (email/profile only) would produce a token that
+  /// lacks Drive access after an app restart.
+  final GoogleSignIn _driveGoogleSignIn = GoogleSignIn(
+    scopes: [_kDriveAppDataScope],
+  );
 
   AuthService(this._prefs);
 
@@ -149,11 +162,16 @@ class AuthService {
   /// After granting the scope, performs a silent sign-in to force a token
   /// refresh so [authenticatedClient()] picks up the new Drive scope.
   Future<bool> requestDriveScope() async {
-    const driveAppDataScope = 'https://www.googleapis.com/auth/drive.appdata';
     try {
+      // Restore the Google Sign-In session if it wasn't yet restored after
+      // app restart (Firebase auth persists automatically; Google Sign-In
+      // does not — it requires an explicit signInSilently() call).
+      if (_googleSignIn.currentUser == null) {
+        await _googleSignIn.signInSilently();
+      }
       final account = _googleSignIn.currentUser;
       if (account == null) return false;
-      final granted = await _googleSignIn.requestScopes([driveAppDataScope]);
+      final granted = await _googleSignIn.requestScopes([_kDriveAppDataScope]);
       if (!granted) return false;
       // Force a silent sign-in so the OAuth token is refreshed to include
       // the newly granted Drive scope. Without this, authenticatedClient()
@@ -170,6 +188,12 @@ class AuthService {
 
   /// Exposes the underlying [GoogleSignIn] instance for use by Drive API auth.
   GoogleSignIn get googleSignIn => _googleSignIn;
+
+  /// Exposes the Drive-scoped [GoogleSignIn] instance for cloud-sync operations.
+  /// Always use this (instead of [googleSignIn]) when passing a [GoogleSignIn]
+  /// to sync methods so that [signInSilently] returns a token covering
+  /// drive.appdata after app restarts.
+  GoogleSignIn get driveGoogleSignIn => _driveGoogleSignIn;
 
   // ── Helpers ───────────────────────────────────────────────
 

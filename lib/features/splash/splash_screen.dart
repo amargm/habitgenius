@@ -95,7 +95,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             .read(cloudSyncProvider.notifier)
             .syncOnLaunch(
               dataNotifier: notifier,
-              googleSignIn: ref.read(authServiceProvider).googleSignIn,
+              googleSignIn: ref.read(authServiceProvider).driveGoogleSignIn,
             )
             .ignore();
       }

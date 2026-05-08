@@ -152,7 +152,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         .read(cloudSyncProvider.notifier)
         .scheduleUpload(
           dataNotifier: ref.read(dataNotifierProvider.notifier),
-          googleSignIn: ref.read(authServiceProvider).googleSignIn,
+          googleSignIn: ref.read(authServiceProvider).driveGoogleSignIn,
         );
   }
 
@@ -170,7 +170,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
         .read(cloudSyncProvider.notifier)
         .checkOnResume(
           dataNotifier: dataNotifier,
-          googleSignIn: ref.read(authServiceProvider).googleSignIn,
+          googleSignIn: ref.read(authServiceProvider).driveGoogleSignIn,
         );
   }
 

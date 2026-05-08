@@ -52,13 +52,28 @@ class DriveService {
     // sync was enabled, or the token was evicted from cache), attempt a silent
     // sign-in to restore the session before building the HTTP client.
     if (googleSignIn.currentUser == null) {
-      await googleSignIn.signInSilently();
+      try {
+        await googleSignIn.signInSilently();
+      } catch (_) {
+        // A PlatformException here means sign-in failed (e.g. network issue,
+        // credentials revoked, or a developer-config error).  Fall through to
+        // authenticatedClient() which will return null and produce a clear
+        // DriveServiceException that the caller maps to an auth error.
+      }
     }
-    final client = await googleSignIn.authenticatedClient();
-    if (client == null) {
+    try {
+      final client = await googleSignIn.authenticatedClient();
+      if (client == null) {
+        throw const DriveServiceException('Not authenticated');
+      }
+      _api = drive.DriveApi(client);
+    } on DriveServiceException {
+      rethrow;
+    } catch (_) {
+      // authenticatedClient() can throw (e.g. PlatformException from
+      // GoogleSignInAccount.authHeaders when the token can't be refreshed).
       throw const DriveServiceException('Not authenticated');
     }
-    _api = drive.DriveApi(client);
   }
 
   drive.DriveApi get _requireApi {

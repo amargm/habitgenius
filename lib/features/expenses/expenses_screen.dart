@@ -503,10 +503,9 @@ class _TransactionsTabState extends State<_TransactionsTab> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      ...{
-                        ..._kExpenseCategories,
-                        ..._kIncomeCategories,
-                      }.map((cat) {
+                      ...{..._kExpenseCategories, ..._kIncomeCategories}.map((
+                        cat,
+                      ) {
                         final sel = _filterCategory == cat;
                         return Padding(
                           padding: const EdgeInsets.only(right: 6),

@@ -458,8 +458,18 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
           s.contains('token');
     }
     return s.contains('401') ||
+        s.contains(
+          'status: 403',
+        ) || // DetailedApiRequestError 403 from googleapis
         s.contains('invalid_grant') ||
-        s.contains('insufficient_scope');
+        s.contains('insufficient_scope') ||
+        s.contains(
+          'insufficient permission',
+        ) || // googleapis Drive API 403 body
+        s.contains(
+          'sign_in_required',
+        ) || // PlatformException from google_sign_in
+        s.contains('sign_in_failed'); // PlatformException from google_sign_in
   }
 
   @override

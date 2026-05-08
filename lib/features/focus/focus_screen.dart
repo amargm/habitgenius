@@ -104,14 +104,17 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                   final now = DateTime.now();
                   final todayStart = DateTime(now.year, now.month, now.day);
                   final todayEnd = todayStart.add(const Duration(days: 1));
-                  final todayMinutes = sessions.where((s) {
-                    try {
-                      final start = DateTime.parse(s.startedAt);
-                      return start.isAfter(todayStart) && start.isBefore(todayEnd);
-                    } catch (_) {
-                      return false;
-                    }
-                  }).fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
+                  final todayMinutes = sessions
+                      .where((s) {
+                        try {
+                          final start = DateTime.parse(s.startedAt);
+                          return start.isAfter(todayStart) &&
+                              start.isBefore(todayEnd);
+                        } catch (_) {
+                          return false;
+                        }
+                      })
+                      .fold(0, (sum, s) => sum + (s.actualDuration ~/ 60));
                   final progress = (todayMinutes / goalMinutes).clamp(0.0, 1.0);
                   final done = todayMinutes >= goalMinutes;
                   return Container(
