@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
@@ -31,7 +31,7 @@ import java.util.UUID
 class MoodActionReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_LOG_MOOD = "com.habitgenius.LOG_MOOD"
+        const val ACTION_LOG_MOOD = "com.onehabittracker.LOG_MOOD"
 
         private val MOOD_EMOJIS = arrayOf("😢", "😔", "😐", "😊", "🤩")
     }
@@ -43,7 +43,7 @@ class MoodActionReceiver : BroadcastReceiver() {
         val level = intent.getIntExtra("level", 0)
         if (level !in 1..5) return
 
-        val dataFile = File(context.filesDir, "app_flutter/habitgenius_data.json")
+        val dataFile = File(context.filesDir, "app_flutter/onehabittracker_data.json")
         if (!dataFile.exists()) return
 
         val root = runCatching { JSONObject(dataFile.readText()) }.getOrNull() ?: return
@@ -80,7 +80,7 @@ class MoodActionReceiver : BroadcastReceiver() {
         meta.put("lastModified", isoNow())
 
         // Atomic write.
-        val tmp = File(dataFile.parent, "habitgenius_data.json.tmp")
+        val tmp = File(dataFile.parent, "onehabittracker_data.json.tmp")
         runCatching {
             tmp.writeText(root.toString())
             if (!tmp.renameTo(dataFile)) {

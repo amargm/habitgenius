@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
@@ -34,7 +34,7 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
         val progressType = intent.getStringExtra("progressType") ?: "checkbox"
         val targetValue = intent.getIntExtra("targetValue", 1)
 
-        val dataFile = File(context.filesDir, "app_flutter/habitgenius_data.json")
+        val dataFile = File(context.filesDir, "app_flutter/onehabittracker_data.json")
         if (!dataFile.exists()) return
 
         val root = runCatching {
@@ -100,7 +100,7 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
         meta.put("lastModified", isoNow())
 
         // Atomic write: write to .tmp then rename.
-        val tmp = File(dataFile.parent, "habitgenius_data.json.tmp")
+        val tmp = File(dataFile.parent, "onehabittracker_data.json.tmp")
         try {
             tmp.writeText(root.toString())
             if (!tmp.renameTo(dataFile)) {
@@ -312,6 +312,6 @@ class HabitsWidgetActionReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_LOG_HABIT = "com.habitgenius.WIDGET_ACTION"
+        const val ACTION_LOG_HABIT = "com.onehabittracker.WIDGET_ACTION"
     }
 }

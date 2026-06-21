@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -7,7 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private companion object {
-        const val WIDGET_CHANNEL = "com.habitgenius/widget"
+        const val WIDGET_CHANNEL = "com.onehabittracker/widget"
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:habitgenius/core/models/app_data.dart';
-import 'package:habitgenius/core/models/app_settings.dart';
-import 'package:habitgenius/core/services/data_service.dart';
+import 'package:onehabittracker/core/models/app_data.dart';
+import 'package:onehabittracker/core/models/app_settings.dart';
+import 'package:onehabittracker/core/services/data_service.dart';
 
 void main() {
   late DataService service;
@@ -12,7 +12,7 @@ void main() {
   setUp(() {
     service = DataService();
     tempPath =
-        '${Directory.systemTemp.path}/habitgenius_test_${DateTime.now().millisecondsSinceEpoch}.json';
+        '${Directory.systemTemp.path}/onehabittracker_test_${DateTime.now().millisecondsSinceEpoch}.json';
   });
 
   tearDown(() async {
@@ -88,16 +88,16 @@ void main() {
         customDirPath: '/some/custom/path',
       );
       expect(path, isNot(contains('/some/custom/path')));
-      expect(path, endsWith('habitgenius_data.json'));
+      expect(path, endsWith('onehabittracker_data.json'));
     });
 
     test('resolveFilePath uses customDirPath for registered user', () async {
-      const custom = '/storage/emulated/0/HabitGenius';
+      const custom = '/storage/emulated/0/1Habit Tracker';
       final path = await service.resolveFilePath(
         isGuest: false,
         customDirPath: custom,
       );
-      expect(path, equals('$custom/habitgenius_data.json'));
+      expect(path, equals('$custom/onehabittracker_data.json'));
     });
 
     test(
@@ -107,7 +107,7 @@ void main() {
           isGuest: false,
           customDirPath: null,
         );
-        expect(path, endsWith('habitgenius_data.json'));
+        expect(path, endsWith('onehabittracker_data.json'));
       },
     );
   });

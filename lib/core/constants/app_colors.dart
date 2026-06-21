@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The 10 selectable primary theme colors for HabitGenius.
+/// The 10 selectable primary theme colors for 1Habit Tracker.
 /// Index 0 is the default (Ember Orange #FF6B00 — per design guidelines).
 /// Indices 1–5 available to Registered users.
 /// Indices 6–9 are Pro-only.

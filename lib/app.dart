@@ -15,14 +15,14 @@ import 'features/focus/focus_screen.dart';
 import 'core/services/focus_session_service.dart';
 import 'package:uuid/uuid.dart';
 
-class HabitGeniusApp extends ConsumerStatefulWidget {
-  const HabitGeniusApp({super.key});
+class OneHabitTrackerApp extends ConsumerStatefulWidget {
+  const OneHabitTrackerApp({super.key});
 
   @override
-  ConsumerState<HabitGeniusApp> createState() => _HabitGeniusAppState();
+  ConsumerState<OneHabitTrackerApp> createState() => _OneHabitTrackerAppState();
 }
 
-class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
+class _OneHabitTrackerAppState extends ConsumerState<OneHabitTrackerApp>
     with WidgetsBindingObserver {
   StreamSubscription<String>? _saveErrorSub;
   // Riverpod subscription used to trigger first-run notification scheduling
@@ -223,7 +223,7 @@ class _HabitGeniusAppState extends ConsumerState<HabitGeniusApp>
     final lightTheme = ref.watch(lightThemeProvider);
 
     return MaterialApp.router(
-      title: 'HabitGenius',
+      title: '1Habit Tracker',
       debugShowCheckedModeBanner: false,
       themeMode: themeState.themeMode,
       theme: lightTheme,

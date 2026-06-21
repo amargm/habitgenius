@@ -1,4 +1,4 @@
-# HabitGenius — Firebase SHA Certificate Fingerprints
+# 1Habit Tracker — Firebase SHA Certificate Fingerprints
 
 Add **all four SHA-1 values** to Firebase Console so Google Sign-In works for
 every build variant.
@@ -7,8 +7,8 @@ every build variant.
 
 ## How to add in Firebase Console
 
-1. Open [Firebase Console](https://console.firebase.google.com) → **habitgenius** project
-2. ⚙️ **Project settings** → **Your apps** → Android app `com.habitgenius`
+1. Open [Firebase Console](https://console.firebase.google.com) → **onehabittracker** project
+2. ⚙️ **Project settings** → **Your apps** → Android app `com.onehabittracker.illusions`
 3. Scroll to **SHA certificate fingerprints** → click **Add fingerprint**
 4. Paste each SHA-1 below (one at a time) → **Save**
 5. After adding all fingerprints, click **Download google-services.json**
@@ -48,8 +48,8 @@ every build variant.
 ## Release keystore (Codemagic + local)
 
 > Used for `flutter build apk --release` and `flutter build appbundle --release`
-> Keystore: `android/app/habitgenius-release.keystore`
-> Alias: `habitgenius`
+> Keystore: `android/app/onehabittracker-release.keystore`
+> Alias: `onehabittracker`
 
 | Algorithm | Fingerprint |
 |-----------|-------------|

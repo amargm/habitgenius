@@ -7,7 +7,7 @@ import 'entitlement_service.dart';
 // ── Product IDs ───────────────────────────────────────────
 
 /// The one-time Pro upgrade product ID on Google Play.
-const kProProductId = 'habitgenius_pro_lifetime';
+const kProProductId = 'onehabittracker_pro_lifetime';
 const _kProPurchasedKey = 'pro_purchased';
 
 // ── Purchase result ───────────────────────────────────────

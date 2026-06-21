@@ -33,7 +33,7 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
   bool? _isGuest;
 
   /// Broadcast stream that emits a human-readable message whenever a disk
-  /// write fails.  Listeners (e.g. [HabitGeniusApp]) show a snackbar so the
+  /// write fails.  Listeners (e.g. [OneHabitTrackerApp]) show a snackbar so the
   /// user knows their latest change was not persisted.
   final StreamController<String> _saveErrors =
       StreamController<String>.broadcast();
@@ -218,7 +218,7 @@ class DataNotifier extends StateNotifier<AsyncValue<AppData>> {
       // Note: rolling back to the state before the debounce window is complex;
       // instead we notify the user and let them retry.
       debugPrint('[DataNotifier] Save failed: $e');
-      // Notify listeners (e.g. global snackbar in HabitGeniusApp).
+      // Notify listeners (e.g. global snackbar in OneHabitTrackerApp).
       if (!_saveErrors.isClosed) {
         _saveErrors.add(
           'Could not save your changes — please check your storage.',

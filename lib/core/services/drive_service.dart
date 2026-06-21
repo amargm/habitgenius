@@ -8,7 +8,7 @@ import 'package:googleapis/drive/v3.dart' as drive;
 
 /// The filename stored in the Drive App Data folder.
 /// Must match [DataService._kFileName].
-const _kDriveFileName = 'habitgenius_data.json';
+const _kDriveFileName = 'onehabittracker_data.json';
 
 /// Metadata returned from [DriveService.getRemoteMetadata].
 class DriveFileMeta {

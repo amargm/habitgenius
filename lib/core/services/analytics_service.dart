@@ -62,7 +62,7 @@ class AnalyticsService {
       .logPurchase(
         currency: 'USD',
         value: 0,
-        items: [AnalyticsEventItem(itemName: 'habitgenius_pro_lifetime')],
+        items: [AnalyticsEventItem(itemName: 'onehabittracker_pro_lifetime')],
       )
       .catchError((_) {});
 

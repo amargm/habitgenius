@@ -119,7 +119,7 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    'HabitGenius',
+                    '1Habit Tracker',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 13,
@@ -134,7 +134,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    '© 2026 HabitGenius. All rights reserved.',
+                    '© 2026 1Habit Tracker. All rights reserved.',
                     style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                   ),
                 ],
@@ -536,7 +536,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _openUrl(context, 'https://habitgenius.app/terms'),
+                onTap: () => _openUrl(context, 'https://onehabittracker.app/terms'),
                 child: const Text(
                   'Terms of Service',
                   style: TextStyle(
@@ -557,7 +557,7 @@ class _ProCardState extends ConsumerState<_ProCard> {
               ),
               GestureDetector(
                 onTap:
-                    () => _openUrl(context, 'https://habitgenius.app/privacy'),
+                    () => _openUrl(context, 'https://onehabittracker.app/privacy'),
                 child: const Text(
                   'Privacy Policy',
                   style: TextStyle(
@@ -970,7 +970,7 @@ class _DataSection extends ConsumerWidget {
     try {
       await Share.shareXFiles([
         XFile(path, mimeType: 'application/json'),
-      ], subject: 'HabitGenius backup');
+      ], subject: '1Habit Tracker backup');
     } catch (e) {
       if (context.mounted) {
         AppToast.show(
@@ -1034,9 +1034,9 @@ class _DataSection extends ConsumerWidget {
       final xFile = XFile.fromData(
         Uint8List.fromList(bytes),
         mimeType: 'text/csv',
-        name: 'habitgenius_export.csv',
+        name: 'onehabittracker_export.csv',
       );
-      await Share.shareXFiles([xFile], subject: 'HabitGenius CSV export');
+      await Share.shareXFiles([xFile], subject: '1Habit Tracker CSV export');
     } catch (e) {
       if (context.mounted) {
         AppToast.show(context, 'Could not export CSV.', type: ToastType.error);
@@ -2339,7 +2339,7 @@ class _AboutSection extends StatelessWidget {
   static Future<void> _share(BuildContext context) async {
     // Copy link to clipboard since share_plus is not installed.
     const link =
-        'https://play.google.com/store/apps/details?id=com.habitgenius';
+        'https://play.google.com/store/apps/details?id=com.onehabittracker.illusions';
     await Clipboard.setData(const ClipboardData(text: link));
     if (context.mounted) {
       AppToast.show(
@@ -2360,23 +2360,23 @@ class _AboutSection extends StatelessWidget {
             icon: Icons.star_rounded,
             label: 'Rate on Google Play',
             color: const Color(0xFFFDCB6E),
-            onTap: () => _open(context, 'market://details?id=com.habitgenius'),
+            onTap: () => _open(context, 'market://details?id=com.onehabittracker.illusions'),
             isFirst: true,
           ),
           _AboutRow(
             icon: Icons.share_rounded,
-            label: 'Share HabitGenius',
+            label: 'Share 1Habit Tracker',
             onTap: () => _share(context),
           ),
           _AboutRow(
             icon: Icons.privacy_tip_outlined,
             label: 'Privacy Policy',
-            onTap: () => _open(context, 'https://habitgenius.app/privacy'),
+            onTap: () => _open(context, 'https://onehabittracker.app/privacy'),
           ),
           _AboutRow(
             icon: Icons.description_outlined,
             label: 'Terms of Service',
-            onTap: () => _open(context, 'https://habitgenius.app/terms'),
+            onTap: () => _open(context, 'https://onehabittracker.app/terms'),
           ),
           _AboutRow(
             icon: Icons.mail_outline_rounded,
@@ -2384,7 +2384,7 @@ class _AboutSection extends StatelessWidget {
             onTap:
                 () => _open(
                   context,
-                  'mailto:support@habitgenius.app?subject=HabitGenius%20Support',
+                  'mailto:support@onehabittracker.app?subject=1Habit%20Tracker%20Support',
                 ),
           ),
           _AboutRow(

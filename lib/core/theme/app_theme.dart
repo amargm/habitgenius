@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import 'app_theme_extension.dart';
 
-/// Builds a [ThemeData] for HabitGenius given a [ThemeColor] and [Brightness].
+/// Builds a [ThemeData] for 1Habit Tracker given a [ThemeColor] and [Brightness].
 /// Call [AppTheme.build] whenever the user changes color or mode.
 class AppTheme {
   AppTheme._();

@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -10,7 +10,7 @@ import android.widget.RemoteViews
 import org.json.JSONObject
 
 /**
- * AppWidgetProvider for the HabitGenius home-screen widget.
+ * AppWidgetProvider for the 1Habit Tracker home-screen widget.
  *
  * Reads the JSON snapshot stored in SharedPreferences by WidgetSyncService
  * (Flutter writes with the "flutter." prefix, so we read the Flutter-shared-

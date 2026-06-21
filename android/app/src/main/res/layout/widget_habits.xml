@@ -19,7 +19,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="HabitGenius"
+            android:text="1Habit Tracker"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary" />
@@ -31,7 +31,7 @@
             android:layout_height="32dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_view"
-            android:contentDescription="Open HabitGenius" />
+            android:contentDescription="Open 1Habit Tracker" />
 
     </LinearLayout>
 
@@ -51,7 +51,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="No habits yet.\nOpen HabitGenius to add one."
+        android:text="No habits yet.\nOpen 1Habit Tracker to add one."
         android:textSize="12sp"
         android:textColor="?android:attr/textColorSecondary"
         android:visibility="gone" />

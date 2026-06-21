@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# HabitGenius — Codemagic CI/CD
+# 1Habit Tracker — Codemagic CI/CD
 #
 # Required variables — set these in Codemagic UI → App settings → Environment
 # variables (no group needed, just plain app-level variables):
@@ -9,10 +9,10 @@
 # Required variable group (Codemagic UI → Teams → Global vars or per-app):
 #
 #   keystore_credentials
-#     CM_KEYSTORE           base64 of android/app/habitgenius-release.keystore
-#     CM_KEYSTORE_PASSWORD  HabitGenius@2026
-#     CM_KEY_ALIAS          habitgenius
-#     CM_KEY_PASSWORD       HabitGenius@2026
+#     CM_KEYSTORE           base64 of android/app/onehabittracker-release.keystore
+#     CM_KEYSTORE_PASSWORD  1HabitTracker@2026
+#     CM_KEY_ALIAS          onehabittracker
+#     CM_KEY_PASSWORD       1HabitTracker@2026
 #
 # Two workflows:
 #   1. android-debug   — fast debug APK on every push to dev/*  or main
@@ -42,7 +42,7 @@ workflows:
       groups:
         - firebase
       vars:
-        PACKAGE_NAME: "com.habitgenius"
+        PACKAGE_NAME: "com.onehabittracker.illusions"
 
     scripts:
       - name: Set Android SDK path
@@ -123,7 +123,7 @@ workflows:
         - keystore_credentials
         - firebase
       vars:
-        PACKAGE_NAME: "com.habitgenius"
+        PACKAGE_NAME: "com.onehabittracker.illusions"
 
     scripts:
       - name: Get Flutter packages
@@ -154,7 +154,7 @@ workflows:
 
       - name: Decode keystore
         script: |
-          KEYSTORE_PATH=$CM_BUILD_DIR/android/app/habitgenius-release.keystore
+          KEYSTORE_PATH=$CM_BUILD_DIR/android/app/onehabittracker-release.keystore
           echo "$CM_KEYSTORE" | tr -d '[:space:]' | base64 -d > "$KEYSTORE_PATH"
           if [ ! -s "$KEYSTORE_PATH" ]; then
             echo "ERROR: keystore is empty. Check CM_KEYSTORE in Codemagic keystore_credentials group."

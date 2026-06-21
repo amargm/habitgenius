@@ -1,4 +1,4 @@
-package com.habitgenius
+package com.onehabittracker.illusions
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -50,11 +50,11 @@ import java.util.UUID
 class FocusTimerReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_FOCUS_START  = "com.habitgenius.FOCUS_START"
-        const val ACTION_FOCUS_PAUSE  = "com.habitgenius.FOCUS_PAUSE"
-        const val ACTION_FOCUS_RESUME = "com.habitgenius.FOCUS_RESUME"
-        const val ACTION_FOCUS_RESET  = "com.habitgenius.FOCUS_RESET"
-        const val ACTION_FOCUS_TICK   = "com.habitgenius.FOCUS_TICK"
+        const val ACTION_FOCUS_START  = "com.onehabittracker.FOCUS_START"
+        const val ACTION_FOCUS_PAUSE  = "com.onehabittracker.FOCUS_PAUSE"
+        const val ACTION_FOCUS_RESUME = "com.onehabittracker.FOCUS_RESUME"
+        const val ACTION_FOCUS_RESET  = "com.onehabittracker.FOCUS_RESET"
+        const val ACTION_FOCUS_TICK   = "com.onehabittracker.FOCUS_TICK"
 
         // Default session: 25-min Pomodoro
         private const val DEFAULT_TARGET_SECONDS = 1500
@@ -230,7 +230,7 @@ class FocusTimerReceiver : BroadcastReceiver() {
      * Safe to call from [BroadcastReceiver.onReceive()].
      */
     private fun saveFocusSessionToFile(context: Context, durationSeconds: Int, category: String) {
-        val dataFile = File(context.filesDir, "app_flutter/habitgenius_data.json")
+        val dataFile = File(context.filesDir, "app_flutter/onehabittracker_data.json")
         if (!dataFile.exists()) return
 
         val root = runCatching { JSONObject(dataFile.readText()) }.getOrNull() ?: return
@@ -256,7 +256,7 @@ class FocusTimerReceiver : BroadcastReceiver() {
         val meta = root.optJSONObject("appMeta") ?: JSONObject().also { root.put("appMeta", it) }
         meta.put("lastModified", isoNow())
 
-        val tmp = File(dataFile.parent, "habitgenius_data.json.tmp")
+        val tmp = File(dataFile.parent, "onehabittracker_data.json.tmp")
         runCatching {
             tmp.writeText(root.toString())
             if (!tmp.renameTo(dataFile)) {

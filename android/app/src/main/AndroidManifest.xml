@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
     <application
-        android:label="HabitGenius"
+        android:label="1Habit Tracker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -73,13 +73,13 @@
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false" />
 
-        <!-- ── HabitGenius Home-Screen Widget ──────────────────────────── -->
+        <!-- ── 1Habit Tracker Home-Screen Widget ──────────────────────────── -->
 
         <!-- Widget provider: renders the widget UI -->
         <receiver
             android:name=".HabitsWidgetProvider"
             android:exported="true"
-            android:label="HabitGenius Habits">
+            android:label="1Habit Tracker Habits">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -99,7 +99,7 @@
             android:name=".HabitsWidgetActionReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.habitgenius.WIDGET_ACTION" />
+                <action android:name="com.onehabittracker.WIDGET_ACTION" />
             </intent-filter>
         </receiver>
 
@@ -108,7 +108,7 @@
         <receiver
             android:name=".FocusWidgetProvider"
             android:exported="true"
-            android:label="HabitGenius Focus Timer">
+            android:label="1Habit Tracker Focus Timer">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -122,11 +122,11 @@
             android:name=".FocusTimerReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.habitgenius.FOCUS_START" />
-                <action android:name="com.habitgenius.FOCUS_PAUSE" />
-                <action android:name="com.habitgenius.FOCUS_RESUME" />
-                <action android:name="com.habitgenius.FOCUS_RESET" />
-                <action android:name="com.habitgenius.FOCUS_TICK" />
+                <action android:name="com.onehabittracker.FOCUS_START" />
+                <action android:name="com.onehabittracker.FOCUS_PAUSE" />
+                <action android:name="com.onehabittracker.FOCUS_RESUME" />
+                <action android:name="com.onehabittracker.FOCUS_RESET" />
+                <action android:name="com.onehabittracker.FOCUS_TICK" />
             </intent-filter>
         </receiver>
 
@@ -135,7 +135,7 @@
         <receiver
             android:name=".MoodWidgetProvider"
             android:exported="true"
-            android:label="HabitGenius Mood">
+            android:label="1Habit Tracker Mood">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -149,7 +149,7 @@
             android:name=".MoodActionReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.habitgenius.LOG_MOOD" />
+                <action android:name="com.onehabittracker.LOG_MOOD" />
             </intent-filter>
         </receiver>
 
@@ -158,7 +158,7 @@
         <receiver
             android:name=".ExpenseWidgetProvider"
             android:exported="true"
-            android:label="HabitGenius Finances">
+            android:label="1Habit Tracker Finances">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -172,7 +172,7 @@
         <receiver
             android:name=".StreakWidgetProvider"
             android:exported="true"
-            android:label="HabitGenius Streaks">
+            android:label="1Habit Tracker Streaks">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

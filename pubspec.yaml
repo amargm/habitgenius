@@ -1,5 +1,5 @@
-name: habitgenius
-description: "HabitGenius - Habit, Mood, Focus, Journal & Expense tracker"
+name: onehabittracker
+description: "1Habit Tracker - Habit, Mood, Focus, Journal & Expense tracker"
 publish_to: "none"
 
 version: 1.0.0+1

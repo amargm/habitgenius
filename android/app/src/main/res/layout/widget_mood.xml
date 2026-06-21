@@ -36,7 +36,7 @@
             android:layout_height="24dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_view"
-            android:contentDescription="Open HabitGenius" />
+            android:contentDescription="Open 1Habit Tracker" />
 
     </LinearLayout>
 

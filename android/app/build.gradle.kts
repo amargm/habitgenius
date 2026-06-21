@@ -6,7 +6,7 @@
 }
 
 android {
-    namespace = "com.habitgenius"
+    namespace = "com.onehabittracker.illusions"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = System.getenv("CM_KEY_ALIAS") ?: "habitgenius"
+            keyAlias = System.getenv("CM_KEY_ALIAS") ?: "onehabittracker"
             keyPassword = System.getenv("CM_KEY_PASSWORD") ?: ""
             storeFile = System.getenv("CM_KEYSTORE_PATH")?.let { file(it) }
             storePassword = System.getenv("CM_KEYSTORE_PASSWORD") ?: ""
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.habitgenius"
+        applicationId = "com.onehabittracker.illusions"
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

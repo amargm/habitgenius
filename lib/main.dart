@@ -75,7 +75,7 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: const HabitGeniusApp(),
+      child: const OneHabitTrackerApp(),
     ),
   );
 }

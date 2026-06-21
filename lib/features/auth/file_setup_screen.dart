@@ -31,7 +31,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
           (_) => AlertDialog(
             title: const Text('Choose a data folder'),
             content: const Text(
-              'HabitGenius stores all your habits, journal, moods, focus sessions, '
+              '1Habit Tracker stores all your habits, journal, moods, focus sessions, '
               'and expenses in a single JSON file.\n\n'
               'Pick any folder on your device. '
               'The app only reads and writes this one file — it does not access '
@@ -53,7 +53,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
     if (confirmed != true || !mounted) return;
 
     final dir = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Choose folder for HabitGenius data',
+      dialogTitle: 'Choose folder for 1Habit Tracker data',
     );
     if (dir == null || !mounted) return;
 
@@ -72,7 +72,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
             (_) => AlertDialog(
               title: const Text('Folder not accessible'),
               content: const Text(
-                'HabitGenius cannot write to that folder on this device.\n\n'
+                '1Habit Tracker cannot write to that folder on this device.\n\n'
                 'This is a known Android limitation for certain storage locations.\n\n'
                 'Would you like to use the default location inside the app instead? '
                 'Your data will be safe there — you can always move the file later.',
@@ -154,7 +154,7 @@ class _FileSetupScreenState extends ConsumerState<FileSetupScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'HabitGenius stores all your data in a single file. Pick where to save it — local storage or a cloud-synced folder (e.g. Google Drive).',
+                '1Habit Tracker stores all your data in a single file. Pick where to save it — local storage or a cloud-synced folder (e.g. Google Drive).',
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,

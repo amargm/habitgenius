@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../constants/app_colors.dart';
 
-/// Centralised runtime permission requests for HabitGenius.
+/// Centralised runtime permission requests for 1Habit Tracker.
 ///
 /// All permission prompts go through this service so the UI stays consistent
 /// and every OS dialog is preceded by a clear in-app rationale sheet.
@@ -49,7 +49,7 @@ class PermissionService {
       icon: Icons.notifications_active_rounded,
       title: 'Enable habit reminders',
       body:
-          'HabitGenius sends you a gentle nudge at your chosen time each day so you never miss a habit.\n\nNo spam — only the reminders you set.',
+          '1Habit Tracker sends you a gentle nudge at your chosen time each day so you never miss a habit.\n\nNo spam — only the reminders you set.',
       allowLabel: 'Enable notifications',
     );
     if (!proceed || !context.mounted) return false;
@@ -104,7 +104,7 @@ class PermissionService {
       icon: Icons.alarm_rounded,
       title: 'Allow precise reminders',
       body:
-          'To fire your habit reminders at the exact time you choose, HabitGenius needs permission to schedule precise alarms.\n\nYou\'ll be taken to your device\'s Settings page to enable this.',
+          'To fire your habit reminders at the exact time you choose, 1Habit Tracker needs permission to schedule precise alarms.\n\nYou\'ll be taken to your device\'s Settings page to enable this.',
       allowLabel: 'Go to Settings',
     );
     if (!proceed || !context.mounted) return false;
@@ -171,7 +171,7 @@ class PermissionService {
             title: Text('$permissionName permission required'),
             content: Text(
               '$permissionName permission was denied. '
-              'You can enable it in Settings → Apps → HabitGenius → Permissions.',
+              'You can enable it in Settings → Apps → 1Habit Tracker → Permissions.',
             ),
             actions: [
               TextButton(

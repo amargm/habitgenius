@@ -1,6 +1,6 @@
 import 'app_colors.dart';
 
-/// Tier-based feature limits for HabitGenius.
+/// Tier-based feature limits for 1Habit Tracker.
 /// All limit checks in the app should reference this class.
 class AppLimits {
   AppLimits._();

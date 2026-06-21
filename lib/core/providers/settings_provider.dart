@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// ```dart
 /// ProviderScope(
 ///   overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-///   child: const HabitGeniusApp(),
+///   child: const OneHabitTrackerApp(),
 /// )
 /// ```
 final sharedPreferencesProvider = Provider<SharedPreferences>(

@@ -160,7 +160,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                'HabitGenius',
+                '1Habit Tracker',
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,

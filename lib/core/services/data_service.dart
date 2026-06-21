@@ -16,9 +16,9 @@ class DataCorruptedException implements Exception {
       'Your most recent changes may not have been saved.';
 }
 
-/// Reads and writes the single-file JSON data store (`habitgenius_data.json`).
+/// Reads and writes the single-file JSON data store (`onehabittracker_data.json`).
 class DataService {
-  static const _kFileName = 'habitgenius_data.json';
+  static const _kFileName = 'onehabittracker_data.json';
 
   /// Current schema version produced by this build.
   static const int _kCurrentVersion = 2;

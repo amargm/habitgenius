@@ -22,7 +22,7 @@ class WidgetSyncService {
   WidgetSyncService._();
   static final WidgetSyncService instance = WidgetSyncService._();
 
-  static const _channel = MethodChannel('com.habitgenius/widget');
+  static const _channel = MethodChannel('com.onehabittracker/widget');
 
   /// Pushes all four widget data payloads in one channel call.
   /// [tier] is the RUNTIME auth tier (from AuthState.tier), not the stored

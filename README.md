@@ -1,6 +1,6 @@
-# habitgenius
+# 1Habit Tracker
 
-A new Flutter project.
+A Flutter habit tracking application.
 
 ## Getting Started
 

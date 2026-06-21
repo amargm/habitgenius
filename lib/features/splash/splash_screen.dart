@@ -163,7 +163,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'HabitGenius',
+                    '1Habit Tracker',
                     style: Theme.of(
                       context,
                     ).textTheme.displayLarge?.copyWith(letterSpacing: -1),
